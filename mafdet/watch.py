@@ -22,6 +22,7 @@ import http.client
 import http.server
 import json
 import os
+import re
 import secrets
 import socket
 import sys
@@ -334,6 +335,10 @@ class Session:
         from . import DEFAULT_MODEL
         args = argparse.Namespace(**vars(self.args))
         args.gguf, args.model, args.device = self.args.gatherer, DEFAULT_MODEL, self.args.gatherer_device
+        # A local file from the training notebook names its base model: mafdet-gatherer-Qwen3-0.6B-Q8_0.gguf.
+        base = re.match(r"mafdet-gatherer-(.+)-[^-]+\.gguf$", os.path.basename(args.gguf))
+        if base and os.path.exists(args.gguf):
+            args.model = f"Qwen/{base.group(1)}"
         args.ctx, args.port, args.recycle, args.draft = 4096, GATHERER_PORT, False, ""
         # On the CPU it shares the cores with the main model's layers there: a few threads are enough.
         args.llama_args = "-t 4" if args.device == "cpu" else ""
