@@ -30,6 +30,15 @@ from .engine import DEFAULT_MODEL, Stats, common_prefix_len
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 N_PROBS = 20                        # candidates returned for the comparison with a from-scratch run
 
+# Draft recycling (mafdet strike): n-gram speculative decoding whose n-gram pool
+# outlives the request. The answers written at earlier pauses, for earlier
+# versions of the message, feed the pool; the final answer reuses their phrases
+# wherever the model agrees with them, several tokens per decode step. Lookup
+# of 4 tokens, drafts of 1 to 8: the best of the settings measured on Qwen3-4B
+# with the chat sampling (temperature 0.7).
+RECYCLE_ARGS = ("--spec-type", "ngram-mod", "--spec-ngram-mod-n-match", "4",
+                "--spec-ngram-mod-n-min", "1", "--spec-ngram-mod-n-max", "8")
+
 
 def find_llama_server() -> str:
     """llama-server from $MAFDET_LLAMA_DIR, ./llama.cpp or <project>/llama.cpp, in this order."""
@@ -251,8 +260,8 @@ def setup_llama(args, device: str, n_slots: int = 1):
 
     tok_id = tokenizer_id(args.gguf) if args.model == DEFAULT_MODEL else args.model
     tok = AutoTokenizer.from_pretrained(tok_id)
-    server = LlamaServer(args.gguf, device, ctx=args.ctx, n_slots=n_slots,
-                         extra_args=tuple(args.llama_args.split()))
+    extra = (RECYCLE_ARGS if getattr(args, "recycle", False) else ()) + tuple(args.llama_args.split())
+    server = LlamaServer(args.gguf, device, ctx=args.ctx, n_slots=n_slots, extra_args=extra)
     fname = os.path.basename(server.model_path)
     if not fname.startswith(tok_id.split("/")[-1]):
         print(f"Warning: tokenizer {tok_id} may not match {fname}", file=sys.stderr)

@@ -241,6 +241,10 @@ def _strike_args(p):
     _watch_args(p)
     p.add_argument("--ahead", type=int, default=512,
                    help="answer tokens written at a pause, before Enter (default: %(default)s)")
+    p.add_argument("--recycle", action="store_true",
+                   help="reuse the answers written for earlier versions of the message as drafts for "
+                        "speculative decoding (n-gram); measured: +4%% decode speed with natural typing, "
+                        "+20%% on code, slightly later first token")
 
 
 def _race_args(p):
