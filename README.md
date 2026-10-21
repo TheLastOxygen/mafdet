@@ -65,7 +65,7 @@ Run `mafdet` with no arguments for the table of commands, `mafdet --help` for th
 |---|---|---|---|---|
 | <img src="assets/icons/awaken.svg" width="22" alt=""> | `mafdet awaken` | the awakening | checks the GPU, downloads and loads the model | available |
 | <img src="assets/icons/watch.svg" width="22" alt=""> | `mafdet watch` | the guard | opens the chat window: the model reads while you type | available |
-| <img src="assets/icons/strike.svg" width="22" alt=""> | `mafdet strike` | the strike | thinks ahead and answers the moment you hit enter | *planned* |
+| <img src="assets/icons/strike.svg" width="22" alt=""> | `mafdet strike` | the strike | writes the answer while you pause: it is already there when you hit enter | available |
 | <img src="assets/icons/hunt.svg" width="22" alt=""> | `mafdet hunt` | the hunt | simulates people typing and measures the wait after sending | available |
 | <img src="assets/icons/race.svg" width="22" alt=""> | `mafdet race` | the race | benchmarks prefill and decode on your machine | available |
 | <img src="assets/icons/judge.svg" width="22" alt=""> | `mafdet judge` | the judgement | checks results against a from-scratch computation | available |
@@ -118,7 +118,24 @@ mafdet watch
 
 `mafdet watch` opens the MAFDET chat window. While you type, a status line under the message shows how much of it the model has already read; when you pause it also reads the end of the prompt, so on Enter a single token is left to compute. The conversation stays in the cache from one turn to the next. Answers render as Markdown and scroll freely while they are written.
 
-It runs on llama.cpp: extract a [llama.cpp release](https://github.com/ggml-org/llama.cpp/releases) into `./llama.cpp` (or set `MAFDET_LLAMA_DIR`). The first start downloads Qwen3-4B in Q4_K_M (about 2.5 GB). On Windows, double-click `avvia_mafdet.bat`. `--browser` opens the chat in the default browser instead of its own window.
+It runs on llama.cpp: extract a [llama.cpp release](https://github.com/ggml-org/llama.cpp/releases) into `./llama.cpp` (or set `MAFDET_LLAMA_DIR`). The first start downloads Qwen3-4B in Q4_K_M (about 2.5 GB). On Windows, double-click `avvia_mafdet.bat` (it opens `mafdet strike`, below). `--browser` opens the chat in the default browser instead of its own window.
+
+### Answer ahead
+
+```bash
+mafdet strike
+```
+
+`mafdet strike` is the same chat, one step further: when you pause, the model has already read your whole message, so it **starts writing the answer** before you press Enter and keeps it aside. The status line shows how many answer tokens are ready. Press Enter and those tokens appear at once, while the rest follows live from where the model got to.
+
+The answer is only kept for the exact text it was written for. Change anything (a letter, a word, a line) and it is thrown away on the spot, and a new one starts at the next pause. Trailing spaces and newlines do not count. So the answer you get is always the one the model would give after Enter, only written earlier: with greedy decoding the two are identical token by token (checked). `--ahead` sets how many tokens to write in advance (default 512).
+
+First measurements on the RTX 2060 (Qwen3-4B Q4_K_M, greedy, after a pause long enough to finish writing ahead):
+
+| Answer | Written before Enter | Full answer on screen after Enter, strike | Without strike |
+|---|---|---|---|
+| 300 tokens | 200 | 1.2 s | 3.5 s |
+| 168 tokens | 168 (all of it) | instant | 1.9 s |
 
 `demo_live.py` (`avvia_demo.bat`) is the step-by-step view for debugging: tokens, cache, hold-back and timings, live in the terminal.
 
@@ -149,7 +166,8 @@ What to expect: on short messages the gain is small in absolute terms, because p
 - [x] Unified `mafdet` CLI
 - [x] `mafdet watch`: the chat window
 - [ ] llama.cpp backend with quantized (GGUF) models
-- [ ] `mafdet strike`: speculative thinking on partial input, re-read as notes when you hit enter
+- [x] `mafdet strike`: the answer written ahead at every pause, shown at once on Enter
+- [ ] Notes from partial input: reasoning ahead that still helps when the text changes after the pause
 
 ## Related research
 

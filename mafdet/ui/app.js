@@ -207,6 +207,7 @@
     const meta = el.querySelector(".msg-meta");
     const parts = [`<span class="diamond">◆</span>first token ${fmt(d.ttft_ms)} ms`];
     if (d.message_tokens) parts.push(`${fmt(d.read)} of ${fmt(d.message_tokens)} tokens read while you typed`);
+    if (d.ahead) parts.push(`${fmt(d.ahead)} written before Enter`);
     parts.push(`${fmt(d.tokens)} tokens · ${d.tps} tok/s`);
     if (d.stopped) parts.push("stopped");
     if (d.cut) parts.push("cut at the token limit");
@@ -347,7 +348,16 @@
       meter.classList.toggle("ready", ready);
       meterRead.style.width = `${s.message_tokens ? (100 * s.read) / s.message_tokens : 0}%`;
       const read = `${fmt(s.read)} of ${fmt(s.message_tokens)} tokens read`;
-      if (s.busy) {
+      if (s.ahead_writing || s.ahead) {
+        setIcon("strike", true);
+        const ahead = `${fmt(s.ahead)} answer tokens written ahead`;
+        if (s.ahead_writing) {
+          statusText.innerHTML = `<span class="diamond">◆</span> Answering ahead · ${ahead}`;
+          statusText.classList.add("pulse");
+        } else {
+          statusText.innerHTML = `<span class="diamond">◆</span> Answer ready on Enter · ${ahead}`;
+        }
+      } else if (s.busy) {
         statusText.textContent = `Reading · ${read}`;
         statusText.classList.add("pulse");
       } else if (ready) {

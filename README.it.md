@@ -65,7 +65,7 @@ Lancia `mafdet` senza argomenti per la tabella dei comandi, `mafdet --help` per 
 |---|---|---|---|---|
 | <img src="assets/icons/awaken.svg" width="22" alt=""> | `mafdet awaken` | il risveglio | controlla la GPU, scarica e carica il modello | disponibile |
 | <img src="assets/icons/watch.svg" width="22" alt=""> | `mafdet watch` | la guardia | apre la finestra della chat: il modello legge mentre scrivi | disponibile |
-| <img src="assets/icons/strike.svg" width="22" alt=""> | `mafdet strike` | il colpo | pensa in anticipo e risponde appena premi invio | *previsto* |
+| <img src="assets/icons/strike.svg" width="22" alt=""> | `mafdet strike` | il colpo | scrive la risposta mentre ti fermi: all'invio è già lì | disponibile |
 | <img src="assets/icons/hunt.svg" width="22" alt=""> | `mafdet hunt` | la caccia | simula persone che scrivono e misura l'attesa dopo l'invio | disponibile |
 | <img src="assets/icons/race.svg" width="22" alt=""> | `mafdet race` | la corsa | misura il costo di prefill e decode sulla tua macchina | disponibile |
 | <img src="assets/icons/judge.svg" width="22" alt=""> | `mafdet judge` | il giudizio | confronta i risultati con un calcolo da zero | disponibile |
@@ -118,7 +118,24 @@ mafdet watch
 
 `mafdet watch` apre la finestra della chat di MAFDET. Mentre scrivi, una riga di stato sotto il messaggio mostra quanto il modello ne ha già letto; quando ti fermi legge anche la fine del prompt, così all'invio resta un solo token da calcolare. La conversazione resta nella cache da un turno all'altro. Le risposte sono impaginate in Markdown e puoi scorrerle liberamente mentre vengono scritte.
 
-Funziona con llama.cpp: estrai una [release di llama.cpp](https://github.com/ggml-org/llama.cpp/releases) in `./llama.cpp` (oppure imposta `MAFDET_LLAMA_DIR`). Il primo avvio scarica Qwen3-4B in Q4_K_M (circa 2,5 GB). Su Windows basta un doppio clic su `avvia_mafdet.bat`. Con `--browser` la chat si apre nel browser predefinito invece che nella sua finestra.
+Funziona con llama.cpp: estrai una [release di llama.cpp](https://github.com/ggml-org/llama.cpp/releases) in `./llama.cpp` (oppure imposta `MAFDET_LLAMA_DIR`). Il primo avvio scarica Qwen3-4B in Q4_K_M (circa 2,5 GB). Su Windows basta un doppio clic su `avvia_mafdet.bat` (apre `mafdet strike`, qui sotto). Con `--browser` la chat si apre nel browser predefinito invece che nella sua finestra.
+
+### Risposta in anticipo
+
+```bash
+mafdet strike
+```
+
+`mafdet strike` è la stessa chat, un passo più in là: quando ti fermi il modello ha già letto tutto il messaggio, quindi **comincia a scrivere la risposta** prima che tu prema invio e la tiene da parte. La riga di stato mostra quanti token della risposta sono pronti. All'invio quei token compaiono subito, e il resto continua dal vivo da dove il modello era arrivato.
+
+La risposta vale solo per il testo esatto per cui è stata scritta. Se cambi qualcosa (una lettera, una parola, una riga) viene scartata sul momento, e alla pausa successiva ne parte una nuova. Spazi e a capo finali non contano. Così la risposta che ricevi è sempre quella che il modello darebbe dopo l'invio, solo scritta prima: con la decodifica greedy le due sono identiche token per token (verificato). `--ahead` imposta quanti token scrivere in anticipo (predefinito 512).
+
+Prime misure sulla RTX 2060 (Qwen3-4B Q4_K_M, greedy, dopo una pausa abbastanza lunga da finire di scrivere in anticipo):
+
+| Risposta | Scritti prima dell'invio | Risposta completa a schermo dopo l'invio, strike | Senza strike |
+|---|---|---|---|
+| 300 token | 200 | 1,2 s | 3,5 s |
+| 168 token | 168 (tutta) | istantanea | 1,9 s |
 
 `demo_live.py` (`avvia_demo.bat`) è la vista passo passo per il debug: token, cache, holdback e tempi, dal vivo nel terminale.
 
@@ -149,7 +166,8 @@ Cosa aspettarsi: sui messaggi brevi il guadagno è piccolo in termini assoluti, 
 - [x] CLI unificata `mafdet`
 - [x] `mafdet watch`: la finestra della chat
 - [ ] Backend llama.cpp con modelli quantizzati (GGUF)
-- [ ] `mafdet strike`: ragionamento speculativo sull'input parziale, riletto come appunti quando premi invio
+- [x] `mafdet strike`: la risposta scritta in anticipo a ogni pausa, mostrata subito all'invio
+- [ ] Appunti dall'input parziale: un ragionamento in anticipo che serva anche quando il testo cambia dopo la pausa
 
 ## Ricerca correlata
 

@@ -41,10 +41,13 @@ COMMANDS = [
             "turn to the next. Runs on llama.cpp (llama-server in ./llama.cpp). The step-by-step view "
             "for debugging is demo_live.py.",
             ("mafdet watch", "mafdet watch --device cpu", "mafdet watch --browser"), "use"),
-    Command("strike", "the strike", "think ahead and answer the moment you hit enter",
-            "Like watch, but the model also starts reasoning on the message while you are still typing, "
-            "and uses those notes when you press Enter. Not available yet: see the Roadmap in README.md.",
-            (), "use", available=False),
+    Command("strike", "the strike", "answer ahead: the reply is already written when you hit enter",
+            "Like watch, but when you pause the model also starts writing the answer, before you press "
+            "Enter, and keeps it aside. If you send the message as it was at the pause, the answer written "
+            "so far appears at once and the rest follows live; if you change the text, that answer is "
+            "thrown away and a new one starts at the next pause. The answer is the same one the model would "
+            "give after Enter: it is only written earlier. --ahead sets how many tokens it writes in advance.",
+            ("mafdet strike", "mafdet strike --ahead 1024", "mafdet strike --device cpu"), "use"),
     Command("hunt", "the hunt", "simulate people typing and measure the wait after sending",
             "Simulates a person typing a message (clean: start to finish; messy: typos, backspaces and an "
             "edit in the middle; paste: a long document followed by a question) and measures the wait from "
@@ -70,6 +73,7 @@ GROUPS = [("use", "Use it"), ("measure", "Measure and verify")]
 GETTING_STARTED = [
     ("mafdet awaken --load", "check the GPU and download the model"),
     ("mafdet watch", "chat with the model: it reads while you type"),
+    ("mafdet strike", "the same chat, with the answer written ahead at every pause"),
     ("mafdet judge", "must end with 0 errors"),
     ("mafdet race", "cost of prefill and decode on your hardware"),
     ("mafdet hunt", "wait after Enter, with and without incremental prefill"),
@@ -233,6 +237,12 @@ def _watch_args(p):
                    help="open the chat in the default browser instead of its own window")
 
 
+def _strike_args(p):
+    _watch_args(p)
+    p.add_argument("--ahead", type=int, default=512,
+                   help="answer tokens written at a pause, before Enter (default: %(default)s)")
+
+
 def _race_args(p):
     p.add_argument("--lengths", type=int, nargs="+", default=None,
                    help="prompt lengths to measure, in tokens (default: 50 to 8000 on GPU, 50 to 2000 on CPU)")
@@ -277,8 +287,8 @@ def _judge_args(p):
                         "or shifted probability (llama, default 0.25)")
 
 
-_ARGS = {"awaken": _awaken_args, "watch": _watch_args, "race": _race_args, "hunt": _hunt_args,
-         "judge": _judge_args}
+_ARGS = {"awaken": _awaken_args, "watch": _watch_args, "strike": _strike_args, "race": _race_args,
+         "hunt": _hunt_args, "judge": _judge_args}
 
 
 # --------------------------------------------------------------------------

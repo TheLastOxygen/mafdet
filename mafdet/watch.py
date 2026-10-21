@@ -23,6 +23,7 @@ import http.server
 import json
 import os
 import secrets
+import socket
 import sys
 import tempfile
 import threading
@@ -57,6 +58,99 @@ def turn_separator(tok) -> str:
     return s.split(b, 1)[1].split(c, 1)[0]
 
 
+class Stream:
+    """One streamed generation on the slot, run in its own thread and read by whoever needs it.
+
+    An answer written ahead (mafdet strike) is a Stream started at a pause,
+    before Enter: it fills `pieces` while nobody shows them. On Enter, if the
+    prompt is still the same, the page gets all of them at once and then
+    follows the stream live. Sampling has no penalties, so each token depends
+    only on the tokens before it: the answer written ahead is drawn from the
+    same distribution as one started after Enter.
+    """
+
+    def __init__(self, session: "Session", prompt: list[int], limit: int):
+        self.session, self.prompt, self.limit = session, prompt, limit
+        self.pieces: list[str] = []                # text of each streamed chunk
+        self.tokens: list[int] = []
+        self.info: dict = {}                       # the last event: stop_type, timings, tokens_cached
+        self.done = self.cancelled = False
+        self.cond = threading.Condition()
+        self._conn: http.client.HTTPConnection | None = None
+        threading.Thread(target=self._run, daemon=True).start()
+
+    @property
+    def hit_limit(self) -> bool:
+        return self.info.get("stop_type") == "limit"
+
+    def _run(self):
+        s = self.session
+        body = {"prompt": self.prompt, "id_slot": s.eng.slot, "cache_prompt": True, "stream": True,
+                "n_predict": self.limit, "return_tokens": True, **SAMPLING}
+        with s.slot_lock:
+            try:
+                if not self.cancelled:
+                    self._conn = http.client.HTTPConnection("127.0.0.1", s.server.port, timeout=600)
+                    self._conn.request("POST", "/completion", json.dumps(body), {"Content-Type": "application/json"})
+                    for raw in self._conn.getresponse():
+                        if self.cancelled:
+                            break                  # closing the connection stops llama-server too
+                        line = raw.decode("utf-8", "replace").strip()
+                        if not line.startswith("data: "):
+                            continue
+                        d = json.loads(line[6:])
+                        with self.cond:
+                            self.tokens += d.get("tokens") or []
+                            if d.get("content"):
+                                self.pieces.append(d["content"])
+                            if d.get("stop"):
+                                self.info = d
+                            self.cond.notify_all()
+                        if d.get("stop"):
+                            break
+            except (OSError, http.client.HTTPException, ValueError) as e:
+                if not self.cancelled:
+                    self.info = {"error": str(e)}
+            finally:
+                if self._conn is not None:
+                    self._conn.close()
+                    # The slot now holds the prompt and what was generated: the next request starts from there.
+                    cached = self.prompt + self.tokens
+                    s.eng.assume_cached(cached[:self.info.get("tokens_cached", len(cached))])
+                with self.cond:
+                    self.done = True
+                    self.cond.notify_all()
+
+    def cancel(self):
+        """Stop now: shutting the socket down also wakes a read waiting for the next token."""
+        self.cancelled = True
+        conn = self._conn
+        if conn is not None and conn.sock is not None:
+            try:
+                conn.sock.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
+
+    def wait(self):
+        with self.cond:
+            while not self.done:
+                self.cond.wait()
+
+    def follow(self, stop: threading.Event):
+        """The text as it arrives: what is already there in one piece, then chunk by chunk."""
+        i = 0
+        while True:
+            with self.cond:
+                while i == len(self.pieces) and not self.done and not stop.is_set():
+                    self.cond.wait(0.1)
+                new, done = self.pieces[i:], self.done
+            i += len(new)
+            if new:
+                yield "".join(new)
+            if done or stop.is_set():
+                return
+
+
 class Session:
     """One conversation on one llama-server slot, its cache following the draft."""
 
@@ -64,12 +158,16 @@ class Session:
         self.args = args
         self.state, self.error, self.label = "loading", "", ""
         self.holdback, self.min_new, self.debounce = args.holdback, args.min_new, args.debounce / 1000
+        self.ahead = getattr(args, "ahead", 0)     # mafdet strike: answer tokens written before Enter
         self.slot_lock = threading.Lock()          # one request at a time on the slot
         self.tok_lock = threading.Lock()           # the fast tokenizer is not safe across threads
+        self.spec_lock = threading.Lock()          # starting an answer ahead vs. pressing Enter
         self.text, self.text_t = "", 0.0
         self.target: list[int] = []                # what the cache should hold now (draft minus hold-back)
         self.final_ids: list[int] = []             # the prompt if the user pressed Enter now
         self.history: list[int] = []               # the conversation so far, up to the start of the next user text
+        self.spec: Stream | None = None            # the answer being written ahead for final_ids
+        self._failed: list[int] = []               # a prompt whose answer ahead failed
         self.busy = self.generating = False
         self.stop = threading.Event()
         threading.Thread(target=self._load, daemon=True).start()
@@ -104,12 +202,22 @@ class Session:
         if self.state == "ready":
             self._retarget()
 
+    def _prompt(self, text: str) -> list[int]:
+        # Trailing spaces and newlines are dropped: one typed after a pause must not throw away the answer written ahead.
+        with self.tok_lock:
+            return self.history + self._encode(self.tok, text.rstrip() + self.suffix)
+
     def _retarget(self):
         with self.tok_lock:
             msg = self._encode(self.tok, self.text)
-            final = self.history + self._encode(self.tok, self.text + self.suffix)
         self.target = self._stable(self.history + msg, self.holdback)
-        self.final_ids = final
+        self.final_ids = self._prompt(self.text)
+
+    def _drop_spec(self):
+        with self.spec_lock:
+            spec, self.spec = self.spec, None
+        if spec is not None:
+            spec.cancel()
 
     def _prefill_loop(self):
         """Reads the draft in the background: a burst of new tokens at the end, or a pause.
@@ -118,13 +226,33 @@ class Session:
         template included, as if the user had pressed Enter: if they do, a
         single token is left to compute; if they type on, the common-prefix
         check drops those few tokens on the next read.
+
+        With --ahead (mafdet strike), once the whole prompt is read and the
+        pause goes on, it also starts writing the answer. Any change to the text
+        cancels it: an answer only holds for the exact prompt it was written for.
         """
         while True:
             time.sleep(0.02)
             target, final, done = self.target, self.final_ids, self.eng.ids
+            spec = self.spec
+            if spec is not None and (spec.prompt != final or spec.info.get("error")):
+                if spec.info.get("error"):
+                    self._failed = spec.prompt     # do not retry the same prompt in a loop
+                self._drop_spec()                  # the text changed: that answer no longer holds
+                spec = None
+            if self.generating or spec is not None:
+                continue
             paused = time.perf_counter() - self.text_t >= self.debounce
-            goal = final if paused and self.text.strip() else target
-            if self.generating or not goal or goal == done:
+            has_text = bool(self.text.strip())
+            if self.ahead and paused and has_text and final and done == final and final != self._failed:
+                with self.spec_lock:
+                    if not self.generating and self.final_ids is final:
+                        room = self.args.ctx - len(final) - 8
+                        if room >= 32:
+                            self.spec = Stream(self, final, min(self.ahead, room))
+                continue
+            goal = final if paused and has_text else target
+            if not goal or goal == done:
                 continue
             n = self._prefix_len(done, target)
             # Edits in the middle wait for a pause: recomputing the tail on every key would be a waste.
@@ -153,9 +281,12 @@ class Session:
         final, target, cache = self.final_ids, self.target, self.eng.cached_tokens
         history = len(self.history)
         reused = min(self._prefix_len(cache, final), len(final) - 1)
+        spec = self.spec
         s.update(has_text=bool(self.text.strip()), busy=self.busy, context=len(final),
                  message_tokens=len(final) - history, read=max(0, reused - history), left=len(final) - reused,
-                 pending=max(0, len(target) - self._prefix_len(cache, target)))
+                 pending=max(0, len(target) - self._prefix_len(cache, target)),
+                 strike=bool(self.ahead), ahead=len(spec.tokens) if spec else 0,
+                 ahead_writing=bool(spec and not spec.done))
         return s
 
     # ---- send ----------------------------------------------------------------------
@@ -166,66 +297,74 @@ class Session:
             return
         t_enter = time.perf_counter()
         self.stop.clear()
-        self.generating = True
+        with self.spec_lock:                       # from here on no answer ahead can start
+            self.generating = True
+            spec, self.spec = self.spec, None
         try:
-            with self.slot_lock:                   # waits for a prefill still running
-                yield from self._answer(text, t_enter)
+            yield from self._answer(text, t_enter, spec)
         finally:
             self.generating = False
             self._retarget()
 
-    def _answer(self, text: str, t_enter: float):
+    def _answer(self, text: str, t_enter: float, spec: Stream | None):
         history = len(self.history)
-        with self.tok_lock:
-            final = self.history + self._encode(self.tok, text + self.suffix)
+        final = self._prompt(text)
         reused = min(self._prefix_len(self.eng.cached_tokens, final), len(final) - 1)
+        if spec is not None and (spec.prompt != final or spec.cancelled or spec.info.get("error")):
+            spec.cancel()                          # written for another text: it does not hold
+            spec = None
         room = self.args.ctx - len(final) - 8
         if room < 32:
+            if spec is not None:
+                spec.cancel()
             yield {"type": "error", "message": f"The conversation no longer fits in the context "
                                                f"({self.args.ctx} tokens). Start a new chat."}
             return
         limit = min(self.args.max_tokens or room, room)
-        body = {"prompt": final, "id_slot": self.eng.slot, "cache_prompt": True, "stream": True,
-                "n_predict": limit, "return_tokens": True, **SAMPLING}
-        conn = http.client.HTTPConnection("127.0.0.1", self.server.port, timeout=600)
-        generated, ttft, info, stopped = [], None, {}, False
-        try:
-            conn.request("POST", "/completion", json.dumps(body), {"Content-Type": "application/json"})
-            resp = conn.getresponse()
-            for raw in resp:
-                if self.stop.is_set():
-                    stopped = True                 # closing the connection stops llama-server too
-                    break
-                line = raw.decode("utf-8", "replace").strip()
-                if not line.startswith("data: "):
-                    continue
-                d = json.loads(line[6:])
-                generated += d.get("tokens") or []
-                if d.get("content"):
-                    if ttft is None:
-                        ttft = (time.perf_counter() - t_enter) * 1000
-                    yield {"type": "token", "text": d["content"]}
-                if d.get("stop"):
-                    info = d
-                    break
-        finally:
-            conn.close()
-        # The slot now holds the prompt and the answer: the next turn continues from there.
-        cached = final + generated
-        self.eng.assume_cached(cached[:info.get("tokens_cached", len(cached))])
+        ahead = len(spec.tokens) if spec else 0
+        # The answer written ahead, if it holds; otherwise a new one (the stream waits for a prefill still running).
+        stream = spec or Stream(self, final, limit)
+        first, generated, ttft, stopped = stream, [], None, False
+        while True:
+            for piece in stream.follow(self.stop):
+                if ttft is None:
+                    ttft = (time.perf_counter() - t_enter) * 1000
+                yield {"type": "token", "text": piece}
+            if self.stop.is_set():
+                stream.cancel()
+                stopped = True
+            stream.wait()
+            generated += stream.tokens
+            if stream.info.get("error"):
+                yield {"type": "error", "message": f"llama-server stopped answering ({stream.info['error']})."}
+                break
+            if stopped or not stream.hit_limit or len(generated) >= limit:
+                break
+            # The answer ahead stopped at --ahead tokens: carry on from there, with the slot's cache already holding it.
+            stream = Stream(self, final + generated, limit - len(generated))
         sep = self.between_ids[1:] if generated and generated[-1] == self.between_ids[0] else self.between_ids
-        self.history = cached + sep
-        t = info.get("timings") or {}
-        yield {"type": "done", "ttft_ms": round(ttft or 0), "tokens": t.get("predicted_n", len(generated)),
+        self.history = final + generated + sep
+        if "cache_n" in (first.info.get("timings") or {}):
+            reused = first.info["timings"]["cache_n"]   # what the server actually reused
+        t = stream.info.get("timings") or {}
+        yield {"type": "done", "ttft_ms": round(ttft or 0), "tokens": len(generated),
                "tps": round(t.get("predicted_per_second", 0), 1), "message_tokens": len(final) - history,
-               "read": max(0, reused - history), "left": len(final) - reused,
-               "cut": info.get("stop_type") == "limit", "stopped": stopped}
+               "read": max(0, reused - history), "left": len(final) - reused, "ahead": ahead,
+               "cut": stream.hit_limit and len(generated) >= limit, "stopped": stopped}
 
     def new_chat(self):
-        with self.slot_lock:
-            if self.state == "ready":
-                self.history = list(self.start_ids)
-                self._retarget()
+        with self.spec_lock:
+            self.generating = True                 # no answer ahead may start meanwhile
+            spec, self.spec = self.spec, None
+        if spec is not None:
+            spec.cancel()
+        try:
+            with self.slot_lock:
+                if self.state == "ready":
+                    self.history = list(self.start_ids)
+                    self._retarget()
+        finally:
+            self.generating = False
 
 
 # --------------------------------------------------------------------------
