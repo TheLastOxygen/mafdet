@@ -44,18 +44,28 @@ STATIC = {
 }
 
 # Qwen3 in non-thinking and thinking mode: the sampling settings recommended by its authors.
+# In thinking mode the presence penalty (which they suggest between 0 and 2) keeps the 4B
+# out of loops that repeat a sentence until the token limit.
 SAMPLING = {"temperature": 0.7, "top_p": 0.8, "top_k": 20, "min_p": 0}
-THINK_SAMPLING = {"temperature": 0.6, "top_p": 0.95, "top_k": 20, "min_p": 0}
+THINK_SAMPLING = {"temperature": 0.6, "top_p": 0.95, "top_k": 20, "min_p": 0, "presence_penalty": 1.5}
 
 # Reasoning ahead (--think) is written by the model as its own thoughts, framed by a few
-# sentences of ours. Without the frame it spends them remarking that the message is
-# unfinished and, after every edit, copies its last paragraph again (measured).
-SEED = ("<think>\nThe user is still typing, so the message above may be unfinished. I will not guess the "
-        "rest: I will work out what I can from the part already written, so I am ready when it is complete.\n\n")
-# When the message changed under the notes: reread it and go on instead of starting over.
-BRIDGE = "\n\nThe user has typed more since then. Let me reread the message and continue from what I have worked out.\n\n"
+# sentences of ours: a list of material for the answer, one line per key term, name or
+# number already typed. Measured on Qwen3-4B, frames compared on the same typing:
+#   - none: the notes remark that the message is unfinished and, after every edit, copy
+#     their last paragraph again;
+#   - "work out what you can": 86% of the notes still about the user or the message;
+#   - this list, with a line per new words: 41%, and the least reasoning left after Enter.
+SEED = ("<think>\nThe user is still typing. I will not wonder what they will ask, nor remark that the text is "
+        "unfinished. While I wait, I collect material for the answer: for each key term, name or number already "
+        "written, one line with what it is and the facts I know about it, or a partial result.\n\n- ")
+# When the user typed more: a new line of the same list, naming the new words (whole words, two or more).
+BRIDGE = "\n- New words \"{new}\": "
+BRIDGE_EDIT = "\n- The text was edited, so: "   # when nothing was added: an edit or a deletion
+BRIDGE_NEW_CHARS = 300
+BRIDGE_MIN_WORDS = 2
 # On Enter: the message is complete now.
-SENT = "\n\nThe user has now sent the message, so this is the complete version. Let me reread it and finish.\n\n"
+SENT = "\n\nThe user has now sent the complete message. Let me reread it and answer it, using the material above.\n\n"
 THINK_MIN_WORDS = 3                 # no reasoning ahead on the first couple of words
 AHEAD_CHUNK = 128                   # tokens per request written ahead; the next one carries on from there
 THINK_CHUNK = 32                    # the same while reasoning: short, so it follows the text as it is typed
@@ -214,6 +224,8 @@ class Session:
         self.answer_ahead: list[int] = []
         self.notes_text = ""                       # the text notes and answer_ahead were last extended on
         self.notes_fresh = 0                       # notes tokens written since the last bridge
+        self.bridge_text = ""                      # the text at the last bridge (or at the frame)
+        self.last_bridge: list[int] = []
         self.chunk_t = 0.0                         # when the last chunk written ahead started or ended
         self.busy = self.generating = False
         self.stop = threading.Event()
@@ -234,7 +246,6 @@ class Session:
             self.between_ids = encode(self.tok, turn_separator(self.tok))
             self.end_id = self.between_ids[0]      # end of a turn: <|im_end|> for Qwen3
             self.think_end = self.tok.convert_tokens_to_ids("</think>")
-            self.bridge_ids = encode(self.tok, BRIDGE)
             self.seed_ids = encode(self.tok, SEED)
             self.sent_ids = encode(self.tok, SENT)
             # How far the cache can run past the stable text after a read at a pause.
@@ -307,9 +318,23 @@ class Session:
         self.notes_text = spec.text
 
     def _bridge(self, after: int = 1):
-        if self.notes_fresh >= after:
-            self.notes = self.notes + self.bridge_ids
-            self.notes_fresh = 0
+        """A bridge after the notes: what the user typed since the last one, for the model to work on."""
+        if self.notes_fresh < after:
+            return
+        new = self.text[len(os.path.commonprefix([self.bridge_text, self.text])):]
+        if new[-1:].isalnum():
+            new = new[:max(new.rfind(" "), 0)]     # whole words only: the last one may still be typed
+        new = new.strip()
+        if "{new}" in BRIDGE and new and len(new.split()) < BRIDGE_MIN_WORDS and after > 1:
+            return                                 # a word or two: wait for more before a bridge
+        with self.tok_lock:
+            if "{new}" in BRIDGE and new:
+                self.last_bridge = self._encode(self.tok, BRIDGE.format(new=new[-BRIDGE_NEW_CHARS:]))
+            else:
+                self.last_bridge = self._encode(self.tok, BRIDGE_EDIT)
+        self.notes = self.notes + self.last_bridge
+        self.notes_fresh = 0
+        self.bridge_text = self.text
 
     def _paused(self) -> bool:
         return time.perf_counter() - self.text_t >= self.debounce
@@ -401,6 +426,7 @@ class Session:
                         room = self.args.ctx - len(final) - 8
                         if room >= 32 and self.think and not self.notes:
                             self.notes = list(self.seed_ids)     # the frame first, then the thoughts
+                            self.bridge_text = self.text
                             self._retarget()
                         elif room >= 32:
                             if self.think and not self.answer_ahead:
@@ -500,8 +526,8 @@ class Session:
             if len(self.notes) <= len(self.seed_ids):
                 self.notes = []                    # nothing but the frame: no reasoning ahead after all
             elif not self.answer_ahead:
-                if self.notes[-len(self.bridge_ids):] == self.bridge_ids:
-                    self.notes = self.notes[:-len(self.bridge_ids)]
+                if self.last_bridge and self.notes[-len(self.last_bridge):] == self.last_bridge:
+                    self.notes = self.notes[:-len(self.last_bridge)]
                 self.notes = self.notes + self.sent_ids
             final = self._prompt(text)
         if spec is not None and (spec.prompt != final or spec.cancelled or spec.info.get("error")):
