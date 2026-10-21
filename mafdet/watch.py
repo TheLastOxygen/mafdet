@@ -77,6 +77,22 @@ SENT = "\n\nThe user has now sent the complete message. Let me reread it and ans
 META_WORDS = ("user", "User", "incomplete", "unfinished", "typing", "typed", "intent", "intends", "asking",
               "wondering", "seems")
 META_BIAS = -4.0
+
+# --gatherer: the small model's llama-server, and how the main model is handed its material.
+GATHERER_PORT = 8090
+# A plain small model (not trained for it) gets the list frame without the example line: a 0.6B
+# copies the example into its notes.
+GATHER_SEED_FRAME = ("<think>\nThe user is still typing. I will not wonder what they will ask, nor remark that the "
+                     "text is unfinished. While I wait, I collect material for the answer: for each key term, name "
+                     "or number already written, one line with what it is and the facts I know about it, or a "
+                     "partial result.\n\n- ")
+# A gatherer trained with training/gatherer_colab.ipynb: exactly the format of its training examples.
+# Each step names the words typed since the last one; it writes their lines and ends the step.
+GATHER_SEED_TRAINED = ("<think>\nMaterial for the answer, gathered while the user types: for each key term, name or "
+                       "number already written, one line with what it is and the facts I know about it, or a partial "
+                       "result.\n\n")
+GATHER_HEADER = "\nNew words: \"{new}\"\n"
+NOTES_INTRO = "<think>\nMaterial gathered while the user was typing, by a fast assistant (it may contain mistakes):\n"
 THINK_MIN_WORDS = 3                 # no reasoning ahead on the first couple of words
 AHEAD_CHUNK = 128                   # tokens per request written ahead; the next one carries on from there
 THINK_CHUNK = 32                    # the same while reasoning: short, so it follows the text as it is typed
@@ -214,13 +230,23 @@ class Detokenizer:
 class Session:
     """One conversation on one llama-server slot, its cache following the draft."""
 
-    def __init__(self, args):
-        self.args = args
+    def __init__(self, args, role: str = "main"):
+        self.args, self.role = args, role
         self.state, self.error, self.label = "loading", "", ""
         self.holdback, self.min_new, self.debounce = args.holdback, args.min_new, args.debounce / 1000
         self.ahead = getattr(args, "ahead", 0)     # mafdet strike: tokens written at a pause, before Enter
         self.think = getattr(args, "think", False)  # mafdet strike: reason ahead, keeping the notes across edits
         self.think_cap = getattr(args, "think_ahead", 0)
+        # --gatherer: a small model writes the notes (a second Session in the "gatherer" role, on
+        # its own llama-server); this one, the main model, only reads them and answers.
+        self.gatherer: Session | None = None
+        self._g_notes: list[int] | None = None     # the gatherer's notes last read into this model
+        if role == "gatherer":
+            self.think, self.ahead = True, 1       # it reasons ahead, and stops where an answer would start
+        elif getattr(args, "gatherer", ""):
+            if not self.think:
+                raise SystemExit("--gatherer hands its material to the main model's reasoning: drop --no-think.")
+            self.ahead = 0                         # the gatherer reasons ahead in its place
         self.slot_lock = threading.Lock()          # one request at a time on the slot
         self.tok_lock = threading.Lock()           # the fast tokenizer is not safe across threads
         self.spec_lock = threading.Lock()          # starting an answer ahead vs. pressing Enter
@@ -239,6 +265,8 @@ class Session:
         self.notes_fresh = 0                       # notes tokens written since the last bridge
         self.bridge_text = ""                      # the text at the last bridge (or at the frame)
         self.last_bridge: list[int] = []
+        self.fmt = "frame"                         # how the notes are framed; "trained": the trained gatherer's steps
+        self.awaiting = False                      # trained gatherer: new words given, their lines not finished yet
         self.chunk_t = 0.0                         # when the last chunk written ahead started or ended
         self.busy = self.generating = False
         self.stop = threading.Event()
@@ -250,7 +278,15 @@ class Session:
             # Imported here: PyTorch and transformers take seconds, and the window is already open.
             from .engine import Template, common_prefix_len, encode, make_engine, setup, stable_ids
             self._prefix_len, self._encode, self._stable = common_prefix_len, encode, stable_ids
-            self.tok, self.server, device, quant = setup(self.args, n_slots=1)
+            if self.role == "main" and getattr(self.args, "gatherer", ""):
+                # The gatherer first: it takes a fixed share of VRAM, then the main model fits in what is left.
+                self.gatherer = Session(self.args, role="gatherer")
+                while self.gatherer.state == "loading":
+                    time.sleep(0.1)
+                if self.gatherer.state == "error":
+                    raise SystemExit(f"Gatherer: {self.gatherer.error}")
+            args = self._gatherer_args() if self.role == "gatherer" else self.args
+            self.tok, self.server, device, quant = setup(args, n_slots=1)
             self.eng = make_engine(self.server, device)
             tpl = Template.from_tokenizer(self.tok, thinking=self.think)
             self.sampling = THINK_SAMPLING if self.think else SAMPLING
@@ -259,7 +295,14 @@ class Session:
             self.between_ids = encode(self.tok, turn_separator(self.tok))
             self.end_id = self.between_ids[0]      # end of a turn: <|im_end|> for Qwen3
             self.think_end = self.tok.convert_tokens_to_ids("</think>")
-            self.seed_ids = encode(self.tok, SEED)
+            if self.role == "gatherer":
+                # A gatherer trained with training/gatherer_colab.ipynb is told apart by its file name.
+                trained = "mafdet-gatherer" in os.path.basename(self.server.model_path)
+                self.fmt = "trained" if trained else "frame"
+                seed = GATHER_SEED_TRAINED if trained else GATHER_SEED_FRAME
+            else:
+                seed = SEED
+            self.seed_ids = encode(self.tok, seed)
             self.sent_ids = encode(self.tok, SENT)
             # Single-token spellings only: biasing the first piece of a longer word would hit other words too.
             meta = {t[0] for w in META_WORDS for v in (w, " " + w) for t in [encode(self.tok, v)] if len(t) == 1}
@@ -279,8 +322,60 @@ class Session:
     # ---- draft and prefill -------------------------------------------------------
     def draft(self, text: str):
         self.text, self.text_t = text, time.perf_counter()
+        if self.gatherer is not None:
+            self.gatherer.draft(text)
         if self.state == "ready":
             self._retarget()
+
+    # ---- gatherer --------------------------------------------------------------------
+    def _gatherer_args(self):
+        """The options of the gatherer's own llama-server: its model, device, port and a short context."""
+        import argparse
+        from . import DEFAULT_MODEL
+        args = argparse.Namespace(**vars(self.args))
+        args.gguf, args.model, args.device = self.args.gatherer, DEFAULT_MODEL, self.args.gatherer_device
+        args.ctx, args.port, args.recycle, args.draft = 4096, GATHERER_PORT, False, ""
+        # On the CPU it shares the cores with the main model's layers there: a few threads are enough.
+        args.llama_args = "-t 4" if args.device == "cpu" else ""
+        return args
+
+    def material(self) -> str:
+        """The gatherer's notes as text, without the frame (and without a bridge left empty)."""
+        notes = self.notes
+        if len(notes) <= len(self.seed_ids):
+            return ""
+        if self.last_bridge and notes[-len(self.last_bridge):] == self.last_bridge:
+            notes = notes[:-len(self.last_bridge)]
+        with self.tok_lock:
+            text = self.tok.decode(notes[len(self.seed_ids):])
+        if self.fmt == "trained":                  # its lines only, not the steps' headers
+            return "\n".join(l for l in text.splitlines() if l.startswith("- "))
+        return "- " + text.strip()
+
+    def take_notes(self, text: str) -> str:
+        """On Enter: stop gathering and hand over the material written so far for `text`."""
+        with self.spec_lock:
+            self.generating = True
+            spec, self.spec = self.spec, None
+        if spec is not None:
+            spec.cancel()
+            if not spec.info.get("error"):
+                self._absorb(spec, changed=spec.text.rstrip() != text.rstrip(), bridge_after=10 ** 9)
+        return self.material()
+
+    def next_turn(self):
+        self.notes, self.answer_ahead, self.notes_fresh, self.notes_text = [], [], 0, ""
+        self.generating = False
+        if self.state == "ready":
+            self._retarget()
+
+    def _read_material(self, sent: bool = False):
+        """The gatherer's material, in this model's tokens, after the message: inside its own reasoning."""
+        material = self.gatherer.material() if self.gatherer.state == "ready" else ""
+        with self.tok_lock:
+            self.notes = self._encode(self.tok, NOTES_INTRO + material) if material else []
+        if sent and self.notes:
+            self.notes = self.notes + self.sent_ids
 
     def _prompt(self, text: str) -> list[int]:
         """The prompt on Enter: history, message, start of the answer, then what was written ahead."""
@@ -317,6 +412,17 @@ class Session:
         spec.wait()
         self.chunk_t = time.perf_counter()
         tokens = spec.tokens
+        if self.fmt == "trained":
+            # The trained gatherer writes the lines for the words it was given, then ends the step.
+            finished = self.end_id in tokens or self.think_end in tokens or not spec.hit_limit
+            for stop in (self.end_id, self.think_end):
+                if stop in tokens:
+                    tokens = tokens[:tokens.index(stop)]
+            self.notes = self.notes + tokens
+            self.notes_fresh += len(tokens)
+            self.awaiting = self.awaiting and not finished
+            self.notes_text = spec.text
+            return
         if self.think and not self.answer_ahead:
             cut = tokens.index(self.think_end) if self.think_end in tokens else len(tokens)
             thought, answer = tokens[:cut], tokens[cut:]
@@ -333,24 +439,39 @@ class Session:
             self.answer_ahead = self.answer_ahead + answer
         self.notes_text = spec.text
 
+    def _new_words(self) -> tuple[str, int]:
+        """The whole words typed since the last bridge, and where they end in the text.
+
+        The last word is left out while it may still be typed: a bridge never
+        names half a word, and the next one starts where this one stopped.
+        """
+        start = len(os.path.commonprefix([self.bridge_text, self.text]))
+        new = self.text[start:]
+        if new[-1:].isalnum():
+            new = new[:max(new.rfind(" "), 0)]
+        return new.strip(), start + len(new)
+
     def _bridge(self, after: int = 1):
         """A bridge after the notes: what the user typed since the last one, for the model to work on."""
-        if self.notes_fresh < after:
+        if self.notes_fresh < after and self.fmt != "trained":
             return
-        new = self.text[len(os.path.commonprefix([self.bridge_text, self.text])):]
-        if new[-1:].isalnum():
-            new = new[:max(new.rfind(" "), 0)]     # whole words only: the last one may still be typed
-        new = new.strip()
-        if "{new}" in BRIDGE and new and len(new.split()) < BRIDGE_MIN_WORDS and after > 1:
+        new, end = self._new_words()
+        bridge = GATHER_HEADER if self.fmt == "trained" else BRIDGE
+        if self.fmt == "trained" and len(self.notes) <= len(self.seed_ids):
+            bridge = bridge.lstrip("\n")           # the first step follows the frame directly, as in training
+        if self.fmt == "trained" and not new:
+            return                                 # the trained gatherer works on new words only
+        if "{new}" in bridge and new and len(new.split()) < BRIDGE_MIN_WORDS and after > 1:
             return                                 # a word or two: wait for more before a bridge
         with self.tok_lock:
-            if "{new}" in BRIDGE and new:
-                self.last_bridge = self._encode(self.tok, BRIDGE.format(new=new[-BRIDGE_NEW_CHARS:]))
+            if "{new}" in bridge and new:
+                self.last_bridge = self._encode(self.tok, bridge.format(new=new[-BRIDGE_NEW_CHARS:]))
             else:
                 self.last_bridge = self._encode(self.tok, BRIDGE_EDIT)
         self.notes = self.notes + self.last_bridge
         self.notes_fresh = 0
-        self.bridge_text = self.text
+        self.bridge_text = self.text[:end]
+        self.awaiting = True
 
     def _paused(self) -> bool:
         return time.perf_counter() - self.text_t >= self.debounce
@@ -365,8 +486,10 @@ class Session:
         the text stays as it is, so the model reasons to the end and then writes
         the answer: after a long enough pause, Enter shows it at once.
         """
-        if self._answer_complete():
-            return False
+        if self._answer_complete() or (self.role == "gatherer" and self.answer_ahead):
+            return False                           # the gatherer's job ends with the reasoning
+        if self.fmt == "trained":
+            return not self.notes or self.awaiting  # a step at a time: new words, then its lines
         if self.think and not self.answer_ahead:
             return self._paused() or len(self.notes) + extra < self.think_cap
         return len(self.answer_ahead) + extra < self.ahead
@@ -398,6 +521,11 @@ class Session:
         """
         while True:
             time.sleep(0.02)
+            if self.gatherer is not None and not self.generating and self.gatherer.notes is not self._g_notes:
+                # New material from the gatherer: read at the next pause, like the rest of the prompt.
+                self._g_notes = self.gatherer.notes
+                self._read_material()
+                self._retarget()
             target, final, done = self.target, self.final_ids, self.eng.ids
             spec = self.spec
             if spec is not None:
@@ -418,6 +546,12 @@ class Session:
                     continue
             if self.generating or self.spec is not None:
                 continue
+            if self.fmt == "trained" and self.notes and not self.awaiting:
+                new, _ = self._new_words()
+                if len(new.split()) >= BRIDGE_MIN_WORDS:
+                    self._bridge()                 # the next step: the words typed since the last one
+                    self._retarget()
+                    continue
             if self.notes_text and self.text.rstrip() != self.notes_text.rstrip():
                 if self.answer_ahead:              # written for a text that has changed since
                     self.answer_ahead = []
@@ -442,7 +576,11 @@ class Session:
                         room = self.args.ctx - len(final) - 8
                         if room >= 32 and self.think and not self.notes:
                             self.notes = list(self.seed_ids)     # the frame first, then the thoughts
-                            self.bridge_text = self.text
+                            self.bridge_text = ""
+                            if self.fmt == "trained":
+                                self._bridge()                   # its first step names the words so far
+                            else:
+                                self.bridge_text = self.text[:self._new_words()[1]]
                             self._retarget()
                         elif room >= 32:
                             if self.think and not self.answer_ahead:
@@ -500,6 +638,11 @@ class Session:
                  strike=bool(self.ahead), think=self.think, ahead=answer_ahead + answer,
                  ahead_writing=writing, thinking_ahead=notes + thought,
                  answer_ready=finished or (holds and self._answer_complete()))
+        g = self.gatherer
+        if g is not None and g.state == "ready":
+            gspec = g.spec
+            s.update(gatherer=g.label, ahead_writing=bool(gspec and not gspec.done) or (
+                gspec is None and time.perf_counter() - g.chunk_t < 0.5 and g._ahead_room()))
         return s
 
     def _split_ahead(self, tokens: list[int]) -> tuple[int, int]:
@@ -524,6 +667,9 @@ class Session:
             yield from self._answer(text, t_enter, spec)
         finally:
             self.notes, self.answer_ahead, self.notes_fresh, self.notes_text = [], [], 0, ""
+            if self.gatherer is not None:
+                self.gatherer.next_turn()
+                self._g_notes = self.gatherer.notes
             self.generating = False
             self._retarget()
 
@@ -531,7 +677,13 @@ class Session:
         history = len(self.history)
         final = self._prompt(text)
         reused = min(self._prefix_len(self.eng.cached_tokens, final), len(final) - 1)
-        if self.think and self.notes:
+        if self.gatherer is not None:
+            # The gatherer stops; its material, already read at the pauses, gets the sentence saying the
+            # message is complete, and this model reasons on from there.
+            self.gatherer.take_notes(text)
+            self._read_material(sent=True)
+            final = self._prompt(text)
+        elif self.think and self.notes:
             # The notes were written as for a message still being typed: keep them, say it is complete now.
             if spec is not None:
                 spec.cancel()
@@ -647,6 +799,10 @@ class Session:
                 if self.state == "ready":
                     self.history = list(self.start_ids)
                     self.notes, self.answer_ahead, self.notes_fresh, self.notes_text = [], [], 0, ""
+                    if self.gatherer is not None:
+                        self.gatherer.take_notes("")
+                        self.gatherer.next_turn()
+                        self._g_notes = self.gatherer.notes
                     self._retarget()
         finally:
             self.generating = False

@@ -104,7 +104,8 @@ class LlamaServer:
         # larger than the GPU still run.
         args += ["-ngl", "auto"] if device == "cuda" else ["-ngl", "0", "-dev", "none"]
         args += list(extra_args)
-        self.log_path = os.path.join(os.path.dirname(exe), "server.log")
+        # One log per server: mafdet strike --gatherer runs two side by side.
+        self.log_path = os.path.join(os.path.dirname(exe), "server.log" if port == 8089 else f"server-{port}.log")
         self._log = open(self.log_path, "w", encoding="utf-8")
         # No console window of its own when started from a windowed app (mafdet watch); the output goes to the log.
         flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
@@ -270,7 +271,8 @@ def setup_llama(args, device: str, n_slots: int = 1):
     if getattr(args, "draft", ""):
         extra += ("-md", resolve_gguf(args.draft)) + DRAFT_ARGS
     extra += tuple(args.llama_args.split())
-    server = LlamaServer(args.gguf, device, ctx=args.ctx, n_slots=n_slots, extra_args=extra)
+    server = LlamaServer(args.gguf, device, ctx=args.ctx, n_slots=n_slots, port=getattr(args, "port", 8089),
+                         extra_args=extra)
     fname = os.path.basename(server.model_path)
     if not fname.startswith(tok_id.split("/")[-1]):
         print(f"Warning: tokenizer {tok_id} may not match {fname}", file=sys.stderr)

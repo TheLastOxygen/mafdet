@@ -251,6 +251,12 @@ def _strike_args(p):
                         "answer ahead")
     p.add_argument("--think-ahead", type=int, default=1024,
                    help="longest reasoning kept across edits of the message, in tokens (default: %(default)s)")
+    p.add_argument("--gatherer", default="",
+                   help="a small model that gathers the material for the answer while you type, so the main "
+                        "model only reads it: 'repo:file' or a path (e.g. Qwen/Qwen3-0.6B-GGUF:Qwen3-0.6B-Q8_0.gguf)")
+    p.add_argument("--gatherer-device", default="cuda", choices=["cuda", "cpu"],
+                   help="where the gatherer runs: cuda takes about 1 GB of VRAM from the main model, cpu none "
+                        "(default: %(default)s)")
     p.add_argument("--recycle", action="store_true",
                    help="reuse the answers written for earlier versions of the message as drafts for "
                         "speculative decoding (n-gram); measured: +4%% decode speed with natural typing, "

@@ -377,7 +377,9 @@
       // "Ready" only for what is really ready: the answer, or (no reasoning) the prompt read.
       if (s.ahead_writing) {
         setIcon("strike", true);
-        statusText.innerHTML = s.think && !s.ahead
+        statusText.innerHTML = s.gatherer
+          ? `<span class="diamond">◆</span> Gathering ahead · ${fmt(s.thinking_ahead)} tokens of material`
+          : s.think && !s.ahead
           ? `<span class="diamond">◆</span> Thinking ahead · ${fmt(s.thinking_ahead)} reasoning tokens`
           : `<span class="diamond">◆</span> Answering ahead · ${fmt(s.ahead)} answer tokens written`;
         statusText.classList.add("pulse");
