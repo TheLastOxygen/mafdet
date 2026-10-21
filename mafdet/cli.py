@@ -41,13 +41,15 @@ COMMANDS = [
             "turn to the next. Runs on llama.cpp (llama-server in ./llama.cpp). The step-by-step view "
             "for debugging is demo_live.py.",
             ("mafdet watch", "mafdet watch --device cpu", "mafdet watch --browser"), "use"),
-    Command("strike", "the strike", "answer ahead: the reply is already written when you hit enter",
-            "Like watch, but when you pause the model also starts writing the answer, before you press "
-            "Enter, and keeps it aside. If you send the message as it was at the pause, the answer written "
-            "so far appears at once and the rest follows live; if you change the text, that answer is "
-            "thrown away and a new one starts at the next pause. The answer is the same one the model would "
-            "give after Enter: it is only written earlier. --ahead sets how many tokens it writes in advance.",
-            ("mafdet strike", "mafdet strike --ahead 1024", "mafdet strike --device cpu"), "use"),
+    Command("strike", "the strike", "think ahead: the model reasons while you type",
+            "Like watch, but the model (Qwen3 in thinking mode) starts reasoning about your message while "
+            "you are still typing it. When the text changes, the reasoning is kept as notes after the new "
+            "message (a fast prefill, not a new decode) and the model is told to reread it; on Enter it "
+            "finishes reasoning from where it got to. If you pause and send the text unchanged, the answer "
+            "written at the pause appears at once. With --no-think there is no reasoning and only that exact "
+            "answer is written ahead.",
+            ("mafdet strike", "mafdet strike --no-think", "mafdet strike --gguf Qwen/Qwen3-8B-GGUF:Qwen3-8B-Q4_K_M.gguf"),
+            "use"),
     Command("hunt", "the hunt", "simulate people typing and measure the wait after sending",
             "Simulates a person typing a message (clean: start to finish; messy: typos, backspaces and an "
             "edit in the middle; paste: a long document followed by a question) and measures the wait from "

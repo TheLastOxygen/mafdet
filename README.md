@@ -65,7 +65,7 @@ Run `mafdet` with no arguments for the table of commands, `mafdet --help` for th
 |---|---|---|---|---|
 | <img src="assets/icons/awaken.svg" width="22" alt=""> | `mafdet awaken` | the awakening | checks the GPU, downloads and loads the model | available |
 | <img src="assets/icons/watch.svg" width="22" alt=""> | `mafdet watch` | the guard | opens the chat window: the model reads while you type | available |
-| <img src="assets/icons/strike.svg" width="22" alt=""> | `mafdet strike` | the strike | writes the answer while you pause: it is already there when you hit enter | available |
+| <img src="assets/icons/strike.svg" width="22" alt=""> | `mafdet strike` | the strike | starts reasoning while you type, and writes the answer when you pause | available |
 | <img src="assets/icons/hunt.svg" width="22" alt=""> | `mafdet hunt` | the hunt | simulates people typing and measures the wait after sending | available |
 | <img src="assets/icons/race.svg" width="22" alt=""> | `mafdet race` | the race | benchmarks prefill and decode on your machine | available |
 | <img src="assets/icons/judge.svg" width="22" alt=""> | `mafdet judge` | the judgement | checks results against a from-scratch computation | available |
@@ -120,22 +120,31 @@ mafdet watch
 
 It runs on llama.cpp: extract a [llama.cpp release](https://github.com/ggml-org/llama.cpp/releases) into `./llama.cpp` (or set `MAFDET_LLAMA_DIR`). The first start downloads Qwen3-4B in Q4_K_M (about 2.5 GB). On Windows, double-click `avvia_mafdet.bat` (it opens `mafdet strike`, below). `--browser` opens the chat in the default browser instead of its own window.
 
-### Answer ahead
+### Reasoning ahead
 
 ```bash
 mafdet strike
 ```
 
-`mafdet strike` is the same chat, one step further: when you pause, the model has already read your whole message, so it **starts writing the answer** before you press Enter and keeps it aside. The status line shows how many answer tokens are ready. Press Enter and those tokens appear at once, while the rest follows live from where the model got to.
+`mafdet strike` is the same chat, one step further: the model **starts thinking about your message while you are still typing it**. It runs Qwen3 in thinking mode, so before answering the model reasons in a hidden block (shown folded above the answer). That reasoning is usually the longest wait, and `strike` moves as much of it as possible to before Enter:
 
-The answer is only kept for the exact text it was written for. Change anything (a letter, a word, a line) and it is thrown away on the spot, and a new one starts at the next pause. Trailing spaces and newlines do not count. So the answer you get is always the one the model would give after Enter, only written earlier: with greedy decoding the two are identical token by token (checked). `--ahead` sets how many tokens to write in advance (default 512).
+1. **While you type**, the model reasons in short chunks of 32 tokens, on the message as it is at that moment, on whole words (after a space or punctuation, or at a pause).
+2. **When the text changes**, the reasoning is not thrown away. It stays in the prompt as notes, after the new version of the message. Moving it there only costs a prefill: the fast, parallel phase, about 60 times faster than writing the same tokens again for the 14B on the RTX 2060. A short sentence tells the model that the message has changed, so it rereads it and goes on from what it had worked out.
+3. **On Enter**, a last sentence tells the model that the message is now complete. It finishes reasoning from where it got to and answers.
 
-First measurements on the RTX 2060 (Qwen3-4B Q4_K_M, greedy, after a pause long enough to finish writing ahead):
+The notes start with a frame: *"The user is still typing... I will not guess the rest: I will work out what I can from the part already written."* Without it, the model spent its notes remarking that the message was unfinished, and after every edit it copied its last paragraph again (measured: 70% more reasoning in total, and two answers out of 24 that never came). With it, the model does useful partial work, such as `3 × 12 = 36` before the question has even been typed.
 
-| Answer | Written before Enter | Full answer on screen after Enter, strike | Without strike |
-|---|---|---|---|
-| 300 tokens | 200 | 1.2 s | 3.5 s |
-| 168 tokens | 168 (all of it) | instant | 1.9 s |
+**If you pause and send the message unchanged**, `strike` goes further and also writes the answer itself. That part is exact: the answer only holds for the exact text it was written for, and any change drops it. With `--no-think` (no reasoning) this is all `strike` does, and with greedy decoding the answer is identical token by token to the one started after Enter (checked).
+
+Reasoning ahead is **not exact**: the model reasons on intermediate versions of the message, so the answer can differ from the one it would give starting from scratch. That is why it was measured on answers that can be checked (below).
+
+| Option | What it does |
+|---|---|
+| `--no-think` | no reasoning: answer right away, and write ahead only the exact answer |
+| `--think-ahead N` | longest reasoning kept across edits (default 1024 tokens) |
+| `--ahead N` | answer tokens written ahead when the text does not change (default 512) |
+| `--recycle` | reuse the answers written for earlier versions of the message as n-gram drafts for speculative decoding (+4% decode speed measured with natural typing, +20% on code) |
+| `--draft repo:file` | a small model of the same family drafts tokens for speculative decoding (no gain measured on the RTX 2060, see below) |
 
 `demo_live.py` (`avvia_demo.bat`) is the step-by-step view for debugging: tokens, cache, hold-back and timings, live in the terminal.
 
@@ -155,9 +164,42 @@ The typing is not replayed in real time. Each prefill really runs on the model, 
 
 ## Results
 
-*Coming soon: measurements on an RTX 2060 and on CPU.*
+All on an RTX 2060 (6 GB), llama.cpp, Q4_K_M models, real-time typing (5 to 8 characters per second, a few natural pauses, Enter right after the last character, no rereading).
 
-What to expect: on short messages the gain is small in absolute terms, because prefilling a few dozen tokens is already fast. The gain grows with message length and is largest when pasting long documents and on CPU. MAFDET hides the cost of *reading* the prompt, not the cost of *generating* the answer.
+**Reasoning ahead, Qwen3-4B** (fits in VRAM, 83 tok/s): 24 word problems with a known numeric answer, typed in Italian.
+
+| | Without reasoning ahead | `mafdet strike` |
+|---|---|---|
+| Correct answers | 22/24 | 22/24 |
+| Median wait for the first word of the answer | 10.2 s | **4.4 s** |
+| Mean wait | 11.8 s | **6.2 s** |
+| Faster | | in 20 of 22 problems |
+| Reasoning in total | 914 tokens | 907 tokens |
+| Reasoning left after Enter | 914 tokens | **462 tokens** |
+
+Same quality, same amount of reasoning, half of it done before Enter. In both columns, 2 answers never finished (the 4B sometimes reasons in circles until the token limit, with or without reasoning ahead).
+
+**Exact answer ahead, Qwen3-4B, no reasoning** (pause before Enter, text unchanged):
+
+| Answer | Written before Enter | Full answer on screen after Enter, strike | Without strike |
+|---|---|---|---|
+| 300 tokens | 200 | 1.2 s | 3.5 s |
+| 168 tokens | 168 (all of it) | instant | 1.9 s |
+
+**Larger models.** What the model can do before Enter is bounded by typing time × its writing speed:
+
+| Model | Fits in 6 GB? | Writes | Reasoning written while typing a 30 s message |
+|---|---|---|---|
+| Qwen3-4B | yes | 83 tok/s | most of it |
+| Qwen3-8B | no, partly on the CPU | about 13 tok/s | 130 to 280 tokens |
+| Qwen3-14B | no, partly on the CPU | 5 tok/s | 130 tokens |
+
+On the 8B and 14B the reasoning is 400 to 1500 tokens, so at most a fraction of it is done before Enter, and in single runs the variation in reasoning length between two samples is larger than the gain (examples: 8B 32 s → 20 s on one problem, 74 s → 83 s on another; 14B 235 s → 146 s). Reading ahead, on the other hand, gains more the larger the model: the 14B reads a 3,000-token pasted document in about 10 s, all of it hidden while you type.
+
+**Tried, and why they are not on by default:**
+
+- `--recycle` (answers to earlier versions of the message as n-gram drafts): +4% decode speed with natural typing, +20% on code, slightly later first token.
+- `--draft` (Qwen3-0.6B drafting for the 14B): on the GPU it takes VRAM from the 14B, which then runs more of its layers on the CPU (4.8 → 3.5 tok/s); on the CPU it gains 8% with 4-token drafts and halves the reading speed.
 
 ## Roadmap
 
@@ -165,9 +207,10 @@ What to expect: on short messages the gain is small in absolute terms, because p
 - [x] Benchmarks, typing simulation and correctness checks
 - [x] Unified `mafdet` CLI
 - [x] `mafdet watch`: the chat window
-- [ ] llama.cpp backend with quantized (GGUF) models
-- [x] `mafdet strike`: the answer written ahead at every pause, shown at once on Enter
-- [ ] Notes from partial input: reasoning ahead that still helps when the text changes after the pause
+- [x] llama.cpp backend with quantized (GGUF) models
+- [x] `mafdet strike`: reasoning ahead while you type, kept across edits; the exact answer ahead at a pause
+- [ ] A small model reasons while you type, a large one answers: reasoning ahead for models larger than the VRAM
+- [ ] Repeated measurements on models larger than the VRAM
 
 ## Related research
 
