@@ -184,7 +184,7 @@ def command_guide() -> str:
     lines.append("")
     lines.append("Common options (every command accepts them, see `mafdet <command> --help`):")
     lines.append("  --model, --device, --dtype, --threads, --compile,")
-    lines.append("  --backend, --gguf, --ctx, --llama-args")
+    lines.append("  --backend, --gguf, --ctx, --draft, --llama-args")
     return "\n".join(lines)
 
 
@@ -214,6 +214,9 @@ def add_common_args(p):
                         "(default: %(default)s)")
     p.add_argument("--ctx", type=int, default=8192,
                    help="--backend llama only: context per slot, in tokens (default: %(default)s)")
+    p.add_argument("--draft", default="",
+                   help="--backend llama only: a small model of the same family that drafts tokens for "
+                        "speculative decoding, 'repo:file' or a path (e.g. Qwen/Qwen3-0.6B-GGUF:Qwen3-0.6B-Q8_0.gguf)")
     p.add_argument("--llama-args", default="",
                    help='--backend llama only: extra llama-server options, with an equals sign: --llama-args="-ub 256"')
 
@@ -241,6 +244,11 @@ def _strike_args(p):
     _watch_args(p)
     p.add_argument("--ahead", type=int, default=512,
                    help="answer tokens written at a pause, before Enter (default: %(default)s)")
+    p.add_argument("--no-think", dest="think", action="store_false",
+                   help="no reasoning: answer right away (Qwen3 non-thinking mode), and write only the "
+                        "answer ahead")
+    p.add_argument("--think-ahead", type=int, default=1024,
+                   help="longest reasoning kept across edits of the message, in tokens (default: %(default)s)")
     p.add_argument("--recycle", action="store_true",
                    help="reuse the answers written for earlier versions of the message as drafts for "
                         "speculative decoding (n-gram); measured: +4%% decode speed with natural typing, "

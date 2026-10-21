@@ -36,6 +36,10 @@ N_PROBS = 20                        # candidates returned for the comparison wit
 # wherever the model agrees with them, several tokens per decode step. Lookup
 # of 4 tokens, drafts of 1 to 8: the best of the settings measured on Qwen3-4B
 # with the chat sampling (temperature 0.7).
+# Speculative decoding with a small draft model (--draft): it proposes up to 8
+# tokens, the big model checks them in one pass. Exact: the big model decides.
+DRAFT_ARGS = ("--spec-type", "draft-simple", "--spec-draft-n-max", "8", "-ngld", "all")
+
 RECYCLE_ARGS = ("--spec-type", "ngram-mod", "--spec-ngram-mod-n-match", "4",
                 "--spec-ngram-mod-n-min", "1", "--spec-ngram-mod-n-max", "8")
 
@@ -96,7 +100,9 @@ class LlamaServer:
                 # the middle of the text: the following tokens depend on the changed ones.
                 "--cache-reuse", "0",
                 "--host", "127.0.0.1", "--port", str(port)]
-        args += ["-ngl", "all"] if device == "cuda" else ["-ngl", "0", "-dev", "none"]
+        # auto: as many layers as fit in VRAM (llama.cpp --fit), the rest on the CPU, so models
+        # larger than the GPU still run.
+        args += ["-ngl", "auto"] if device == "cuda" else ["-ngl", "0", "-dev", "none"]
         args += list(extra_args)
         self.log_path = os.path.join(os.path.dirname(exe), "server.log")
         self._log = open(self.log_path, "w", encoding="utf-8")
@@ -260,7 +266,10 @@ def setup_llama(args, device: str, n_slots: int = 1):
 
     tok_id = tokenizer_id(args.gguf) if args.model == DEFAULT_MODEL else args.model
     tok = AutoTokenizer.from_pretrained(tok_id)
-    extra = (RECYCLE_ARGS if getattr(args, "recycle", False) else ()) + tuple(args.llama_args.split())
+    extra = (RECYCLE_ARGS if getattr(args, "recycle", False) else ())
+    if getattr(args, "draft", ""):
+        extra += ("-md", resolve_gguf(args.draft)) + DRAFT_ARGS
+    extra += tuple(args.llama_args.split())
     server = LlamaServer(args.gguf, device, ctx=args.ctx, n_slots=n_slots, extra_args=extra)
     fname = os.path.basename(server.model_path)
     if not fname.startswith(tok_id.split("/")[-1]):

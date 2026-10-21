@@ -43,8 +43,17 @@ STATIC = {
     "fonts/jetbrains-mono.woff2": "font/woff2",
 }
 
-# Qwen3 in non-thinking mode: the sampling settings recommended by its authors.
+# Qwen3 in non-thinking and thinking mode: the sampling settings recommended by its authors.
 SAMPLING = {"temperature": 0.7, "top_p": 0.8, "top_k": 20, "min_p": 0}
+THINK_SAMPLING = {"temperature": 0.6, "top_p": 0.95, "top_k": 20, "min_p": 0}
+
+# Reasoning ahead (--think): what follows the notes when the message changed under them.
+# The model reads it as its own thought and rereads the message instead of starting over.
+BRIDGE = "\n\nWait, the user has edited the message since I started thinking. Let me reread it and continue.\n\n"
+THINK_MIN_WORDS = 3                 # no reasoning ahead on the first couple of words
+AHEAD_CHUNK = 128                   # tokens per request written ahead; the next one carries on from there
+THINK_CHUNK = 32                    # the same while reasoning: short, so it follows the text as it is typed
+BRIDGE_EVERY = 64                   # new reasoning tokens before an edit earns a bridge
 
 
 def turn_separator(tok) -> str:
@@ -69,8 +78,8 @@ class Stream:
     same distribution as one started after Enter.
     """
 
-    def __init__(self, session: "Session", prompt: list[int], limit: int):
-        self.session, self.prompt, self.limit = session, prompt, limit
+    def __init__(self, session: "Session", prompt: list[int], limit: int, text: str = ""):
+        self.session, self.prompt, self.limit, self.text = session, prompt, limit, text
         self.pieces: list[str] = []                # text of each streamed chunk
         self.tokens: list[int] = []
         self.info: dict = {}                       # the last event: stop_type, timings, tokens_cached
@@ -86,7 +95,7 @@ class Stream:
     def _run(self):
         s = self.session
         body = {"prompt": self.prompt, "id_slot": s.eng.slot, "cache_prompt": True, "stream": True,
-                "n_predict": self.limit, "return_tokens": True, **SAMPLING}
+                "n_predict": self.limit, "return_tokens": True, **s.sampling}
         with s.slot_lock:
             try:
                 if not self.cancelled:
@@ -158,7 +167,9 @@ class Session:
         self.args = args
         self.state, self.error, self.label = "loading", "", ""
         self.holdback, self.min_new, self.debounce = args.holdback, args.min_new, args.debounce / 1000
-        self.ahead = getattr(args, "ahead", 0)     # mafdet strike: answer tokens written before Enter
+        self.ahead = getattr(args, "ahead", 0)     # mafdet strike: tokens written at a pause, before Enter
+        self.think = getattr(args, "think", False)  # mafdet strike: reason ahead, keeping the notes across edits
+        self.think_cap = getattr(args, "think_ahead", 0)
         self.slot_lock = threading.Lock()          # one request at a time on the slot
         self.tok_lock = threading.Lock()           # the fast tokenizer is not safe across threads
         self.spec_lock = threading.Lock()          # starting an answer ahead vs. pressing Enter
@@ -168,6 +179,13 @@ class Session:
         self.history: list[int] = []               # the conversation so far, up to the start of the next user text
         self.spec: Stream | None = None            # the answer being written ahead for final_ids
         self._failed: list[int] = []               # a prompt whose answer ahead failed
+        # Written ahead, in the prompt after the message. The reasoning (--think) survives edits:
+        # notes. The answer only holds for the exact text it was written for: answer_ahead
+        # (with --think it starts with </think>).
+        self.notes: list[int] = []
+        self.answer_ahead: list[int] = []
+        self.notes_text = ""                       # the text notes and answer_ahead were last extended on
+        self.notes_fresh = 0                       # notes tokens written since the last bridge
         self.busy = self.generating = False
         self.stop = threading.Event()
         threading.Thread(target=self._load, daemon=True).start()
@@ -180,10 +198,13 @@ class Session:
             self._prefix_len, self._encode, self._stable = common_prefix_len, encode, stable_ids
             self.tok, self.server, device, quant = setup(self.args, n_slots=1)
             self.eng = make_engine(self.server, device)
-            tpl = Template.from_tokenizer(self.tok, thinking=False)
+            tpl = Template.from_tokenizer(self.tok, thinking=self.think)
+            self.sampling = THINK_SAMPLING if self.think else SAMPLING
             self.start_ids = encode(self.tok, tpl.prefix)
             self.suffix = tpl.suffix
             self.between_ids = encode(self.tok, turn_separator(self.tok))
+            self.think_end = self.tok.convert_tokens_to_ids("</think>")
+            self.bridge_ids = encode(self.tok, BRIDGE)
             # How far the cache can run past the stable text after a read at a pause.
             self.tail_slack = len(encode(self.tok, tpl.suffix)) + self.holdback + 2
             self.history = list(self.start_ids)
@@ -203,9 +224,13 @@ class Session:
             self._retarget()
 
     def _prompt(self, text: str) -> list[int]:
+        """The prompt on Enter: history, message, start of the answer, then what was written ahead."""
         # Trailing spaces and newlines are dropped: one typed after a pause must not throw away the answer written ahead.
         with self.tok_lock:
-            return self.history + self._encode(self.tok, text.rstrip() + self.suffix)
+            ids = self.history + self._encode(self.tok, text.rstrip() + self.suffix) + self.notes
+        if self.answer_ahead and text.rstrip() == self.notes_text.rstrip():
+            ids += self.answer_ahead
+        return ids
 
     def _retarget(self):
         with self.tok_lock:
@@ -213,11 +238,58 @@ class Session:
         self.target = self._stable(self.history + msg, self.holdback)
         self.final_ids = self._prompt(self.text)
 
-    def _drop_spec(self):
+    def _take_spec(self, spec: Stream) -> bool:
+        """Take `spec` away from the session, unless Enter has claimed it first."""
         with self.spec_lock:
-            spec, self.spec = self.spec, None
-        if spec is not None:
-            spec.cancel()
+            if self.spec is not spec:
+                return False
+            self.spec = None
+        return True
+
+    def _absorb(self, spec: Stream, changed: bool, bridge_after: int = BRIDGE_EVERY):
+        """Keep what `spec` wrote: reasoning (before </think>) to the notes, answer to answer_ahead.
+
+        If the message changed meanwhile, the answer is dropped. A bridge then
+        follows the notes, telling the model to reread the message, so it goes
+        on from its earlier thoughts instead of starting over: once it had
+        finished thinking, or after `bridge_after` tokens of new thoughts (not
+        after every chunk written while the user types on).
+        """
+        spec.wait()
+        tokens = spec.tokens
+        if self.think and not self.answer_ahead:
+            cut = tokens.index(self.think_end) if self.think_end in tokens else len(tokens)
+            thought, answer = tokens[:cut], tokens[cut:]
+        else:
+            thought, answer = [], tokens
+        if thought:
+            self.notes = self.notes + thought
+            self.notes_fresh += len(thought)
+        if changed:
+            had_answer = bool(answer or self.answer_ahead)
+            self.answer_ahead = []
+            self._bridge(1 if had_answer else bridge_after)
+        else:
+            self.answer_ahead = self.answer_ahead + answer
+        self.notes_text = spec.text
+
+    def _bridge(self, after: int = 1):
+        if self.notes_fresh >= after:
+            self.notes = self.notes + self.bridge_ids
+            self.notes_fresh = 0
+
+    def _ahead_room(self, extra: int = 0) -> bool:
+        """Still room to write ahead: reasoning up to --think-ahead, then answer up to --ahead."""
+        if self.think and not self.answer_ahead:
+            return len(self.notes) + extra < self.think_cap
+        return len(self.answer_ahead) + extra < self.ahead
+
+    def _notes_stale(self) -> bool:
+        """The message was emptied or mostly rewritten: notes about the old one would mislead."""
+        if not self.notes:
+            return False
+        kept = len(os.path.commonprefix([self.text, self.notes_text]))
+        return not self.text.strip() or kept < len(self.notes_text) // 2
 
     def _prefill_loop(self):
         """Reads the draft in the background: a burst of new tokens at the end, or a pause.
@@ -228,38 +300,73 @@ class Session:
         check drops those few tokens on the next read.
 
         With --ahead (mafdet strike), once the whole prompt is read and the
-        pause goes on, it also starts writing the answer. Any change to the text
-        cancels it: an answer only holds for the exact prompt it was written for.
+        pause goes on, it also starts writing the answer. An answer only holds
+        for the exact prompt it was written for, so any change cancels it.
+
+        With --think the model reasons while the user types, not only at pauses,
+        in short chunks: a chunk runs on the text as it was when it started, then
+        the cache reads the new text and the next chunk goes on from there. The
+        reasoning is kept across edits: it becomes notes that follow the new
+        text, a prefill away (parallel and fast) rather than a decode away.
         """
         while True:
             time.sleep(0.02)
             target, final, done = self.target, self.final_ids, self.eng.ids
             spec = self.spec
-            if spec is not None and (spec.prompt != final or spec.info.get("error")):
-                if spec.info.get("error"):
-                    self._failed = spec.prompt     # do not retry the same prompt in a loop
-                self._drop_spec()                  # the text changed: that answer no longer holds
-                spec = None
-            if self.generating or spec is not None:
+            if spec is not None:
+                changed, failed = spec.prompt != final, bool(spec.info.get("error"))
+                if changed and self.think and not failed and not spec.done and not self._notes_stale():
+                    continue                       # reasoning on a slightly older text is still worth finishing
+                if (changed or failed) and self._take_spec(spec):
+                    spec.cancel()                  # the text changed: that answer no longer holds
+                    if failed:
+                        self._failed = spec.prompt     # do not retry the same prompt in a loop
+                    elif self.think:
+                        self._absorb(spec, changed=True)
+                    self._retarget()
+                    continue
+                if spec.done and spec.hit_limit and self._ahead_room(len(spec.tokens)) and self._take_spec(spec):
+                    self._absorb(spec, changed=False)  # the pause goes on: carry on from there at the next turn
+                    self._retarget()
+                    continue
+            if self.generating or self.spec is not None:
                 continue
+            if self.notes_text and self.text.rstrip() != self.notes_text.rstrip():
+                if self.answer_ahead:              # written for a text that has changed since
+                    self.answer_ahead = []
+                    self._bridge()
+                    self._retarget()
+                    continue
+                if self._notes_stale():
+                    self.notes, self.notes_text, self.notes_fresh = [], "", 0
+                    self._retarget()
+                    continue
             paused = time.perf_counter() - self.text_t >= self.debounce
             has_text = bool(self.text.strip())
-            if self.ahead and paused and has_text and final and done == final and final != self._failed:
+            can_start = self._ahead_room() and (not self.think or len(self.text.split()) >= THINK_MIN_WORDS)
+            # Reasoning goes on while the user types; an answer (no --think) waits for a pause.
+            go = paused or (self.think and self.ahead and can_start)
+            if (self.ahead and go and has_text and can_start and final and done == final
+                    and final != self._failed):
                 with self.spec_lock:
                     if not self.generating and self.final_ids is final:
                         room = self.args.ctx - len(final) - 8
                         if room >= 32:
-                            self.spec = Stream(self, final, min(self.ahead, room))
+                            if self.think and not self.answer_ahead:
+                                chunk = min(THINK_CHUNK, self.think_cap - len(self.notes))
+                            else:
+                                chunk = min(AHEAD_CHUNK, self.ahead - len(self.answer_ahead))
+                            self.spec = Stream(self, final, min(chunk, room), self.text)
                 continue
-            goal = final if paused and has_text else target
+            goal = final if go and has_text else target
             if not goal or goal == done:
                 continue
             n = self._prefix_len(done, target)
             # Edits in the middle wait for a pause: recomputing the tail on every key would be a waste.
             # The tail read at the last pause (end of the template, held-back tokens) does not count.
             burst = n >= len(done) - self.tail_slack and len(target) - n >= self.min_new
-            if burst or paused:
-                if burst and not paused:
+            if burst or go:
+                if burst and not go:
                     goal = target
                 with self.slot_lock:
                     if self.generating or target is not self.target:
@@ -279,15 +386,26 @@ class Session:
         if self.state != "ready":
             return s
         final, target, cache = self.final_ids, self.target, self.eng.cached_tokens
-        history = len(self.history)
+        history, notes = len(self.history), len(self.notes)
+        message = len(final) - history - notes
         reused = min(self._prefix_len(cache, final), len(final) - 1)
         spec = self.spec
+        thought, answer = self._split_ahead(list(spec.tokens) if spec else [])
+        answer_ahead = len(self.answer_ahead) if self.text.rstrip() == self.notes_text.rstrip() else 0
+        message -= answer_ahead
         s.update(has_text=bool(self.text.strip()), busy=self.busy, context=len(final),
-                 message_tokens=len(final) - history, read=max(0, reused - history), left=len(final) - reused,
-                 pending=max(0, len(target) - self._prefix_len(cache, target)),
-                 strike=bool(self.ahead), ahead=len(spec.tokens) if spec else 0,
-                 ahead_writing=bool(spec and not spec.done))
+                 message_tokens=message, read=min(message, max(0, reused - history)),
+                 left=max(0, len(final) - reused), pending=max(0, len(target) - self._prefix_len(cache, target)),
+                 strike=bool(self.ahead), think=self.think, ahead=answer_ahead + answer,
+                 ahead_writing=bool(spec and not spec.done), thinking_ahead=notes + thought)
         return s
+
+    def _split_ahead(self, tokens: list[int]) -> tuple[int, int]:
+        """How many of `tokens`, written after the current prompt, are reasoning and how many answer."""
+        if not self.think or self.answer_ahead:
+            return 0, len(tokens)
+        cut = tokens.index(self.think_end) if self.think_end in tokens else len(tokens)
+        return cut, len(tokens) - cut
 
     # ---- send ----------------------------------------------------------------------
     def send(self, text: str):
@@ -303,6 +421,7 @@ class Session:
         try:
             yield from self._answer(text, t_enter, spec)
         finally:
+            self.notes, self.answer_ahead, self.notes_fresh, self.notes_text = [], [], 0, ""
             self.generating = False
             self._retarget()
 
@@ -312,24 +431,64 @@ class Session:
         reused = min(self._prefix_len(self.eng.cached_tokens, final), len(final) - 1)
         if spec is not None and (spec.prompt != final or spec.cancelled or spec.info.get("error")):
             spec.cancel()                          # written for another text: it does not hold
+            if self.think and not spec.info.get("error"):
+                self._absorb(spec, changed=True, bridge_after=1)   # but its reasoning does
+                final = self._prompt(text)
             spec = None
         room = self.args.ctx - len(final) - 8
         if room < 32:
-            if spec is not None:
-                spec.cancel()
             yield {"type": "error", "message": f"The conversation no longer fits in the context "
                                                f"({self.args.ctx} tokens). Start a new chat."}
             return
-        limit = min(self.args.max_tokens or room, room)
-        ahead = len(spec.tokens) if spec else 0
+        notes = list(self.notes)
+        answer_pre = self.answer_ahead if text.rstrip() == self.notes_text.rstrip() else []
+        limit = min(self.args.max_tokens or room, room) - len(answer_pre)
+        thought, answer = self._split_ahead(list(spec.tokens) if spec else [])
+        thinking = self.think and not answer_pre
+        ttft = answer_ms = None
+        state = {"thinking": thinking, "started": False}
+
+        def pieces(piece: str):
+            """Reasoning and answer events for a piece of text, leading blank lines of the answer dropped."""
+            if state["thinking"]:
+                head, end, piece = piece.partition("</think>")
+                head = head.replace("<think>", "")
+                if head:
+                    yield {"type": "think", "text": head if state["started"] else head.lstrip()}
+                    state["started"] = True
+                if not end:
+                    return
+                state["thinking"], state["started"] = False, False
+            if not state["thinking"] and "</think>" in piece:
+                piece = piece.split("</think>", 1)[1]
+            if not state["started"]:
+                piece = piece.lstrip()
+            if piece:
+                state["started"] = True
+                yield {"type": "token", "text": piece}
+
+        # What was written ahead first, all at once: the notes, then the answer if it holds.
+        with self.tok_lock:
+            pre = self.tok.decode(notes) if notes else ""
+            if answer_pre:
+                pre += self.tok.decode(answer_pre)
+        if pre:
+            state["thinking"] = self.think
+        for ev in pieces(pre):
+            if ev["type"] == "token" and answer_ms is None:
+                answer_ms = (time.perf_counter() - t_enter) * 1000
+            yield ev
         # The answer written ahead, if it holds; otherwise a new one (the stream waits for a prefill still running).
-        stream = spec or Stream(self, final, limit)
-        first, generated, ttft, stopped = stream, [], None, False
+        stream = spec or Stream(self, final, limit, text)
+        first, generated, stopped = stream, [], False
         while True:
             for piece in stream.follow(self.stop):
                 if ttft is None:
                     ttft = (time.perf_counter() - t_enter) * 1000
-                yield {"type": "token", "text": piece}
+                for ev in pieces(piece):
+                    if ev["type"] == "token" and answer_ms is None:
+                        answer_ms = (time.perf_counter() - t_enter) * 1000
+                    yield ev
             if self.stop.is_set():
                 stream.cancel()
                 stopped = True
@@ -341,15 +500,21 @@ class Session:
             if stopped or not stream.hit_limit or len(generated) >= limit:
                 break
             # The answer ahead stopped at --ahead tokens: carry on from there, with the slot's cache already holding it.
-            stream = Stream(self, final + generated, limit - len(generated))
+            stream = Stream(self, final + generated, limit - len(generated), text)
         sep = self.between_ids[1:] if generated and generated[-1] == self.between_ids[0] else self.between_ids
         self.history = final + generated + sep
         if "cache_n" in (first.info.get("timings") or {}):
             reused = first.info["timings"]["cache_n"]   # what the server actually reused
+        reasoning = len(notes) + (self._split_ahead(generated)[0] if not answer_pre else 0)
         t = stream.info.get("timings") or {}
-        yield {"type": "done", "ttft_ms": round(ttft or 0), "tokens": len(generated),
-               "tps": round(t.get("predicted_per_second", 0), 1), "message_tokens": len(final) - history,
-               "read": max(0, reused - history), "left": len(final) - reused, "ahead": ahead,
+        message = len(final) - history - len(notes) - len(answer_pre)
+        yield {"type": "done", "ttft_ms": round(ttft if ttft is not None else answer_ms or 0),
+               "answer_ms": round(answer_ms or 0), "tokens": len(answer_pre) + len(generated),
+               "tps": round(t.get("predicted_per_second", 0), 1),
+               "message_tokens": message, "read": min(message, max(0, reused - history)),
+               "left": max(0, len(final) - reused), "ahead": max(0, len(answer_pre) - self.think) + answer,
+               "think_tokens": reasoning if self.think else 0,
+               "think_ahead": len(notes) + thought if self.think else 0,
                "cut": stream.hit_limit and len(generated) >= limit, "stopped": stopped}
 
     def new_chat(self):
@@ -362,6 +527,7 @@ class Session:
             with self.slot_lock:
                 if self.state == "ready":
                     self.history = list(self.start_ids)
+                    self.notes, self.answer_ahead, self.notes_fresh, self.notes_text = [], [], 0, ""
                     self._retarget()
         finally:
             self.generating = False

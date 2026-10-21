@@ -194,6 +194,23 @@ svg { display: block; flex: none; }
   overflow-wrap: anywhere;
 }
 
+/* The reasoning of thinking mode: folded above the answer. */
+.think { border-left: 2px solid var(--line-strong); padding: 2px 0 2px 16px; }
+.think summary { display: flex; align-items: center; gap: 8px; cursor: pointer; list-style: none; line-height: 1.6; }
+.think summary::-webkit-details-marker { display: none; }
+.think summary::before { content: "▸"; color: var(--amber); }
+.think[open] summary::before { content: "▾"; }
+.think-body {
+  margin-top: 10px;
+  max-height: 40vh;
+  overflow: auto;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .msg-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; color: var(--faint); line-height: 1.6; }
 .msg-meta .diamond { color: var(--amber); }
 .msg-meta .sep { color: var(--line-strong); }

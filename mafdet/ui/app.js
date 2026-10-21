@@ -178,7 +178,9 @@
     el.className = `msg ${role}`;
     el.innerHTML = role === "user"
       ? `<div class="msg-label label">You</div><div class="msg-body"></div>`
-      : `<div class="msg-label label">${mark("mask", 16)}MAFDET</div><div class="msg-body md"></div><div class="msg-meta label" hidden></div>`;
+      : `<div class="msg-label label">${mark("mask", 16)}MAFDET</div>` +
+        `<details class="think" hidden><summary class="label"></summary><div class="think-body"></div></details>` +
+        `<div class="msg-body md"></div><div class="msg-meta label" hidden></div>`;
     thread.appendChild(el);
     return el;
   }
@@ -203,11 +205,28 @@
 
   const fmt = (n) => Math.round(n).toLocaleString("en-US");
 
+  // The reasoning (thinking mode): folded above the answer, open while the model is still thinking.
+  function renderThink(el, text, thinking, d) {
+    const box = el.querySelector(".think");
+    if (!text) return;
+    const follow = nearBottom();
+    box.hidden = false;
+    box.querySelector(".think-body").textContent = text;
+    const summary = box.querySelector("summary");
+    summary.classList.toggle("pulse", thinking);
+    summary.textContent = thinking ? "Thinking"
+      : d && d.think_tokens ? `Reasoning · ${fmt(d.think_tokens)} tokens, ${fmt(d.think_ahead)} before Enter` : "Reasoning";
+    if (follow) toBottom();
+  }
+
   function metaLine(el, d) {
     const meta = el.querySelector(".msg-meta");
-    const parts = [`<span class="diamond">◆</span>first token ${fmt(d.ttft_ms)} ms`];
+    const parts = [d.think_tokens
+      ? `<span class="diamond">◆</span>first word ${fmt(d.answer_ms)} ms`
+      : `<span class="diamond">◆</span>first token ${fmt(d.ttft_ms)} ms`];
     if (d.message_tokens) parts.push(`${fmt(d.read)} of ${fmt(d.message_tokens)} tokens read while you typed`);
-    if (d.ahead) parts.push(`${fmt(d.ahead)} written before Enter`);
+    if (d.think_tokens) parts.push(`${fmt(d.think_ahead)} of ${fmt(d.think_tokens)} reasoning tokens before Enter`);
+    if (d.ahead) parts.push(`${fmt(d.ahead)} answer tokens before Enter`);
     parts.push(`${fmt(d.tokens)} tokens · ${d.tps} tok/s`);
     if (d.stopped) parts.push("stopped");
     if (d.cut) parts.push("cut at the token limit");
@@ -254,8 +273,12 @@
     pushDraft();
     const bot = addMessage("bot");
     toBottom();
-    let answer = "", frame = 0;
-    const paint = () => { frame = 0; renderAnswer(bot, answer, true); };
+    let answer = "", reasoning = "", frame = 0;
+    const paint = () => {
+      frame = 0;
+      renderThink(bot, reasoning, !answer);
+      renderAnswer(bot, answer, true);
+    };
     renderAnswer(bot, "", true);
     try {
       const reader = (await api("/api/send", { text })).body.getReader();
@@ -271,10 +294,11 @@
           buf = buf.slice(cut + 2);
           if (!chunk.startsWith("data: ")) continue;
           const ev = JSON.parse(chunk.slice(6));
-          if (ev.type === "token") {
-            answer += ev.text;
+          if (ev.type === "token" || ev.type === "think") {
+            if (ev.type === "token") answer += ev.text; else reasoning += ev.text;
             if (!frame) frame = requestAnimationFrame(paint);
           } else if (ev.type === "done") {
+            renderThink(bot, reasoning, false, ev);
             metaLine(bot, ev);
           } else if (ev.type === "error") {
             errorLine(bot, ev.message);
@@ -285,6 +309,7 @@
       errorLine(bot, `Connection lost: ${e.message}`);
     } finally {
       if (frame) cancelAnimationFrame(frame);
+      bot.querySelector(".think summary")?.classList.remove("pulse");
       renderAnswer(bot, answer, false);
       generating = false;
       setSendMode();
@@ -348,22 +373,23 @@
       meter.classList.toggle("ready", ready);
       meterRead.style.width = `${s.message_tokens ? (100 * s.read) / s.message_tokens : 0}%`;
       const read = `${fmt(s.read)} of ${fmt(s.message_tokens)} tokens read`;
-      if (s.ahead_writing || s.ahead) {
+      const thought = s.thinking_ahead ? ` · ${fmt(s.thinking_ahead)} reasoning tokens ahead` : "";
+      if (s.ahead_writing) {
         setIcon("strike", true);
-        const ahead = `${fmt(s.ahead)} answer tokens written ahead`;
-        if (s.ahead_writing) {
-          statusText.innerHTML = `<span class="diamond">◆</span> Answering ahead · ${ahead}`;
-          statusText.classList.add("pulse");
-        } else {
-          statusText.innerHTML = `<span class="diamond">◆</span> Answer ready on Enter · ${ahead}`;
-        }
-      } else if (s.busy) {
-        statusText.textContent = `Reading · ${read}`;
+        statusText.innerHTML = s.think && !s.ahead
+          ? `<span class="diamond">◆</span> Thinking ahead${thought}`
+          : `<span class="diamond">◆</span> Answering ahead · ${fmt(s.ahead)} answer tokens written`;
         statusText.classList.add("pulse");
+      } else if (s.busy) {
+        statusText.textContent = `Reading · ${read}${thought}`;
+        statusText.classList.add("pulse");
+      } else if (s.ahead) {
+        setIcon("strike", true);
+        statusText.innerHTML = `<span class="diamond">◆</span> Answer ready on Enter · ${fmt(s.ahead)} answer tokens written ahead`;
       } else if (ready) {
-        statusText.innerHTML = `<span class="diamond">◆</span> Ready on Enter · ${read}, ${fmt(s.left)} left`;
+        statusText.innerHTML = `<span class="diamond">◆</span> Ready on Enter · ${read}, ${fmt(s.left)} left${thought}`;
       } else {
-        statusText.textContent = `Waiting for a pause · ${read}`;
+        statusText.textContent = `Waiting for a pause · ${read}${thought}`;
       }
     }
     setSendMode();
