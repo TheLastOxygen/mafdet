@@ -55,10 +55,15 @@ THINK_SAMPLING = {"temperature": 0.6, "top_p": 0.95, "top_k": 20, "min_p": 0, "p
 #   - none: the notes remark that the message is unfinished and, after every edit, copy
 #     their last paragraph again;
 #   - "work out what you can": 86% of the notes still about the user or the message;
-#   - this list, with a line per new words: 41%, and the least reasoning left after Enter.
+#   - this list, with a line per new words: 41-54%;
+#   - the list with an example line (from another message) and META_BIAS below: 17-26%, no
+#     answer lost in a loop, the least reasoning left after Enter. The example ends up copied
+#     into about one set of notes in nine.
 SEED = ("<think>\nThe user is still typing. I will not wonder what they will ask, nor remark that the text is "
         "unfinished. While I wait, I collect material for the answer: for each key term, name or number already "
-        "written, one line with what it is and the facts I know about it, or a partial result.\n\n- ")
+        "written, one line with what it is and the facts I know about it, or a partial result. For example, from "
+        "\"Quanto pesa la Luna rispetto alla\" I would write \"- Luna (the Moon): mass 7.35e22 kg, radius "
+        "1,737 km\".\n\n- ")
 # When the user typed more: a new line of the same list, naming the new words (whole words, two or more).
 BRIDGE = "\n- New words \"{new}\": "
 BRIDGE_EDIT = "\n- The text was edited, so: "   # when nothing was added: an edit or a deletion
@@ -66,6 +71,12 @@ BRIDGE_NEW_CHARS = 300
 BRIDGE_MIN_WORDS = 2
 # On Enter: the message is complete now.
 SENT = "\n\nThe user has now sent the complete message. Let me reread it and answer it, using the material above.\n\n"
+# While reasoning ahead (and only then) these words are made less likely: thoughts about the
+# user or the unfinished text are the waste the frame does not remove. The token ids come from
+# the tokenizer of the model loaded, so this works with any model. 0 turns it off.
+META_WORDS = ("user", "User", "incomplete", "unfinished", "typing", "typed", "intent", "intends", "asking",
+              "wondering", "seems")
+META_BIAS = -4.0
 THINK_MIN_WORDS = 3                 # no reasoning ahead on the first couple of words
 AHEAD_CHUNK = 128                   # tokens per request written ahead; the next one carries on from there
 THINK_CHUNK = 32                    # the same while reasoning: short, so it follows the text as it is typed
@@ -94,8 +105,8 @@ class Stream:
     same distribution as one started after Enter.
     """
 
-    def __init__(self, session: "Session", prompt: list[int], limit: int, text: str = ""):
-        self.session, self.prompt, self.limit, self.text = session, prompt, limit, text
+    def __init__(self, session: "Session", prompt: list[int], limit: int, text: str = "", bias: list | None = None):
+        self.session, self.prompt, self.limit, self.text, self.bias = session, prompt, limit, text, bias
         self.tokens: list[int] = []
         self.info: dict = {}                       # the last event: stop_type, timings, tokens_cached
         self.done = self.cancelled = False
@@ -111,6 +122,8 @@ class Stream:
         s = self.session
         body = {"prompt": self.prompt, "id_slot": s.eng.slot, "cache_prompt": True, "stream": True,
                 "n_predict": self.limit, "return_tokens": True, **s.sampling}
+        if self.bias:
+            body["logit_bias"] = self.bias
         with s.slot_lock:
             try:
                 if not self.cancelled:
@@ -248,6 +261,9 @@ class Session:
             self.think_end = self.tok.convert_tokens_to_ids("</think>")
             self.seed_ids = encode(self.tok, SEED)
             self.sent_ids = encode(self.tok, SENT)
+            # Single-token spellings only: biasing the first piece of a longer word would hit other words too.
+            meta = {t[0] for w in META_WORDS for v in (w, " " + w) for t in [encode(self.tok, v)] if len(t) == 1}
+            self.meta_bias = [[t, META_BIAS] for t in sorted(meta)] if META_BIAS else []
             # How far the cache can run past the stable text after a read at a pause.
             self.tail_slack = len(encode(self.tok, tpl.suffix)) + self.holdback + 2
             self.history = list(self.start_ids)
@@ -433,7 +449,8 @@ class Session:
                                 chunk = min(THINK_CHUNK, self.think_cap - len(self.notes))
                             else:
                                 chunk = min(AHEAD_CHUNK, self.ahead - len(self.answer_ahead))
-                            self.spec = Stream(self, final, min(chunk, room), self.text)
+                            bias = self.meta_bias if self.think and not self.answer_ahead else None
+                            self.spec = Stream(self, final, min(chunk, room), self.text, bias)
                             self.chunk_t = time.perf_counter()
                 continue
             goal = final if go and has_text else target
