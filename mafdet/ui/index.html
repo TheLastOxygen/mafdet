@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MAFDET</title>
+<link rel="icon" href="/favicon.ico">
+<link rel="preload" href="/static/fonts/archivo.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/static/fonts/jetbrains-mono.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/static/app.css">
+<script>window.MAFDET_TOKEN = "{{TOKEN}}";</script>
+<script src="/identity.js"></script>
+</head>
+<body>
+<header class="bar">
+  <div class="lockup" id="lockup"></div>
+  <div class="bar-side">
+    <span class="label model" id="model">Waking up</span>
+    <button class="btn" id="new-chat" type="button" title="New chat (Ctrl+N)"></button>
+  </div>
+</header>
+
+<main class="scroll" id="scroll">
+  <div class="thread" id="thread"></div>
+</main>
+
+<footer class="composer">
+  <div class="composer-inner">
+    <button class="jump" id="jump" type="button" title="Jump to the latest message" hidden></button>
+    <div class="field" id="field">
+      <textarea id="input" rows="1" placeholder="Message MAFDET" spellcheck="true" autofocus></textarea>
+      <button class="send" id="send" type="button" aria-label="Send" disabled></button>
+    </div>
+    <div class="status" id="status">
+      <span class="status-icon" id="status-icon"></span>
+      <span class="status-text label" id="status-text"></span>
+      <span class="meter" id="meter" hidden><i id="meter-read"></i></span>
+      <span class="status-side label" id="status-side"></span>
+    </div>
+  </div>
+</footer>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

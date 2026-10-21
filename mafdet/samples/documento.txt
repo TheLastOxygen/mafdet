@@ -1,0 +1,22 @@
+Specifica tecnica: servizio di sincronizzazione degli ordini
+
+1. Scopo
+Il servizio riceve gli ordini dai negozi online, li normalizza in un formato comune e li inoltra al gestionale di magazzino. Deve funzionare anche quando il gestionale è irraggiungibile per alcune ore, senza perdere ordini e senza crearne di duplicati.
+
+2. Architettura
+Il servizio è composto da tre componenti. Il ricevitore espone un endpoint HTTP che accetta gli ordini in formato JSON, ne verifica la firma e li scrive in una coda persistente. Il normalizzatore legge dalla coda, converte i campi specifici di ciascun negozio nel modello interno e calcola una chiave di idempotenza a partire dall'identificativo del negozio e dal numero d'ordine. L'inoltro invia gli ordini normalizzati al gestionale e registra l'esito in una tabella di stato.
+
+3. Garanzie di consegna
+La coda garantisce la consegna almeno una volta. Poiché un ordine può quindi arrivare più volte al normalizzatore, la chiave di idempotenza viene salvata in una tabella con vincolo di unicità prima dell'inoltro. Se l'inserimento fallisce per violazione del vincolo, l'ordine è già stato elaborato e viene scartato. Il gestionale accetta a sua volta la chiave di idempotenza in un'intestazione dedicata e ignora le richieste ripetute.
+
+4. Gestione dei guasti
+Se il gestionale risponde con un errore temporaneo, l'inoltro ritenta con un ritardo esponenziale che parte da due secondi e raddoppia fino a un massimo di dieci minuti, con una componente casuale per evitare che molte istanze ritentino nello stesso istante. Dopo ventiquattro ore di tentativi falliti l'ordine viene spostato in una coda di scarto e viene inviato un avviso al turno di reperibilità. Gli errori permanenti, come un campo obbligatorio mancante, spostano subito l'ordine nella coda di scarto.
+
+5. Prestazioni
+Nel periodo di picco il servizio deve sostenere almeno duecento ordini al secondo con una latenza mediana di inoltro inferiore a cinquecento millisecondi. Il normalizzatore è privo di stato e può essere scalato orizzontalmente; la tabella delle chiavi di idempotenza è partizionata per negozio.
+
+6. Osservabilità
+Ogni ordine porta con sé un identificativo di traccia che attraversa i tre componenti. Le metriche principali sono la lunghezza della coda, il numero di tentativi per ordine, la percentuale di ordini finiti nella coda di scarto e la latenza tra ricezione e conferma del gestionale. Un cruscotto mostra queste metriche per negozio.
+
+7. Questioni aperte
+Non è ancora deciso se i negozi debbano poter annullare un ordine già inoltrato, né come gestire le modifiche di un ordine che si trova ancora in coda. Va inoltre valutato se conservare gli ordini scartati per novanta giorni o per un anno, tenendo conto degli obblighi di conservazione dei dati.

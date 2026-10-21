@@ -1,0 +1,8 @@
+# PyTorch va installato PRIMA, a parte, con l'index CUDA (vedi README):
+#   pip install torch --index-url https://download.pytorch.org/whl/cu128
+transformers>=4.51
+packaging
+pywebview>=5            # mafdet watch: la finestra della chat
+rich                    # demo_live.py
+# Facoltativo, solo per --compile su Windows (versione abbinata a torch 2.11):
+#   pip install "triton-windows>=3.7,<3.8"

@@ -1,0 +1,1 @@
+Leggi la specifica qui sopra e dimmi quali scenari di guasto non sono coperti, in particolare cosa succede se il normalizzatore si blocca dopo aver salvato la chiave di idempotenza ma prima di inoltrare l'ordine

@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mafdet"
+dynamic = ["version"]
+description = "You type. It already knows. Incremental prefill for local LLMs."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.10"
+# PyTorch is deliberately NOT listed: install it first from the CUDA index
+# (see README). If pip pulled it from PyPI, on Windows it would get the
+# CPU-only build.
+dependencies = [
+    "transformers>=4.51",
+    "packaging",
+    "pywebview>=5",       # the chat window of `mafdet watch`
+]
+
+[project.scripts]
+mafdet = "mafdet.cli:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "mafdet.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["mafdet*"]
+
+[tool.setuptools.package-data]
+mafdet = ["samples/*.txt", "ui/*.html", "ui/*.css", "ui/*.js", "ui/*.ico", "ui/fonts/*"]

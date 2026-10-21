@@ -1,0 +1,10 @@
+.venv/
+results/
+__pycache__/
+*.egg-info/
+
+# llama.cpp release binaries (downloaded separately, see README) and the server log
+llama.cpp/
+
+# Report di lavoro, resta in locale
+report_ottimizzazioni.pdf

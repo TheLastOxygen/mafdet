@@ -1,0 +1,420 @@
+/* MAFDET chat window. Visual identity v2: deep black, off-white, a single amber accent;
+   Archivo for text, JetBrains Mono for labels; straight segments, square corners. */
+
+@font-face {
+  font-family: "Archivo";
+  src: url("/static/fonts/archivo.woff2") format("woff2");
+  font-weight: 400 700;
+  font-stretch: 100% 125%;
+  font-display: swap;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/static/fonts/jetbrains-mono.woff2") format("woff2");
+  font-weight: 400 800;
+  font-display: swap;
+}
+
+:root {
+  --ink: #0E0D0C;
+  --paper: #EEEAE2;
+  --amber: #D4892A;
+  --rust: #C46A3A;
+
+  /* Negative on dark: the identity's terminal and README card. */
+  --bg: #0E0D0C;
+  --surface: #121211;
+  --raised: #191816;
+  --line: #2A2825;
+  --line-strong: #3A3733;
+  --text: #E4E0D8;
+  --strong: #EEEAE2;
+  --soft: #C9C4BA;
+  --muted: #A39D92;
+  --faint: #7D776D;
+  --mark: var(--paper);
+  --solid: var(--paper);
+  --on-solid: var(--ink);
+  --selection: rgba(212, 137, 42, .32);
+  color-scheme: dark;
+}
+
+/* Positive on light: the identity's paper panels. */
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #F6F3EE;
+    --surface: #EEEAE2;
+    --raised: #E6E1D7;
+    --line: #D9D3C7;
+    --line-strong: #C9C3B7;
+    --text: #1F1D1A;
+    --strong: #0E0D0C;
+    --soft: #3E3A34;
+    --muted: #6A655D;
+    --faint: #9C968B;
+    --mark: var(--ink);
+    --solid: var(--ink);
+    --on-solid: var(--paper);
+    --selection: rgba(212, 137, 42, .28);
+    color-scheme: light;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
+  font: 400 16px/1.6 "Archivo", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection { background: var(--selection); }
+
+button { font: inherit; color: inherit; }
+
+/* Mono labels: the identity's captions ("VISUAL IDENTITY · V2"). */
+.label {
+  font: 400 12px/1 "JetBrains Mono", ui-monospace, monospace;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+svg { display: block; flex: none; }
+.mark, .wordmark { color: var(--mark); }
+
+/* ---- header -------------------------------------------------------------- */
+
+.bar {
+  flex: none;
+  height: 64px;
+  padding: 0 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  border-bottom: 1px solid var(--line);
+}
+
+/* Horizontal lockup: wordmark 0.4× the symbol height, gap 1/3 of the symbol. */
+.lockup { display: flex; align-items: center; gap: 10px; }
+
+.bar-side { display: flex; align-items: center; gap: 20px; min-width: 0; }
+.model { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--strong);
+  font: 600 12px/1 "JetBrains Mono", ui-monospace, monospace;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn:hover { border-color: var(--muted); }
+.btn:focus-visible, .send:focus-visible, .jump:focus-visible, .copy:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+
+/* ---- conversation ---------------------------------------------------------- */
+
+.scroll {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+.scroll::-webkit-scrollbar { width: 10px; }
+.scroll::-webkit-scrollbar-thumb { background: var(--line-strong); border: 3px solid var(--bg); }
+
+.thread {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px 28px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+}
+
+/* Empty state: the cover of the identity guide. */
+.hero {
+  min-height: calc(100vh - 64px - 200px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  text-align: center;
+}
+.hero-title {
+  margin: 8px 0 0;
+  font: 600 26px/1.15 "Archivo", sans-serif;
+  font-stretch: 112%;
+  color: var(--strong);
+  text-wrap: balance;
+}
+.hero-body {
+  margin: -8px 0 0;
+  max-width: 46ch;
+  color: var(--soft);
+  text-wrap: pretty;
+}
+.hero-keys { margin-top: 6px; color: var(--faint); line-height: 1.8; }
+.hero-keys b { color: var(--muted); font-weight: 600; }
+
+.msg { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.msg-label { display: flex; align-items: center; gap: 10px; }
+.msg-label .mark { width: 16px; height: 16px; }
+
+.msg.user .msg-body {
+  padding: 16px 20px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--strong);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.msg-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; color: var(--faint); line-height: 1.6; }
+.msg-meta .diamond { color: var(--amber); }
+.msg-meta .sep { color: var(--line-strong); }
+.msg-error { color: var(--rust); }
+
+/* The caret that follows the answer while it is written: the terminal's block cursor. */
+.caret {
+  display: inline-block;
+  width: .55em;
+  height: 1.1em;
+  margin-left: 2px;
+  vertical-align: -0.18em;
+  background: var(--amber);
+  animation: blink 1s steps(1) infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+/* ---- answer: Markdown ------------------------------------------------------ */
+
+.md { color: var(--text); overflow-wrap: anywhere; }
+.md > :first-child { margin-top: 0; }
+.md > :last-child { margin-bottom: 0; }
+.md p { margin: 0 0 14px; }
+.md strong { color: var(--strong); font-weight: 600; }
+.md em { font-style: italic; }
+.md del { color: var(--muted); }
+.md a { color: var(--amber); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.md a:hover { color: var(--strong); }
+.md h1, .md h2, .md h3, .md h4, .md h5, .md h6 {
+  margin: 28px 0 12px;
+  color: var(--strong);
+  font-weight: 600;
+  font-stretch: 112%;
+  line-height: 1.2;
+}
+.md h1 { font-size: 26px; font-stretch: 115%; }
+.md h2 { font-size: 21px; padding-top: 14px; border-top: 2px solid var(--strong); }
+.md h3 { font-size: 18px; }
+.md h4, .md h5, .md h6 { font-size: 16px; }
+.md ul, .md ol { margin: 0 0 14px; padding-left: 26px; }
+.md li { margin: 4px 0; }
+.md li > ul, .md li > ol { margin: 4px 0 0; }
+.md ul > li::marker { content: "◆  "; color: var(--amber); font-size: 9px; }
+.md ol > li::marker { font: 600 13px "JetBrains Mono", monospace; color: var(--muted); }
+.md blockquote {
+  margin: 0 0 14px;
+  padding: 2px 0 2px 18px;
+  border-left: 2px solid var(--amber);
+  color: var(--soft);
+}
+.md hr { margin: 24px 0; border: 0; border-top: 1px solid var(--line-strong); }
+.md code {
+  padding: 2px 5px;
+  border-radius: 3px;
+  background: var(--raised);
+  color: var(--strong);
+  font: 400 .88em/1.5 "JetBrains Mono", ui-monospace, monospace;
+}
+
+.code {
+  margin: 0 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.code-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px 0 16px;
+  height: 36px;
+  border-bottom: 1px solid var(--line);
+  background: var(--raised);
+}
+.copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  cursor: pointer;
+}
+.copy:hover { color: var(--strong); }
+.code pre {
+  margin: 0;
+  padding: 16px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+.code pre code {
+  padding: 0;
+  background: none;
+  color: var(--text);
+  font: 400 14px/1.6 "JetBrains Mono", ui-monospace, monospace;
+  white-space: pre;
+}
+
+.table { margin: 0 0 16px; overflow-x: auto; }
+.md table { border-collapse: collapse; font-size: 15px; }
+.md th, .md td { padding: 8px 14px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.md th {
+  border-bottom: 2px solid var(--strong);
+  color: var(--strong);
+  font: 600 12px/1.3 "JetBrains Mono", monospace;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+/* ---- composer ---------------------------------------------------------------- */
+
+.composer {
+  flex: none;
+  padding: 0 28px 18px;
+}
+.composer-inner {
+  position: relative;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 28px;
+}
+
+.field {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 10px 10px 10px 18px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  transition: border-color .15s;
+}
+.field:focus-within { border-color: var(--muted); }
+
+textarea {
+  flex: 1;
+  min-height: 38px;
+  max-height: 40vh;
+  padding: 7px 0;
+  border: 0;
+  outline: none;
+  resize: none;
+  background: transparent;
+  color: var(--strong);
+  font: 400 16px/1.5 "Archivo", system-ui, sans-serif;
+}
+textarea::placeholder { color: var(--faint); }
+
+.send {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  background: var(--solid);
+  color: var(--on-solid);
+  cursor: pointer;
+}
+.send:disabled { background: var(--line); color: var(--faint); cursor: default; }
+.send.stop { background: var(--amber); color: var(--ink); }
+
+.jump {
+  position: absolute;
+  top: -48px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  background: var(--raised);
+  cursor: pointer;
+}
+.jump[hidden] { display: none; }
+
+/* What MAFDET is doing with the draft: the identity's terminal lines ("◆ watch · listening"). */
+.status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 30px;
+  padding: 0 4px;
+}
+.status-icon { color: var(--muted); }
+.status-icon.on { color: var(--strong); }
+.status-text { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.status-text .diamond { color: var(--amber); }
+.status-text.error { color: var(--rust); }
+.status-side { margin-left: auto; white-space: nowrap; color: var(--faint); }
+.meter {
+  flex: 0 0 96px;
+  height: 2px;
+  background: var(--line-strong);
+  overflow: hidden;
+}
+.meter[hidden] { display: none; }
+.meter i { display: block; height: 100%; width: 0; background: var(--soft); transition: width .2s; }
+.meter.ready i { background: var(--amber); }
+
+.pulse { animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .35; } }
+
+@media (max-width: 720px) {
+  .bar { padding: 0 16px; }
+  .model { display: none; }
+  .thread { padding: 28px 16px 24px; }
+  .composer { padding: 0 0 14px; }
+  .composer-inner { padding: 0 16px; }
+  .status-side { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .caret, .pulse { animation: none; }
+  .meter i, .field { transition: none; }
+}

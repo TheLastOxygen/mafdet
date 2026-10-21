@@ -1,0 +1,1 @@
+scrivimi una funzione python che legge un file csv e restituisce la media di una colonna scelta dall'utente gestendo le righe vuote
