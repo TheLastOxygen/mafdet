@@ -374,18 +374,24 @@
       meterRead.style.width = `${s.message_tokens ? (100 * s.read) / s.message_tokens : 0}%`;
       const read = `${fmt(s.read)} of ${fmt(s.message_tokens)} tokens read`;
       const thought = s.thinking_ahead ? ` · ${fmt(s.thinking_ahead)} reasoning tokens ahead` : "";
+      // "Ready" only for what is really ready: the answer, or (no reasoning) the prompt read.
       if (s.ahead_writing) {
         setIcon("strike", true);
         statusText.innerHTML = s.think && !s.ahead
-          ? `<span class="diamond">◆</span> Thinking ahead${thought}`
+          ? `<span class="diamond">◆</span> Thinking ahead · ${fmt(s.thinking_ahead)} reasoning tokens`
           : `<span class="diamond">◆</span> Answering ahead · ${fmt(s.ahead)} answer tokens written`;
         statusText.classList.add("pulse");
       } else if (s.busy) {
         statusText.textContent = `Reading · ${read}${thought}`;
         statusText.classList.add("pulse");
+      } else if (s.answer_ready) {
+        setIcon("strike", true);
+        statusText.innerHTML = `<span class="diamond">◆</span> Answer ready on Enter · written ahead in full`;
       } else if (s.ahead) {
         setIcon("strike", true);
-        statusText.innerHTML = `<span class="diamond">◆</span> Answer ready on Enter · ${fmt(s.ahead)} answer tokens written ahead`;
+        statusText.innerHTML = `<span class="diamond">◆</span> Answer started · ${fmt(s.ahead)} tokens written ahead, the rest after Enter`;
+      } else if (s.think && s.thinking_ahead) {
+        statusText.textContent = `Paused · ${fmt(s.thinking_ahead)} reasoning tokens ahead, more thinking after Enter`;
       } else if (ready) {
         statusText.innerHTML = `<span class="diamond">◆</span> Ready on Enter · ${read}, ${fmt(s.left)} left${thought}`;
       } else {

@@ -214,6 +214,7 @@ class Session:
         self.answer_ahead: list[int] = []
         self.notes_text = ""                       # the text notes and answer_ahead were last extended on
         self.notes_fresh = 0                       # notes tokens written since the last bridge
+        self.chunk_t = 0.0                         # when the last chunk written ahead started or ended
         self.busy = self.generating = False
         self.stop = threading.Event()
         threading.Thread(target=self._load, daemon=True).start()
@@ -287,6 +288,7 @@ class Session:
         after every chunk written while the user types on).
         """
         spec.wait()
+        self.chunk_t = time.perf_counter()
         tokens = spec.tokens
         if self.think and not self.answer_ahead:
             cut = tokens.index(self.think_end) if self.think_end in tokens else len(tokens)
@@ -309,12 +311,23 @@ class Session:
             self.notes = self.notes + self.bridge_ids
             self.notes_fresh = 0
 
+    def _paused(self) -> bool:
+        return time.perf_counter() - self.text_t >= self.debounce
+
+    def _answer_complete(self) -> bool:
+        return bool(self.answer_ahead) and self.answer_ahead[-1] == self.end_id
+
     def _ahead_room(self, extra: int = 0) -> bool:
-        """Still room to write ahead: reasoning up to --think-ahead, then answer up to --ahead (or its end)."""
-        if self.answer_ahead and self.answer_ahead[-1] == self.end_id:
+        """Still room to write ahead: reasoning, then answer up to --ahead (or its end).
+
+        --think-ahead caps the reasoning only while the user types. At a pause
+        the text stays as it is, so the model reasons to the end and then writes
+        the answer: after a long enough pause, Enter shows it at once.
+        """
+        if self._answer_complete():
             return False
         if self.think and not self.answer_ahead:
-            return len(self.notes) + extra < self.think_cap
+            return self._paused() or len(self.notes) + extra < self.think_cap
         return len(self.answer_ahead) + extra < self.ahead
 
     def _notes_stale(self) -> bool:
@@ -395,6 +408,7 @@ class Session:
                             else:
                                 chunk = min(AHEAD_CHUNK, self.ahead - len(self.answer_ahead))
                             self.spec = Stream(self, final, min(chunk, room), self.text)
+                            self.chunk_t = time.perf_counter()
                 continue
             goal = final if go and has_text else target
             if not goal or goal == done:
@@ -429,13 +443,20 @@ class Session:
         reused = min(self._prefix_len(cache, final), len(final) - 1)
         spec = self.spec
         thought, answer = self._split_ahead(list(spec.tokens) if spec else [])
-        answer_ahead = len(self.answer_ahead) if self.text.rstrip() == self.notes_text.rstrip() else 0
+        holds = self.text.rstrip() == self.notes_text.rstrip()
+        answer_ahead = len(self.answer_ahead) if holds else 0
         message -= answer_ahead
+        # Between two chunks the slot is free for a few milliseconds: that is not a stop.
+        writing = bool(spec and not spec.done) or (
+            spec is None and time.perf_counter() - self.chunk_t < 0.5 and self._ahead_room())
+        finished = bool(spec and spec.done and not spec.cancelled and not spec.hit_limit
+                        and not spec.info.get("error") and answer)
         s.update(has_text=bool(self.text.strip()), busy=self.busy, context=len(final),
                  message_tokens=message, read=min(message, max(0, reused - history)),
                  left=max(0, len(final) - reused), pending=max(0, len(target) - self._prefix_len(cache, target)),
                  strike=bool(self.ahead), think=self.think, ahead=answer_ahead + answer,
-                 ahead_writing=bool(spec and not spec.done), thinking_ahead=notes + thought)
+                 ahead_writing=writing, thinking_ahead=notes + thought,
+                 answer_ready=finished or (holds and self._answer_complete()))
         return s
 
     def _split_ahead(self, tokens: list[int]) -> tuple[int, int]:
