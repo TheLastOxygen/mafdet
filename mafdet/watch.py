@@ -254,6 +254,7 @@ class Session:
         self.text, self.text_t = "", 0.0
         self.target: list[int] = []                # what the cache should hold now (draft minus hold-back)
         self.final_ids: list[int] = []             # the prompt if the user pressed Enter now
+        self.final_text = ""
         self.history: list[int] = []               # the conversation so far, up to the start of the next user text
         self.spec: Stream | None = None            # the answer being written ahead for final_ids
         self._failed: list[int] = []               # a prompt whose answer ahead failed
@@ -395,7 +396,21 @@ class Session:
         with self.tok_lock:
             msg = self._encode(self.tok, self.text)
         self.target = self._stable(self.history + msg, self.holdback)
+        self.final_text = self.text                # the text final_ids was built from
         self.final_ids = self._prompt(self.text)
+
+    def _start_chunk(self, prompt: list[int], text: str):
+        """A chunk written ahead on `prompt`, built from `text` (call it holding spec_lock)."""
+        room = self.args.ctx - len(prompt) - 8
+        if room < 32:
+            return
+        if self.think and not self.answer_ahead:
+            chunk = min(THINK_CHUNK, self.think_cap - len(self.notes)) if not self._paused() else THINK_CHUNK
+        else:
+            chunk = min(AHEAD_CHUNK, self.ahead - len(self.answer_ahead))
+        bias = self.meta_bias if self.think and not self.answer_ahead else None
+        self.spec = Stream(self, prompt, max(1, min(chunk, room)), text, bias)
+        self.chunk_t = time.perf_counter()
 
     def _take_spec(self, spec: Stream) -> bool:
         """Take `spec` away from the session, unless Enter has claimed it first."""
@@ -531,7 +546,7 @@ class Session:
                 self._g_notes = self.gatherer.notes
                 self._read_material()
                 self._retarget()
-            target, final, done = self.target, self.final_ids, self.eng.ids
+            target, final, final_text, done = self.target, self.final_ids, self.final_text, self.eng.ids
             spec = self.spec
             if spec is not None:
                 changed, failed = spec.prompt != final, bool(spec.info.get("error"))
@@ -578,8 +593,7 @@ class Session:
                     and final != self._failed):
                 with self.spec_lock:
                     if not self.generating and self.final_ids is final:
-                        room = self.args.ctx - len(final) - 8
-                        if room >= 32 and self.think and not self.notes:
+                        if self.think and not self.notes:
                             self.notes = list(self.seed_ids)     # the frame first, then the thoughts
                             self.bridge_text = ""
                             if self.fmt == "trained":
@@ -587,14 +601,8 @@ class Session:
                             else:
                                 self.bridge_text = self.text[:self._new_words()[1]]
                             self._retarget()
-                        elif room >= 32:
-                            if self.think and not self.answer_ahead:
-                                chunk = min(THINK_CHUNK, self.think_cap - len(self.notes))
-                            else:
-                                chunk = min(AHEAD_CHUNK, self.ahead - len(self.answer_ahead))
-                            bias = self.meta_bias if self.think and not self.answer_ahead else None
-                            self.spec = Stream(self, final, min(chunk, room), self.text, bias)
-                            self.chunk_t = time.perf_counter()
+                        else:
+                            self._start_chunk(final, final_text)
                 continue
             goal = final if go and has_text else target
             if not goal or goal == done:
@@ -617,6 +625,15 @@ class Session:
                         return
                     finally:
                         self.busy = False
+                # Reasoning starts right away on the text just read, even if the user has typed on
+                # meanwhile: on a slow model that read takes longer than a keystroke, and waiting for
+                # the cache to catch up with the text would never let a chunk start (measured on the
+                # 14B: 0.8 s to reread the frame after every word, no reasoning ahead at all).
+                if (goal is final and go and self.think and self.ahead and self.notes and not self.answer_ahead
+                        and self._ahead_room() and final != self._failed):
+                    with self.spec_lock:
+                        if not self.generating and self.spec is None:
+                            self._start_chunk(final, final_text)
 
     def status(self) -> dict:
         s = {"state": self.state, "error": self.error, "model": self.label, "ctx": self.args.ctx,
