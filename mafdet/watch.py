@@ -47,9 +47,15 @@ STATIC = {
 SAMPLING = {"temperature": 0.7, "top_p": 0.8, "top_k": 20, "min_p": 0}
 THINK_SAMPLING = {"temperature": 0.6, "top_p": 0.95, "top_k": 20, "min_p": 0}
 
-# Reasoning ahead (--think): what follows the notes when the message changed under them.
-# The model reads it as its own thought and rereads the message instead of starting over.
-BRIDGE = "\n\nWait, the user has edited the message since I started thinking. Let me reread it and continue.\n\n"
+# Reasoning ahead (--think) is written by the model as its own thoughts, framed by a few
+# sentences of ours. Without the frame it spends them remarking that the message is
+# unfinished and, after every edit, copies its last paragraph again (measured).
+SEED = ("<think>\nThe user is still typing, so the message above may be unfinished. I will not guess the "
+        "rest: I will work out what I can from the part already written, so I am ready when it is complete.\n\n")
+# When the message changed under the notes: reread it and go on instead of starting over.
+BRIDGE = "\n\nThe user has typed more since then. Let me reread the message and continue from what I have worked out.\n\n"
+# On Enter: the message is complete now.
+SENT = "\n\nThe user has now sent the message, so this is the complete version. Let me reread it and finish.\n\n"
 THINK_MIN_WORDS = 3                 # no reasoning ahead on the first couple of words
 AHEAD_CHUNK = 128                   # tokens per request written ahead; the next one carries on from there
 THINK_CHUNK = 32                    # the same while reasoning: short, so it follows the text as it is typed
@@ -71,7 +77,7 @@ class Stream:
     """One streamed generation on the slot, run in its own thread and read by whoever needs it.
 
     An answer written ahead (mafdet strike) is a Stream started at a pause,
-    before Enter: it fills `pieces` while nobody shows them. On Enter, if the
+    before Enter: it fills `tokens` while nobody shows them. On Enter, if the
     prompt is still the same, the page gets all of them at once and then
     follows the stream live. Sampling has no penalties, so each token depends
     only on the tokens before it: the answer written ahead is drawn from the
@@ -80,7 +86,6 @@ class Stream:
 
     def __init__(self, session: "Session", prompt: list[int], limit: int, text: str = ""):
         self.session, self.prompt, self.limit, self.text = session, prompt, limit, text
-        self.pieces: list[str] = []                # text of each streamed chunk
         self.tokens: list[int] = []
         self.info: dict = {}                       # the last event: stop_type, timings, tokens_cached
         self.done = self.cancelled = False
@@ -110,8 +115,6 @@ class Stream:
                         d = json.loads(line[6:])
                         with self.cond:
                             self.tokens += d.get("tokens") or []
-                            if d.get("content"):
-                                self.pieces.append(d["content"])
                             if d.get("stop"):
                                 self.info = d
                             self.cond.notify_all()
@@ -146,18 +149,43 @@ class Stream:
                 self.cond.wait()
 
     def follow(self, stop: threading.Event):
-        """The text as it arrives: what is already there in one piece, then chunk by chunk."""
+        """The tokens as they arrive: what is already there in one go, then as they come."""
         i = 0
         while True:
             with self.cond:
-                while i == len(self.pieces) and not self.done and not stop.is_set():
+                while i == len(self.tokens) and not self.done and not stop.is_set():
                     self.cond.wait(0.1)
-                new, done = self.pieces[i:], self.done
+                new, done = self.tokens[i:], self.done
             i += len(new)
             if new:
-                yield "".join(new)
+                yield new
             if done or stop.is_set():
                 return
+
+
+class Detokenizer:
+    """Text from a growing list of tokens, never cutting a character in two.
+
+    The text streamed by the server is cut where each request ends: a letter
+    whose bytes fall across two chunks (an accent, a typographic quote) comes
+    out as two replacement characters. Decoding the tokens here, a short window
+    at a time, holds such a character back until its last byte arrives.
+    """
+
+    def __init__(self, tok, lock: threading.Lock, skip: int):
+        self.tok, self.lock, self.skip = tok, lock, skip
+        self.ids: list[int] = []
+        self.start = self.read = 0
+
+    def push(self, tokens: list[int]) -> str:
+        self.ids += [t for t in tokens if t != self.skip]
+        with self.lock:
+            head = self.tok.decode(self.ids[self.start:self.read])
+            text = self.tok.decode(self.ids[self.start:])
+        if text.endswith("�"):
+            return ""                              # a character still incomplete: wait for its other bytes
+        self.start, self.read = self.read, len(self.ids)
+        return text[len(head):]
 
 
 class Session:
@@ -203,8 +231,11 @@ class Session:
             self.start_ids = encode(self.tok, tpl.prefix)
             self.suffix = tpl.suffix
             self.between_ids = encode(self.tok, turn_separator(self.tok))
+            self.end_id = self.between_ids[0]      # end of a turn: <|im_end|> for Qwen3
             self.think_end = self.tok.convert_tokens_to_ids("</think>")
             self.bridge_ids = encode(self.tok, BRIDGE)
+            self.seed_ids = encode(self.tok, SEED)
+            self.sent_ids = encode(self.tok, SENT)
             # How far the cache can run past the stable text after a read at a pause.
             self.tail_slack = len(encode(self.tok, tpl.suffix)) + self.holdback + 2
             self.history = list(self.start_ids)
@@ -279,7 +310,9 @@ class Session:
             self.notes_fresh = 0
 
     def _ahead_room(self, extra: int = 0) -> bool:
-        """Still room to write ahead: reasoning up to --think-ahead, then answer up to --ahead."""
+        """Still room to write ahead: reasoning up to --think-ahead, then answer up to --ahead (or its end)."""
+        if self.answer_ahead and self.answer_ahead[-1] == self.end_id:
+            return False
         if self.think and not self.answer_ahead:
             return len(self.notes) + extra < self.think_cap
         return len(self.answer_ahead) + extra < self.ahead
@@ -343,7 +376,9 @@ class Session:
                     continue
             paused = time.perf_counter() - self.text_t >= self.debounce
             has_text = bool(self.text.strip())
-            can_start = self._ahead_room() and (not self.think or len(self.text.split()) >= THINK_MIN_WORDS)
+            # Reasoning starts on whole words: a pause, or a space or punctuation just typed.
+            can_start = self._ahead_room() and (not self.think or (
+                len(self.text.split()) >= THINK_MIN_WORDS and (paused or not self.text[-1:].isalnum())))
             # Reasoning goes on while the user types; an answer (no --think) waits for a pause.
             go = paused or (self.think and self.ahead and can_start)
             if (self.ahead and go and has_text and can_start and final and done == final
@@ -351,7 +386,10 @@ class Session:
                 with self.spec_lock:
                     if not self.generating and self.final_ids is final:
                         room = self.args.ctx - len(final) - 8
-                        if room >= 32:
+                        if room >= 32 and self.think and not self.notes:
+                            self.notes = list(self.seed_ids)     # the frame first, then the thoughts
+                            self._retarget()
+                        elif room >= 32:
                             if self.think and not self.answer_ahead:
                                 chunk = min(THINK_CHUNK, self.think_cap - len(self.notes))
                             else:
@@ -429,6 +467,22 @@ class Session:
         history = len(self.history)
         final = self._prompt(text)
         reused = min(self._prefix_len(self.eng.cached_tokens, final), len(final) - 1)
+        if self.think and self.notes:
+            # The notes were written as for a message still being typed: keep them, say it is complete now.
+            if spec is not None:
+                spec.cancel()
+                if not spec.info.get("error"):
+                    self._absorb(spec, changed=spec.text.rstrip() != text.rstrip(), bridge_after=10 ** 9)
+                spec = None
+            if text.rstrip() != self.notes_text.rstrip():
+                self.answer_ahead = []
+            if len(self.notes) <= len(self.seed_ids):
+                self.notes = []                    # nothing but the frame: no reasoning ahead after all
+            elif not self.answer_ahead:
+                if self.notes[-len(self.bridge_ids):] == self.bridge_ids:
+                    self.notes = self.notes[:-len(self.bridge_ids)]
+                self.notes = self.notes + self.sent_ids
+            final = self._prompt(text)
         if spec is not None and (spec.prompt != final or spec.cancelled or spec.info.get("error")):
             spec.cancel()                          # written for another text: it does not hold
             if self.think and not spec.info.get("error"):
@@ -468,10 +522,8 @@ class Session:
                 yield {"type": "token", "text": piece}
 
         # What was written ahead first, all at once: the notes, then the answer if it holds.
-        with self.tok_lock:
-            pre = self.tok.decode(notes) if notes else ""
-            if answer_pre:
-                pre += self.tok.decode(answer_pre)
+        detok = Detokenizer(self.tok, self.tok_lock, self.end_id)
+        pre = detok.push(notes + answer_pre)
         if pre:
             state["thinking"] = self.think
         for ev in pieces(pre):
@@ -479,13 +531,15 @@ class Session:
                 answer_ms = (time.perf_counter() - t_enter) * 1000
             yield ev
         # The answer written ahead, if it holds; otherwise a new one (the stream waits for a prefill still running).
-        stream = spec or Stream(self, final, limit, text)
+        # An answer ahead that reached its end is complete: nothing is left to generate.
+        complete = bool(answer_pre) and answer_pre[-1] == self.end_id
+        stream = None if complete else spec or Stream(self, final, limit, text)
         first, generated, stopped = stream, [], False
-        while True:
-            for piece in stream.follow(self.stop):
+        while stream is not None:
+            for tokens in stream.follow(self.stop):
                 if ttft is None:
                     ttft = (time.perf_counter() - t_enter) * 1000
-                for ev in pieces(piece):
+                for ev in pieces(detok.push(tokens)):
                     if ev["type"] == "token" and answer_ms is None:
                         answer_ms = (time.perf_counter() - t_enter) * 1000
                     yield ev
@@ -501,12 +555,13 @@ class Session:
                 break
             # The answer ahead stopped at --ahead tokens: carry on from there, with the slot's cache already holding it.
             stream = Stream(self, final + generated, limit - len(generated), text)
-        sep = self.between_ids[1:] if generated and generated[-1] == self.between_ids[0] else self.between_ids
+        written = answer_pre + generated
+        sep = self.between_ids[1:] if written and written[-1] == self.end_id else self.between_ids
         self.history = final + generated + sep
-        if "cache_n" in (first.info.get("timings") or {}):
+        if first is not None and "cache_n" in (first.info.get("timings") or {}):
             reused = first.info["timings"]["cache_n"]   # what the server actually reused
         reasoning = len(notes) + (self._split_ahead(generated)[0] if not answer_pre else 0)
-        t = stream.info.get("timings") or {}
+        t = (stream.info.get("timings") or {}) if stream is not None else {}
         message = len(final) - history - len(notes) - len(answer_pre)
         yield {"type": "done", "ttft_ms": round(ttft if ttft is not None else answer_ms or 0),
                "answer_ms": round(answer_ms or 0), "tokens": len(answer_pre) + len(generated),
@@ -515,7 +570,7 @@ class Session:
                "left": max(0, len(final) - reused), "ahead": max(0, len(answer_pre) - self.think) + answer,
                "think_tokens": reasoning if self.think else 0,
                "think_ahead": len(notes) + thought if self.think else 0,
-               "cut": stream.hit_limit and len(generated) >= limit, "stopped": stopped}
+               "cut": stream is not None and stream.hit_limit and len(generated) >= limit, "stopped": stopped}
 
     def new_chat(self):
         with self.spec_lock:
