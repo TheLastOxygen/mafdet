@@ -88,7 +88,7 @@ L'ordine conta: **prima PyTorch dall'index CUDA**, poi MAFDET.
 > **PyTorch non è una dipendenza del pacchetto `mafdet`, ed è voluto.** Se lo installasse pip da PyPI, su Windows prenderebbe la versione solo CPU e la GPU resterebbe inutilizzata. Installalo tu dall'index CUDA, come qui sotto, prima di installare MAFDET.
 
 ```bash
-git clone https://github.com/<your-username>/mafdet.git
+git clone https://github.com/TheLastOxygen/mafdet.git
 cd mafdet
 
 python -m venv .venv          # Windows: py -3.12 -m venv .venv

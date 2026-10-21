@@ -88,7 +88,7 @@ Order matters: **install PyTorch from the CUDA index first**, then MAFDET.
 > **PyTorch is not a dependency of the `mafdet` package, on purpose.** If pip installed it from PyPI, on Windows it would pick the CPU-only build and the GPU would sit unused. Install it yourself from the CUDA index, as below, before installing MAFDET.
 
 ```bash
-git clone https://github.com/<your-username>/mafdet.git
+git clone https://github.com/TheLastOxygen/mafdet.git
 cd mafdet
 
 python -m venv .venv          # Windows: py -3.12 -m venv .venv
