@@ -129,10 +129,12 @@ mafdet strike
 `mafdet strike` è la stessa chat, un passo più in là: il modello **comincia a pensare al tuo messaggio mentre lo stai ancora scrivendo**. Usa Qwen3 in modalità ragionamento, quindi prima di rispondere il modello ragiona in un blocco nascosto (mostrato chiuso sopra la risposta). Quel ragionamento di solito è l'attesa più lunga, e `strike` ne sposta il più possibile prima dell'invio:
 
 1. **Mentre scrivi**, il modello ragiona a blocchi brevi di 32 token, sul messaggio così com'è in quel momento, a parole intere (dopo uno spazio o un segno di punteggiatura, oppure a una pausa).
-2. **Quando il testo cambia**, il ragionamento non viene buttato. Resta nel prompt come appunti, dopo la nuova versione del messaggio. Spostarlo lì costa solo un prefill: la fase veloce e parallela, circa 60 volte più rapida che riscrivere gli stessi token sul 14B con la RTX 2060. Una breve frase dice al modello che il messaggio è cambiato, così lo rilegge e prosegue da quello che aveva già ricavato.
+2. **Quando il testo cambia**, il ragionamento non viene buttato. Resta nel prompt come appunti, dopo la nuova versione del messaggio. Spostarlo lì costa solo un prefill: la fase veloce e parallela, circa 60 volte più rapida che riscrivere gli stessi token sul 14B con la RTX 2060. Una nuova riga degli appunti nomina le parole appena scritte, così il modello continua a raccogliere materiale su di esse invece di ricominciare.
 3. **All'invio**, un'ultima frase dice al modello che il messaggio ora è completo. Finisce di ragionare da dove era arrivato e risponde.
 
-Gli appunti cominciano con una cornice: *"L'utente sta ancora scrivendo... Non indovinerò il resto: ricaverò quello che posso dalla parte già scritta."* Senza, il modello spendeva gli appunti a osservare che il messaggio era incompleto e, dopo ogni modifica, ricopiava il suo ultimo paragrafo (misurato: il 70% di ragionamento in più, e due risposte su 24 mai arrivate). Con la cornice fa lavoro parziale utile, per esempio `3 × 12 = 36` prima ancora che la domanda sia stata scritta.
+Gli appunti sono un elenco di **materiale per la risposta**, aperto da una cornice: *"L'utente sta ancora scrivendo. Non mi chiederò cosa chiederà, né osserverò che il testo è incompleto. Mentre aspetto raccolgo materiale per la risposta: per ogni termine chiave, nome o numero già scritto, una riga con cos'è e i fatti che so, oppure un risultato parziale."* Ogni volta che scrivi altro, una nuova riga nomina le parole nuove: `- New words "finestra di contesto": `. Così da *"Quando finisce la finestra di contesto degli LLM?"* gli appunti contengono già cos'è una finestra di contesto e cosa significa LLM, e da un problema i risultati parziali (`3 × 12 = 36`) prima ancora che la domanda sia stata scritta.
+
+La cornice conta. Senza, il modello spendeva gli appunti a osservare che il messaggio era incompleto e, dopo ogni modifica, ricopiava il suo ultimo paragrafo. Su sei messaggi digitati in tempo reale, la quota di frasi degli appunti che parlano dell'utente o del messaggio (invece che del contenuto) è scesa dall'86% con una cornice generica (*"ricava quello che puoi"*) al 41% con questo elenco. In modalità ragionamento si usa anche la presence penalty suggerita dagli autori di Qwen3, che tiene il 4B lontano dai loop in cui ripete una frase fino al limite di token.
 
 **Se fai una pausa e invii il messaggio senza cambiarlo**, `strike` va oltre e scrive anche la risposta. Questa parte è esatta: la risposta vale solo per il testo esatto per cui è stata scritta, e qualsiasi modifica la scarta. Con `--no-think` (senza ragionamento) `strike` fa solo questo, e con la decodifica greedy la risposta è identica token per token a quella avviata dopo l'invio (verificato).
 
@@ -170,14 +172,14 @@ Tutto su una RTX 2060 (6 GB), llama.cpp, modelli Q4_K_M, digitazione in tempo re
 
 | | Senza ragionamento in anticipo | `mafdet strike` |
 |---|---|---|
-| Risposte corrette | 22/24 | 22/24 |
-| Attesa mediana per la prima parola della risposta | 10,2 s | **4,4 s** |
-| Attesa media | 11,8 s | **6,2 s** |
-| Più veloce | | in 20 problemi su 22 |
-| Ragionamento in totale | 914 token | 907 token |
-| Ragionamento rimasto dopo l'invio | 914 token | **462 token** |
+| Risposte corrette | 24/24 | 24/24 |
+| Attesa mediana per la prima parola della risposta | 10,7 s | **2,9 s** |
+| Attesa media | 12,2 s | **3,2 s** |
+| Più veloce | | in 24 problemi su 24 |
+| Ragionamento in totale | 944 token | **662 token** |
+| Ragionamento rimasto dopo l'invio | 944 token | **244 token** |
 
-Stessa qualità, stessa quantità di ragionamento, metà fatta prima dell'invio. In entrambe le colonne 2 risposte non sono mai arrivate (il 4B a volte ragiona in tondo fino al limite di token, con o senza ragionamento in anticipo).
+Stessa precisione, meno ragionamento in totale (il materiale raccolto mentre scrivi evita al modello di ripartire da zero), e quasi due terzi fatti prima dell'invio. Le due cornici precedenti, misurate allo stesso modo: una cornice generica dava 22/24 e una mediana di 4,4 s; nessuna cornice dava 22/24, 6,9 s e il 70% di ragionamento in più.
 
 **Risposta esatta in anticipo, Qwen3-4B, senza ragionamento** (pausa prima dell'invio, testo invariato):
 

@@ -129,10 +129,12 @@ mafdet strike
 `mafdet strike` is the same chat, one step further: the model **starts thinking about your message while you are still typing it**. It runs Qwen3 in thinking mode, so before answering the model reasons in a hidden block (shown folded above the answer). That reasoning is usually the longest wait, and `strike` moves as much of it as possible to before Enter:
 
 1. **While you type**, the model reasons in short chunks of 32 tokens, on the message as it is at that moment, on whole words (after a space or punctuation, or at a pause).
-2. **When the text changes**, the reasoning is not thrown away. It stays in the prompt as notes, after the new version of the message. Moving it there only costs a prefill: the fast, parallel phase, about 60 times faster than writing the same tokens again for the 14B on the RTX 2060. A short sentence tells the model that the message has changed, so it rereads it and goes on from what it had worked out.
+2. **When the text changes**, the reasoning is not thrown away. It stays in the prompt as notes, after the new version of the message. Moving it there only costs a prefill: the fast, parallel phase, about 60 times faster than writing the same tokens again for the 14B on the RTX 2060. A new line of the notes names the words just typed, so the model goes on gathering material on them instead of starting over.
 3. **On Enter**, a last sentence tells the model that the message is now complete. It finishes reasoning from where it got to and answers.
 
-The notes start with a frame: *"The user is still typing... I will not guess the rest: I will work out what I can from the part already written."* Without it, the model spent its notes remarking that the message was unfinished, and after every edit it copied its last paragraph again (measured: 70% more reasoning in total, and two answers out of 24 that never came). With it, the model does useful partial work, such as `3 × 12 = 36` before the question has even been typed.
+The notes are a list of **material for the answer**, started by a frame: *"The user is still typing. I will not wonder what they will ask, nor remark that the text is unfinished. While I wait, I collect material for the answer: for each key term, name or number already written, one line with what it is and the facts I know about it, or a partial result."* Each time you type more, a new line names the new words: `- New words "finestra di contesto": `. So from *"Quando finisce la finestra di contesto degli LLM?"* the notes already hold what a context window is and what LLM stands for, and from a word problem the partial results (`3 × 12 = 36`) before the question has been typed.
+
+The frame matters. Without one, the model spent its notes remarking that the message was unfinished, and after every edit it copied its last paragraph again. On six messages typed in real time, the share of sentences in the notes about the user or the message itself (instead of its content) went from 86% with a generic frame (*"work out what you can"*) to 41% with this list. Thinking mode also uses the presence penalty suggested by Qwen3's authors, which keeps the 4B out of loops that repeat a sentence until the token limit.
 
 **If you pause and send the message unchanged**, `strike` goes further and also writes the answer itself. That part is exact: the answer only holds for the exact text it was written for, and any change drops it. With `--no-think` (no reasoning) this is all `strike` does, and with greedy decoding the answer is identical token by token to the one started after Enter (checked).
 
@@ -170,14 +172,14 @@ All on an RTX 2060 (6 GB), llama.cpp, Q4_K_M models, real-time typing (5 to 8 ch
 
 | | Without reasoning ahead | `mafdet strike` |
 |---|---|---|
-| Correct answers | 22/24 | 22/24 |
-| Median wait for the first word of the answer | 10.2 s | **4.4 s** |
-| Mean wait | 11.8 s | **6.2 s** |
-| Faster | | in 20 of 22 problems |
-| Reasoning in total | 914 tokens | 907 tokens |
-| Reasoning left after Enter | 914 tokens | **462 tokens** |
+| Correct answers | 24/24 | 24/24 |
+| Median wait for the first word of the answer | 10.7 s | **2.9 s** |
+| Mean wait | 12.2 s | **3.2 s** |
+| Faster | | in 24 of 24 problems |
+| Reasoning in total | 944 tokens | **662 tokens** |
+| Reasoning left after Enter | 944 tokens | **244 tokens** |
 
-Same quality, same amount of reasoning, half of it done before Enter. In both columns, 2 answers never finished (the 4B sometimes reasons in circles until the token limit, with or without reasoning ahead).
+Same accuracy, less reasoning in total (the material gathered while typing saves the model from starting over), and almost two thirds of it done before Enter. The two earlier frames, measured the same way: a generic frame gave 22/24 and a median of 4.4 s; no frame gave 22/24, 6.9 s and 70% more reasoning.
 
 **Exact answer ahead, Qwen3-4B, no reasoning** (pause before Enter, text unchanged):
 
