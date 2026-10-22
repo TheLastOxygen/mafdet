@@ -16,10 +16,11 @@ import csv
 import os
 import statistics
 
-import torch
-
 from .engine import (Template, argmax_id, device_label, encode, make_engine, model_label, peak_mem_mb,
-                     read_sample, setup, timed)
+                     read_sample, setup, timed, torch)
+
+# Out of GPU memory only exists on the PyTorch backend; on llama.cpp (torch may be absent) nothing to catch.
+GPU_OOM = torch.cuda.OutOfMemoryError if torch is not None else ()
 
 
 def filler_ids(tok, n: int) -> list[int]:
@@ -65,7 +66,7 @@ def run(args) -> int:
                 t = argmax_id(logits)
                 logits, ms = timed(device, eng.sync, eng.ids + [t], need_logits=True)
                 steps.append(ms)
-        except torch.cuda.OutOfMemoryError:
+        except GPU_OOM:
             print(f"{len(ids):>7}  out of GPU memory: stopping here")
             torch.cuda.empty_cache()
             break

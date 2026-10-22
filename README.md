@@ -90,7 +90,7 @@ The same app comes in two forms, on the same engine:
 
 **Chat.** While you type, a status line under the message shows what the model is doing with it: how much it has read, and how many reasoning tokens it has written ahead (the field glows amber while it thinks). On Enter only the tail is left to compute. The reasoning is shown folded above the answer, and every answer ends with its numbers: first word after Enter, tokens read while you typed, reasoning done before Enter, speed.
 
-**Models.** Five families: **Qwen3**, **Llama 3**, **Gemma 3**, **Mistral** and **Phi-4**, from 0.6B to 32B parameters, each in several quantizations. With every model, MAFDET reads your message while you type and, at a pause, writes the answer ahead; Qwen3 also **reasons ahead**, the one family whose reasoning frame was measured. Every model of the catalog comes with what it does on *your* machine, before you download it: whether it fits in VRAM or runs partly on the CPU, how fast it writes and reads, and how long the answer takes after Enter with and without MAFDET. The estimate comes from your hardware (GPU and RAM bandwidth, VRAM, llama.cpp's split of layers between GPU and CPU) and is within 12% of the measured speeds on the reference PC (Qwen3-4B 89.6 estimated / 87.1 measured tok/s, 8B 16.2 / 16.2, 14B 5.1 / 4.9). Once a model is downloaded, **Measure** benchmarks it in half a minute and the real numbers replace the estimate. The model that runs best here is marked *Best for you*, and each family has its own best pick. To add a model, add a line to `tools/build_catalog.py`: it reads the file sizes and the shape of the model from Hugging Face.
+**Models.** Five families: **Qwen3**, **Llama 3**, **Gemma 3**, **Mistral** and **Phi-4**, from 0.6B to 32B parameters, each in several quantizations. With every model, MAFDET reads your message while you type and, at a pause, writes the answer ahead; Qwen3 also **reasons ahead**, the one family whose reasoning frame was measured. Every model of the catalog comes with what it does on *your* machine, before you download it: whether it fits in VRAM or runs partly on the CPU, how fast it writes and reads, and for Qwen3 how long the answer takes after Enter with and without MAFDET (for the other families, how long a typical answer takes to write). The estimate comes from your hardware (GPU and RAM bandwidth, VRAM, llama.cpp's split of layers between GPU and CPU) and is within 12% of the measured speeds on the reference PC (Qwen3-4B 89.6 estimated / 87.1 measured tok/s, 8B 16.2 / 16.2, 14B 5.1 / 4.9). Once a model is downloaded, **Measure** benchmarks it in half a minute and the real numbers replace the estimate. The model that runs best here is marked *Best for you*, and each family has its own best pick. To add a model, add a line to `tools/build_catalog.py`: it reads the file sizes and the shape of the model from Hugging Face.
 
 **Hardware and settings.** The Hardware view shows the GPU, CPU, memory and the llama.cpp runtime, with a button to install or reinstall it. Settings keep the chat options from one start to the next (in `~/.mafdet`, or `$MAFDET_HOME`).
 
@@ -101,9 +101,9 @@ The same app comes in two forms, on the same engine:
 
 ## Requirements
 
-- **Windows or Linux**, with an **NVIDIA GPU** and up-to-date drivers (tested target: RTX 2060, 6 GB), or just a CPU
-- **Python 3.10 or later**
-- Disk space for the models: from 0.6 GB (Qwen3-0.6B) to 2.3 GB for the 4B recommended on 6-8 GB cards
+- **Windows**, with an **NVIDIA GPU** and up-to-date drivers (tested target: RTX 2060, 6 GB), or just a CPU. **Linux** has its llama.cpp builds and code paths in place, but has not been tested yet
+- **Python 3.10 or later** (tested with 3.12)
+- Disk space: about 0.7 GB for llama.cpp with CUDA (60 MB without), plus the models, from 0.6 GB (Qwen3-0.6B) to 2.3 GB for the 4B recommended on 6-8 GB cards
 - **16 GB of RAM** recommended for CPU-only runs and for models larger than the VRAM
 
 The app needs no PyTorch: llama.cpp runs the models, and transformers only provides the tokenizers. PyTorch is needed only for the measurements on the PyTorch backend (below): install it first from the CUDA index, then `pip install -e ".[research]"`.
@@ -184,8 +184,8 @@ Same accuracy, less reasoning in total (the material gathered while typing saves
 | Model | Fits in 6 GB? | Writes | Reasoning written while typing a 30 s message |
 |---|---|---|---|
 | Qwen3-4B | yes | 83 tok/s | most of it |
-| Qwen3-8B | no, partly on the CPU | about 13 tok/s | 130 to 280 tokens |
-| Qwen3-14B | no, partly on the CPU | 5 tok/s | 130 tokens |
+| Qwen3-8B | no, partly on the CPU | 13 to 16 tok/s | 130 to 280 tokens |
+| Qwen3-14B | no, partly on the CPU | 5 tok/s | about 160 tokens |
 
 Even so, on the 14B (6 word problems typed in real time, 6/6 correct both ways) reasoning ahead halves the mean wait after Enter: **108 s → 47 s**, with 164 reasoning tokens written before Enter on average. Single runs vary a lot (the same problem took 106 s once and 154 s another time), so 6 problems give the order of magnitude, not a precise figure. Reading ahead gains more the larger the model: the 14B reads a 3,000-token pasted document in about 10 s, all of it hidden while you type.
 
@@ -216,11 +216,11 @@ Even perfect material only matches reasoning ahead: the 14B reads it, then redoe
 - [x] llama.cpp backend with quantized (GGUF) models
 - [x] `mafdet strike`: reasoning ahead while you type, kept across edits; the exact answer ahead at a pause
 - [x] The app: window and terminal, model catalog with estimates for your hardware, automatic llama.cpp setup, guided first start, four languages
+- [x] Five model families: Qwen3, Llama 3, Gemma 3, Mistral, Phi-4
 - [x] A small model gathers while you type, a large one answers: tried and measured (no gain on the RTX 2060, see Results)
 - [ ] Reasoning ahead for models larger than the VRAM that beats the large model thinking by itself
-- [x] Five model families: Qwen3, Llama 3, Gemma 3, Mistral, Phi-4
 - [ ] Reasoning ahead beyond Qwen3, including the thinking models with their own formats (DeepSeek-R1, gpt-oss): each needs its frame measured
-- [ ] macOS (Metal) and AMD GPUs
+- [ ] Linux tested; macOS (Metal) and AMD GPUs
 
 ## Related research
 
