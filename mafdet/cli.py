@@ -47,7 +47,7 @@ COMMANDS = [
     Command("doctor", "the check-up", "check the machine, llama.cpp and the models",
             "Checks the GPU, memory, llama.cpp and the downloaded models, and says what is missing. With "
             "--install it downloads the llama.cpp build for this machine by itself.",
-            ("mafdet doctor", "mafdet doctor --install"), "app", common=False),
+            ("mafdet doctor", "mafdet doctor --install", "mafdet doctor --install --cuda 12"), "app", common=False),
     Command("awaken", "the awakening", "check PyTorch and the GPU (for the measurements)",
             "Checks that PyTorch sees the GPU (CUDA build, free VRAM, bf16 support) and says what to fix "
             "if it does not. With --load it also downloads the model (about 3.5 GB the first time), "
@@ -260,6 +260,9 @@ def _models_args(p):
 
 def _doctor_args(p):
     p.add_argument("--install", action="store_true", help="download and install the llama.cpp build for this machine")
+    p.add_argument("--cuda", choices=["12", "13", "cpu"], default="",
+                   help="with --install: this build instead of the automatic choice (CUDA 13 from driver 580 on, "
+                        "CUDA 12 for older drivers and GTX 10 or older cards)")
 
 
 def _awaken_args(p):

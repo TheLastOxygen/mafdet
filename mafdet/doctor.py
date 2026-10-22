@@ -4,6 +4,7 @@ llama.cpp in place by itself.
 
     mafdet doctor
     mafdet doctor --install
+    mafdet doctor --install --cuda 12     # a given build instead of the automatic choice
 """
 from __future__ import annotations
 
@@ -34,7 +35,7 @@ def run(args) -> int:
         console.print(f"{warn} GPU        no NVIDIA card found (nvidia-smi): models run on the CPU")
 
     if args.install:
-        install(console)
+        install(console, args.cuda or None)
     rt = llama_setup.status()
     if rt["installed"]:
         same = rt["build"] == rt["tested_build"]
@@ -53,8 +54,8 @@ def run(args) -> int:
     return 0 if rt["installed"] else 1
 
 
-def install(console: Console):
-    task = TaskManager().start("llama", llama_setup.LLAMA_TAG, llama_setup.install)
+def install(console: Console, cuda: str | None = None):
+    task = TaskManager().start("llama", llama_setup.LLAMA_TAG, lambda t: llama_setup.install(t, cuda=cuda))
     with Progress("{task.description}", BarColumn(), TaskProgressColumn(), console=console) as bar:
         row = bar.add_task("llama.cpp", total=1.0)
         while task.state == "running":

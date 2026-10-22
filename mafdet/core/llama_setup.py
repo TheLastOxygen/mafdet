@@ -32,12 +32,17 @@ INSTALL_INFO = "mafdet-install.json"
 OLD_FOR_CUDA13 = re.compile(r"GTX (9|10)\d\d|TITAN (X|XP|V)\b|QUADRO [MP]\d|TESLA [MPV]\d|\bP\d{2,3}\b", re.I)
 
 
-def build_for(hw: Hardware) -> dict:
-    """Which build of the release fits this machine: {flavor, assets (name patterns), label}."""
+def build_for(hw: Hardware, cuda: str | None = None) -> dict:
+    """Which build of the release fits this machine: {flavor, assets (name patterns), label}.
+
+    `cuda` overrides the choice: "12" or "13" for that CUDA build (an older driver, a card the
+    automatic choice gets wrong), "cpu" for the build without CUDA.
+    """
     system, arm = hw.system, hw.arch in ("arm64", "aarch64")
     gpu = hw.gpu
-    cuda = None
-    if gpu and system in ("windows", "linux") and not arm:
+    if cuda == "cpu" or arm or system not in ("windows", "linux"):
+        cuda = None
+    elif cuda is None and gpu:
         driver = int(re.match(r"\d+", gpu.driver).group()) if re.match(r"\d+", gpu.driver) else 0
         cuda = "13" if driver >= 580 and not OLD_FOR_CUDA13.search(gpu.name) else "12"
     if system == "windows":
@@ -108,10 +113,10 @@ def _extract(archive: Path, into: Path):
                 t.extractall(into)
 
 
-def install(task: Task, tag: str = LLAMA_TAG) -> dict:
+def install(task: Task, tag: str = LLAMA_TAG, cuda: str | None = None) -> dict:
     """Download and unpack the release for this machine into ~/.mafdet/llama.cpp, then check it runs."""
     hw = detect()
-    build = build_for(hw)
+    build = build_for(hw, cuda)
     task.stage = "release"
     assets = _release_assets(tag)
     names = [p.format(tag=tag) for p in build["assets"]]

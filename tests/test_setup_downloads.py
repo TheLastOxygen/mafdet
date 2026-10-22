@@ -78,3 +78,15 @@ def test_fetch_cancel_keeps_part(server, tmp_path):
     with pytest.raises(Cancelled):
         downloads.fetch(server, dest, task, size=len(DATA))
     assert not dest.exists() and (tmp_path / "model.gguf.part").exists()
+
+
+@pytest.mark.parametrize("hw,cuda,flavor", [
+    (machine(gpu_name="NVIDIA GeForce RTX 2060"), "12", "cuda-12.4"),          # a driver that supports 13, forced to 12
+    (machine(gpu_name="NVIDIA GeForce GTX 1080"), "13", "cuda-13.4"),
+    (machine(gpu_name="NVIDIA GeForce RTX 2060"), "cpu", "cpu"),
+    (machine("linux", "x86_64", "NVIDIA GeForce RTX 4090"), "12", "cuda-12.8"),
+    (machine(), "12", "cuda-12.4"),                                             # no card seen: the user knows better
+    (machine("darwin", "arm64"), "12", "metal"),                                # no CUDA on a Mac
+])
+def test_build_override(hw, cuda, flavor):
+    assert llama_setup.build_for(hw, cuda)["flavor"] == flavor
