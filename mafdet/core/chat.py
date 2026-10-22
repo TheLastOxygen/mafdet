@@ -78,7 +78,9 @@ class ChatService:
         return dataclasses.replace(hw, gpus=gpus)
 
     def catalog(self) -> dict:
-        out = catalog.listing(self.machine(), self.settings["device"], self.settings["ctx"])
+        hw = self.machine()
+        out = catalog.listing(hw, self.settings["device"], self.settings["ctx"])
+        out["vram_others_mb"] = hw.gpu.vram_used_mb if hw.gpu else 0
         out["loaded"] = self.variant_id if self.session is not None else ""
         return out
 
@@ -108,17 +110,20 @@ class ChatService:
         argv = ["strike", "--gguf", path, "--model", v.model["tokenizer"], "--ctx", str(st["ctx"]),
                 "--device", st["device"], "--ahead", str(st["ahead"]), "--think-ahead", str(st["think_ahead"]),
                 "--max-tokens", str(st["max_tokens"])]
-        if not st["think"]:
-            argv.append("--no-think")
+        if not st["think"] or not v.model["reason_ahead"]:
+            argv.append("--no-think")              # only a measured frame reasons ahead (Qwen3 today)
+        if v.model.get("llama_args"):
+            argv.append("--llama-args=" + " ".join(v.model["llama_args"]))
         if st["recycle"]:
             argv.append("--recycle")
-        if st["gatherer"]:
+        if st["gatherer"] and v.model["reason_ahead"] and st["think"]:   # material for a model that reasons
             g = catalog.find(st["gatherer"])
             gpath = catalog.local_path(g) if g else st["gatherer"]
             if gpath:
                 argv += ["--gatherer", gpath]
         args = build_parser().parse_args(argv)
         args.port = free_port()
+        args.tokenizer_kwargs = v.model.get("tokenizer_kwargs", {})
         return args
 
     def load(self, variant_id: str = "") -> dict:

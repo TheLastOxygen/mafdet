@@ -102,11 +102,59 @@ def tokenizer_id(gguf: str) -> str:
     raise SystemExit("With a local GGUF file, pass the tokenizer with --model (e.g. Qwen/Qwen3-4B).")
 
 
+# A llama-server holds gigabytes of VRAM. If the app dies without closing it (the terminal closed
+# with its X, a crash, a kill), atexit never runs: the server must not outlive it.
+_JOB = None
+
+
+def _tie_to_this_process(proc: subprocess.Popen):
+    """Windows: put the server in a job object that kills its processes when the app's handle closes."""
+    global _JOB
+    if os.name != "nt":
+        return
+    import ctypes
+    from ctypes import wintypes
+    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    if _JOB is None:
+        class LIMITS(ctypes.Structure):
+            _fields_ = [("PerProcessUserTimeLimit", ctypes.c_int64), ("PerJobUserTimeLimit", ctypes.c_int64),
+                        ("LimitFlags", wintypes.DWORD), ("MinimumWorkingSetSize", ctypes.c_size_t),
+                        ("MaximumWorkingSetSize", ctypes.c_size_t), ("ActiveProcessLimit", wintypes.DWORD),
+                        ("Affinity", ctypes.c_size_t), ("PriorityClass", wintypes.DWORD),
+                        ("SchedulingClass", wintypes.DWORD)]
+
+        class IO(ctypes.Structure):
+            _fields_ = [(n, ctypes.c_uint64) for n in ("r", "w", "o", "rb", "wb", "ob")]
+
+        class EXTENDED(ctypes.Structure):
+            _fields_ = [("Basic", LIMITS), ("Io", IO), ("ProcessMemoryLimit", ctypes.c_size_t),
+                        ("JobMemoryLimit", ctypes.c_size_t), ("PeakProcessMemoryUsed", ctypes.c_size_t),
+                        ("PeakJobMemoryUsed", ctypes.c_size_t)]
+        k32.CreateJobObjectW.restype = wintypes.HANDLE
+        job = k32.CreateJobObjectW(None, None)
+        info = EXTENDED()
+        info.Basic.LimitFlags = 0x2000                      # JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+        if not job or not k32.SetInformationJobObject(job, 9, ctypes.byref(info), ctypes.sizeof(info)):
+            return                                          # 9 = JobObjectExtendedLimitInformation
+        _JOB = job                                          # never closed: it goes when the app goes
+    k32.AssignProcessToJobObject(wintypes.HANDLE(_JOB), wintypes.HANDLE(proc._handle))
+
+
+def _die_with_parent():
+    """Linux: the server gets SIGTERM when the app's process dies."""
+    try:
+        import ctypes
+        import signal
+        ctypes.CDLL("libc.so.6").prctl(1, signal.SIGTERM)  # PR_SET_PDEATHSIG
+    except OSError:
+        pass
+
+
 class LlamaServer:
     """Starts llama-server, waits until it is ready and shuts it down on exit."""
 
     def __init__(self, gguf: str, device: str, ctx: int = 8192, n_slots: int = 1, port: int = 8089,
-                 extra_args: tuple[str, ...] = ()):
+                 extra_args: tuple[str, ...] = (), log_name: str = "server"):
         self.url = f"http://127.0.0.1:{port}"
         self.port = port
         self._conn: http.client.HTTPConnection | None = None
@@ -132,12 +180,14 @@ class LlamaServer:
         # larger than the GPU still run.
         args += ["-ngl", "auto"] if device == "cuda" else ["-ngl", "0", "-dev", "none"]
         args += list(extra_args)
-        # One log per server: mafdet strike --gatherer runs two side by side.
-        self.log_path = os.path.join(os.path.dirname(exe), "server.log" if port == 8089 else f"server-{port}.log")
+        # One log per role (chat, gatherer, benchmark), overwritten at each start: the ports change every time.
+        self.log_path = os.path.join(os.path.dirname(exe), f"{log_name}.log")
         self._log = open(self.log_path, "w", encoding="utf-8")
         # No console window of its own when started from a windowed app (mafdet watch); the output goes to the log.
         flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
-        self.proc = subprocess.Popen(args, stdout=self._log, stderr=subprocess.STDOUT, creationflags=flags)
+        self.proc = subprocess.Popen(args, stdout=self._log, stderr=subprocess.STDOUT, creationflags=flags,
+                                     preexec_fn=_die_with_parent if os.name != "nt" else None)
+        _tie_to_this_process(self.proc)
         atexit.register(self.close)
         t0 = time.perf_counter()
         while not self._alive():
@@ -300,13 +350,13 @@ def setup_llama(args, device: str | None = None, n_slots: int = 1):
     device = device or pick_device(args.device)
 
     tok_id = tokenizer_id(args.gguf) if args.model == DEFAULT_MODEL else args.model
-    tok = AutoTokenizer.from_pretrained(tok_id)
+    tok = AutoTokenizer.from_pretrained(tok_id, **getattr(args, "tokenizer_kwargs", {}))
     extra = (RECYCLE_ARGS if getattr(args, "recycle", False) else ())
     if getattr(args, "draft", ""):
         extra += ("-md", resolve_gguf(args.draft)) + DRAFT_ARGS
     extra += tuple(args.llama_args.split())
     server = LlamaServer(args.gguf, device, ctx=args.ctx, n_slots=n_slots, port=getattr(args, "port", 8089),
-                         extra_args=extra)
+                         extra_args=extra, log_name=getattr(args, "log_name", "server"))
     fname = os.path.basename(server.model_path)
     if not fname.startswith(tok_id.split("/")[-1]):
         print(f"Warning: tokenizer {tok_id} may not match {fname}", file=sys.stderr)

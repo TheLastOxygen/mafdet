@@ -61,6 +61,10 @@ def catalog() -> dict:
     return json.loads(files("mafdet").joinpath("catalog.json").read_text(encoding="utf-8"))
 
 
+def families() -> list[dict]:
+    return catalog()["families"]
+
+
 def variants() -> list[Variant]:
     return [Variant(m, v["quant"], v["repo"], v["file"], v["bytes"]) for m in catalog()["models"] for v in m["variants"]]
 
@@ -157,14 +161,25 @@ def estimate(v: Variant, hw: Hardware, device: str = "auto", ctx: int = 8192) ->
             "measured": False}
 
 
+ANSWER_TOKENS = 300            # a typical answer, for the models that do not reason
+
+
 def waits(m: dict, decode_tps: float) -> dict:
-    """Seconds from Enter to the answer for a typical question, with and without reasoning ahead."""
-    reasoning = m["reasoning_tokens"]
+    """What the user waits for after Enter.
+
+    A model that reasons ahead: seconds to the answer for a typical question, with and without
+    MAFDET. The others start answering right away (the message is already read), so what tells
+    them apart is how long a typical answer takes to write.
+    """
     if decode_tps <= 0:
-        return {"with_mafdet_s": None, "without_s": None, "ahead_tokens": 0}
-    ahead = min(AHEAD_SHARE_MAX * reasoning, decode_tps * TYPING_SECONDS) if m["reason_ahead"] else 0
+        return {"with_mafdet_s": None, "without_s": None, "ahead_tokens": 0, "answer_s": None}
+    answer_s = round(ANSWER_TOKENS / decode_tps, 1)
+    if not m["reason_ahead"]:
+        return {"with_mafdet_s": None, "without_s": None, "ahead_tokens": 0, "answer_s": answer_s}
+    reasoning = m["reasoning_tokens"]
+    ahead = min(AHEAD_SHARE_MAX * reasoning, decode_tps * TYPING_SECONDS)
     return {"with_mafdet_s": round((reasoning - ahead) / decode_tps, 1),
-            "without_s": round(reasoning / decode_tps, 1), "ahead_tokens": round(ahead)}
+            "without_s": round(reasoning / decode_tps, 1), "ahead_tokens": round(ahead), "answer_s": answer_s}
 
 
 def entry(v: Variant, hw: Hardware, device: str = "auto", ctx: int = 8192) -> dict:
@@ -177,7 +192,9 @@ def entry(v: Variant, hw: Hardware, device: str = "auto", ctx: int = 8192) -> di
                  measured_at=got.get("date", ""))
     e.update(waits(v.model, e["decode_tps"]))
     path = local_path(v)
+    fam = next(f for f in families() if f["id"] == v.model["family"])
     return {"id": v.id, "model_id": v.model["id"], "name": v.model["name"], "quant": v.quant,
+            "family": fam["id"], "family_name": fam["name"], "vendor": fam["vendor"], "license": fam["license"],
             "default": v.quant == v.model["default_quant"], "tier": v.model["tier"],
             "params_b": v.model["params_b"], "active_b": v.model["active_b"],
             "reason_ahead": v.model["reason_ahead"], "bytes": v.bytes, "installed": bool(path),
@@ -185,12 +202,14 @@ def entry(v: Variant, hw: Hardware, device: str = "auto", ctx: int = 8192) -> di
 
 
 def recommend(entries: list[dict]) -> str | None:
-    """The largest model, at its default quantization, whose answer comes within a comfortable wait.
+    """The MAFDET experience: the largest model that reasons ahead, at its default quantization,
+    whose answer comes within a comfortable wait.
 
     Preference: all on the GPU and under 8 s after Enter; then anything under 15 s; then the
     fastest that fits at all.
     """
-    pool = [e for e in entries if e["default"] and e["placement"] != "too_big" and e["with_mafdet_s"] is not None]
+    pool = [e for e in entries if e["default"] and e["reason_ahead"] and e["placement"] != "too_big"
+            and e["with_mafdet_s"] is not None]
     for ok in (lambda e: e["placement"] == "gpu" and e["with_mafdet_s"] <= 8,
                lambda e: e["with_mafdet_s"] <= 15):
         good = [e for e in pool if ok(e)]
@@ -199,9 +218,22 @@ def recommend(entries: list[dict]) -> str | None:
     return min(pool, key=lambda e: e["with_mafdet_s"])["id"] if pool else None
 
 
+def best_in_family(entries: list[dict], family: str) -> str | None:
+    """The largest model of a family that chats comfortably here: all on the GPU at 20 tokens/s or
+    more; then anything at 10 or more; then the fastest that fits."""
+    pool = [e for e in entries if e["family"] == family and e["default"] and e["placement"] != "too_big"]
+    for ok in (lambda e: e["placement"] == "gpu" and e["decode_tps"] >= 20, lambda e: e["decode_tps"] >= 10):
+        good = [e for e in pool if ok(e)]
+        if good:
+            return max(good, key=lambda e: e["params_b"])["id"]
+    return max(pool, key=lambda e: e["decode_tps"])["id"] if pool else None
+
+
 def listing(hw: Hardware, device: str = "auto", ctx: int = 8192) -> dict:
     entries = [entry(v, hw, device, ctx) for v in variants()]
     best = recommend(entries)
+    family_best = {f["id"]: best_in_family(entries, f["id"]) for f in families()}
     for e in entries:
         e["recommended"] = e["id"] == best
-    return {"models": entries, "recommended": best}
+        e["family_best"] = e["id"] == family_best[e["family"]]
+    return {"models": entries, "recommended": best, "family_best": family_best, "families": families()}

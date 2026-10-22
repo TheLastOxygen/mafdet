@@ -357,6 +357,7 @@ class Session:
         if base and os.path.exists(args.gguf):
             args.model = f"Qwen/{base.group(1)}"
         args.ctx, args.port, args.recycle, args.draft = 4096, GATHERER_PORT, False, ""
+        args.log_name, args.tokenizer_kwargs = "server-gatherer", {}
         # On the CPU it shares the cores with the main model's layers there: a few threads are enough.
         args.llama_args = "-t 4" if args.device == "cpu" else ""
         return args

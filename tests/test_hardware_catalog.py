@@ -69,3 +69,25 @@ def test_find_default_quant():
     assert catalog.find("qwen3-0.6b").id == "qwen3-0.6b:Q8_0"
     assert catalog.find("qwen3-4b").id == "qwen3-4b:Q4_K_M"
     assert catalog.find("nope") is None
+
+
+def test_every_family_has_models_and_a_best_pick():
+    entries = catalog.listing(reference_pc())
+    fams = {f["id"] for f in catalog.families()}
+    assert fams == {"qwen3", "llama", "gemma", "mistral", "phi"}
+    assert entries["family_best"] == {"qwen3": "qwen3-4b:Q4_K_M", "llama": "llama-3.2-3b:Q4_K_M",
+                                      "gemma": "gemma-3-4b:Q4_K_M", "mistral": "mistral-7b:Q4_K_M",
+                                      "phi": "phi-4-mini:Q4_K_M"}
+
+
+def test_only_qwen3_reasons_ahead():
+    for v in catalog.variants():
+        assert v.model["reason_ahead"] == (v.model["family"] == "qwen3")
+    e = catalog.entry(catalog.find("llama-3.2-3b"), reference_pc())
+    assert e["with_mafdet_s"] is None and e["answer_s"] > 0
+
+
+def test_gemma_keeps_the_full_cache():
+    """Gemma 3's sliding window: without --swa-full the cache could not be cut back as the text changes."""
+    for v in catalog.variants():
+        assert ("--swa-full" in v.model.get("llama_args", [])) == (v.model["family"] == "gemma")

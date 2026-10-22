@@ -33,7 +33,8 @@ def run(variant_id: str, device: str = "auto", ctx: int = 8192,
         raise FileNotFoundError(f"{v.file} is not downloaded")
     dev = pick_device(device)
     progress("starting", 0.05)
-    server = LlamaServer(path, dev, ctx=ctx, port=BENCH_PORT)
+    server = LlamaServer(path, dev, ctx=ctx, port=BENCH_PORT, extra_args=tuple(v.model.get("llama_args", ())),
+                         log_name="server-bench")
     try:
         prompt = read_sample("documento.txt")
         progress("prefill", 0.35)

@@ -1,5 +1,42 @@
 {
- "version": 1,
+ "version": 2,
+ "families": [
+  {
+   "id": "qwen3",
+   "name": "Qwen3",
+   "vendor": "Alibaba",
+   "license": "Apache-2.0",
+   "reason_ahead": true
+  },
+  {
+   "id": "llama",
+   "name": "Llama 3",
+   "vendor": "Meta",
+   "license": "Llama Community License",
+   "reason_ahead": false
+  },
+  {
+   "id": "gemma",
+   "name": "Gemma 3",
+   "vendor": "Google",
+   "license": "Gemma Terms of Use",
+   "reason_ahead": false
+  },
+  {
+   "id": "mistral",
+   "name": "Mistral",
+   "vendor": "Mistral AI",
+   "license": "Apache-2.0",
+   "reason_ahead": false
+  },
+  {
+   "id": "phi",
+   "name": "Phi-4",
+   "vendor": "Microsoft",
+   "license": "MIT",
+   "reason_ahead": false
+  }
+ ],
  "models": [
   {
    "id": "qwen3-0.6b",
@@ -12,7 +49,6 @@
    "kv_heads": 8,
    "head_dim": 128,
    "reason_ahead": true,
-   "reasoning_tokens": 1100,
    "tier": "tiny",
    "default_quant": "Q8_0",
    "variants": [
@@ -22,7 +58,8 @@
      "file": "Qwen3-0.6B-Q8_0.gguf",
      "bytes": 639446688
     }
-   ]
+   ],
+   "reasoning_tokens": 1100
   },
   {
    "id": "qwen3-1.7b",
@@ -35,7 +72,6 @@
    "kv_heads": 8,
    "head_dim": 128,
    "reason_ahead": true,
-   "reasoning_tokens": 1000,
    "tier": "light",
    "default_quant": "Q8_0",
    "variants": [
@@ -45,7 +81,8 @@
      "file": "Qwen3-1.7B-Q8_0.gguf",
      "bytes": 1834426016
     }
-   ]
+   ],
+   "reasoning_tokens": 1000
   },
   {
    "id": "qwen3-4b",
@@ -58,7 +95,6 @@
    "kv_heads": 8,
    "head_dim": 128,
    "reason_ahead": true,
-   "reasoning_tokens": 900,
    "tier": "balanced",
    "default_quant": "Q4_K_M",
    "variants": [
@@ -86,7 +122,8 @@
      "file": "Qwen3-4B-Q8_0.gguf",
      "bytes": 4280404704
     }
-   ]
+   ],
+   "reasoning_tokens": 900
   },
   {
    "id": "qwen3-8b",
@@ -99,7 +136,6 @@
    "kv_heads": 8,
    "head_dim": 128,
    "reason_ahead": true,
-   "reasoning_tokens": 700,
    "tier": "strong",
    "default_quant": "Q4_K_M",
    "variants": [
@@ -127,7 +163,8 @@
      "file": "Qwen3-8B-Q8_0.gguf",
      "bytes": 8709518112
     }
-   ]
+   ],
+   "reasoning_tokens": 700
   },
   {
    "id": "qwen3-14b",
@@ -140,7 +177,6 @@
    "kv_heads": 8,
    "head_dim": 128,
    "reason_ahead": true,
-   "reasoning_tokens": 500,
    "tier": "very_strong",
    "default_quant": "Q4_K_M",
    "variants": [
@@ -168,7 +204,8 @@
      "file": "Qwen3-14B-Q8_0.gguf",
      "bytes": 15698533728
     }
-   ]
+   ],
+   "reasoning_tokens": 500
   },
   {
    "id": "qwen3-30b-a3b",
@@ -181,7 +218,6 @@
    "kv_heads": 4,
    "head_dim": 128,
    "reason_ahead": true,
-   "reasoning_tokens": 600,
    "tier": "moe",
    "default_quant": "Q4_K_M",
    "variants": [
@@ -209,7 +245,8 @@
      "file": "Qwen3-30B-A3B-Q8_0.gguf",
      "bytes": 32483931648
     }
-   ]
+   ],
+   "reasoning_tokens": 600
   },
   {
    "id": "qwen3-32b",
@@ -222,7 +259,6 @@
    "kv_heads": 8,
    "head_dim": 128,
    "reason_ahead": true,
-   "reasoning_tokens": 450,
    "tier": "best",
    "default_quant": "Q4_K_M",
    "variants": [
@@ -249,6 +285,456 @@
      "repo": "Qwen/Qwen3-32B-GGUF",
      "file": "Qwen3-32B-Q8_0.gguf",
      "bytes": 34817718912
+    }
+   ],
+   "reasoning_tokens": 450
+  },
+  {
+   "id": "llama-3.2-1b",
+   "name": "Llama 3.2 1B",
+   "family": "llama",
+   "tokenizer": "unsloth/Llama-3.2-1B-Instruct",
+   "params_b": 1.2,
+   "active_b": 1.2,
+   "layers": 16,
+   "kv_heads": 8,
+   "head_dim": 64,
+   "reason_ahead": false,
+   "tier": "tiny",
+   "default_quant": "Q4_K_M",
+   "variants": [
+    {
+     "quant": "Q4_K_M",
+     "repo": "unsloth/Llama-3.2-1B-Instruct-GGUF",
+     "file": "Llama-3.2-1B-Instruct-Q4_K_M.gguf",
+     "bytes": 807694368
+    },
+    {
+     "quant": "Q5_K_M",
+     "repo": "unsloth/Llama-3.2-1B-Instruct-GGUF",
+     "file": "Llama-3.2-1B-Instruct-Q5_K_M.gguf",
+     "bytes": 911503392
+    },
+    {
+     "quant": "Q6_K",
+     "repo": "unsloth/Llama-3.2-1B-Instruct-GGUF",
+     "file": "Llama-3.2-1B-Instruct-Q6_K.gguf",
+     "bytes": 1021800480
+    },
+    {
+     "quant": "Q8_0",
+     "repo": "unsloth/Llama-3.2-1B-Instruct-GGUF",
+     "file": "Llama-3.2-1B-Instruct-Q8_0.gguf",
+     "bytes": 1321082528
+    }
+   ]
+  },
+  {
+   "id": "llama-3.2-3b",
+   "name": "Llama 3.2 3B",
+   "family": "llama",
+   "tokenizer": "unsloth/Llama-3.2-3B-Instruct",
+   "params_b": 3.2,
+   "active_b": 3.2,
+   "layers": 28,
+   "kv_heads": 8,
+   "head_dim": 128,
+   "reason_ahead": false,
+   "tier": "light",
+   "default_quant": "Q4_K_M",
+   "variants": [
+    {
+     "quant": "Q4_K_M",
+     "repo": "unsloth/Llama-3.2-3B-Instruct-GGUF",
+     "file": "Llama-3.2-3B-Instruct-Q4_K_M.gguf",
+     "bytes": 2019377600
+    },
+    {
+     "quant": "Q5_K_M",
+     "repo": "unsloth/Llama-3.2-3B-Instruct-GGUF",
+     "file": "Llama-3.2-3B-Instruct-Q5_K_M.gguf",
+     "bytes": 2322153920
+    },
+    {
+     "quant": "Q6_K",
+     "repo": "unsloth/Llama-3.2-3B-Instruct-GGUF",
+     "file": "Llama-3.2-3B-Instruct-Q6_K.gguf",
+     "bytes": 2643853760
+    },
+    {
+     "quant": "Q8_0",
+     "repo": "unsloth/Llama-3.2-3B-Instruct-GGUF",
+     "file": "Llama-3.2-3B-Instruct-Q8_0.gguf",
+     "bytes": 3421898816
+    }
+   ]
+  },
+  {
+   "id": "llama-3.1-8b",
+   "name": "Llama 3.1 8B",
+   "family": "llama",
+   "tokenizer": "unsloth/Llama-3.1-8B-Instruct",
+   "params_b": 8.0,
+   "active_b": 8.0,
+   "layers": 32,
+   "kv_heads": 8,
+   "head_dim": 128,
+   "reason_ahead": false,
+   "tier": "strong",
+   "default_quant": "Q4_K_M",
+   "variants": [
+    {
+     "quant": "Q4_K_M",
+     "repo": "unsloth/Llama-3.1-8B-Instruct-GGUF",
+     "file": "Llama-3.1-8B-Instruct-Q4_K_M.gguf",
+     "bytes": 4920739200
+    },
+    {
+     "quant": "Q5_K_M",
+     "repo": "unsloth/Llama-3.1-8B-Instruct-GGUF",
+     "file": "Llama-3.1-8B-Instruct-Q5_K_M.gguf",
+     "bytes": 5732992384
+    },
+    {
+     "quant": "Q6_K",
+     "repo": "unsloth/Llama-3.1-8B-Instruct-GGUF",
+     "file": "Llama-3.1-8B-Instruct-Q6_K.gguf",
+     "bytes": 6596011392
+    }
+   ]
+  },
+  {
+   "id": "gemma-3-1b",
+   "name": "Gemma 3 1B",
+   "family": "gemma",
+   "tokenizer": "unsloth/gemma-3-1b-it",
+   "params_b": 1.0,
+   "active_b": 1.0,
+   "layers": 26,
+   "kv_heads": 1,
+   "head_dim": 256,
+   "reason_ahead": false,
+   "tier": "tiny",
+   "default_quant": "Q4_K_M",
+   "variants": [
+    {
+     "quant": "Q4_K_M",
+     "repo": "unsloth/gemma-3-1b-it-GGUF",
+     "file": "gemma-3-1b-it-Q4_K_M.gguf",
+     "bytes": 806058272
+    },
+    {
+     "quant": "Q5_K_M",
+     "repo": "unsloth/gemma-3-1b-it-GGUF",
+     "file": "gemma-3-1b-it-Q5_K_M.gguf",
+     "bytes": 851345696
+    },
+    {
+     "quant": "Q6_K",
+     "repo": "unsloth/gemma-3-1b-it-GGUF",
+     "file": "gemma-3-1b-it-Q6_K.gguf",
+     "bytes": 1011738656
+    },
+    {
+     "quant": "Q8_0",
+     "repo": "unsloth/gemma-3-1b-it-GGUF",
+     "file": "gemma-3-1b-it-Q8_0.gguf",
+     "bytes": 1069306400
+    }
+   ],
+   "llama_args": [
+    "--swa-full"
+   ]
+  },
+  {
+   "id": "gemma-3-4b",
+   "name": "Gemma 3 4B",
+   "family": "gemma",
+   "tokenizer": "unsloth/gemma-3-4b-it",
+   "params_b": 3.9,
+   "active_b": 3.9,
+   "layers": 34,
+   "kv_heads": 4,
+   "head_dim": 256,
+   "reason_ahead": false,
+   "tier": "balanced",
+   "default_quant": "Q4_K_M",
+   "variants": [
+    {
+     "quant": "Q4_K_M",
+     "repo": "unsloth/gemma-3-4b-it-GGUF",
+     "file": "gemma-3-4b-it-Q4_K_M.gguf",
+     "bytes": 2489894016
+    },
+    {
+     "quant": "Q5_K_M",
+     "repo": "unsloth/gemma-3-4b-it-GGUF",
+     "file": "gemma-3-4b-it-Q5_K_M.gguf",
+     "bytes": 2829698176
+    },
+    {
+     "quant": "Q6_K",
+     "repo": "unsloth/gemma-3-4b-it-GGUF",
+     "file": "gemma-3-4b-it-Q6_K.gguf",
+     "bytes": 3190740096
+    },
+    {
+     "quant": "Q8_0",
+     "repo": "unsloth/gemma-3-4b-it-GGUF",
+     "file": "gemma-3-4b-it-Q8_0.gguf",
+     "bytes": 4130402176
+    }
+   ],
+   "llama_args": [
+    "--swa-full"
+   ]
+  },
+  {
+   "id": "gemma-3-12b",
+   "name": "Gemma 3 12B",
+   "family": "gemma",
+   "tokenizer": "unsloth/gemma-3-12b-it",
+   "params_b": 11.8,
+   "active_b": 11.8,
+   "layers": 48,
+   "kv_heads": 8,
+   "head_dim": 256,
+   "reason_ahead": false,
+   "tier": "very_strong",
+   "default_quant": "Q4_K_M",
+   "variants": [
+    {
+     "quant": "Q4_K_M",
+     "repo": "unsloth/gemma-3-12b-it-GGUF",
+     "file": "gemma-3-12b-it-Q4_K_M.gguf",
+     "bytes": 7300778336
+    },
+    {
+     "quant": "Q5_K_M",
+     "repo": "unsloth/gemma-3-12b-it-GGUF",
+     "file": "gemma-3-12b-it-Q5_K_M.gguf",
+     "bytes": 8445036896
+    },
+    {
+     "quant": "Q6_K",
+     "repo": "unsloth/gemma-3-12b-it-GGUF",
+     "file": "gemma-3-12b-it-Q6_K.gguf",
+     "bytes": 9660811616
+    },
+    {
+     "quant": "Q8_0",
+     "repo": "unsloth/gemma-3-12b-it-GGUF",
+     "file": "gemma-3-12b-it-Q8_0.gguf",
+     "bytes": 12510212576
+    }
+   ],
+   "llama_args": [
+    "--swa-full"
+   ]
+  },
+  {
+   "id": "gemma-3-27b",
+   "name": "Gemma 3 27B",
+   "family": "gemma",
+   "tokenizer": "unsloth/gemma-3-27b-it",
+   "params_b": 27.0,
+   "active_b": 27.0,
+   "layers": 62,
+   "kv_heads": 16,
+   "head_dim": 128,
+   "reason_ahead": false,
+   "tier": "best",
+   "default_quant": "Q4_K_M",
+   "variants": [
+    {
+     "quant": "Q4_K_M",
+     "repo": "unsloth/gemma-3-27b-it-GGUF",
+     "file": "gemma-3-27b-it-Q4_K_M.gguf",
+     "bytes": 16546688736
+    },
+    {
+     "quant": "Q5_K_M",
+     "repo": "unsloth/gemma-3-27b-it-GGUF",
+     "file": "gemma-3-27b-it-Q5_K_M.gguf",
+     "bytes": 19271675616
+    },
+    {
+     "quant": "Q6_K",
+     "repo": "unsloth/gemma-3-27b-it-GGUF",
+     "file": "gemma-3-27b-it-Q6_K.gguf",
+     "bytes": 22166974176
+    },
+    {
+     "quant": "Q8_0",
+     "repo": "unsloth/gemma-3-27b-it-GGUF",
+     "file": "gemma-3-27b-it-Q8_0.gguf",
+     "bytes": 28707972192
+    }
+   ],
+   "llama_args": [
+    "--swa-full"
+   ]
+  },
+  {
+   "id": "mistral-7b",
+   "name": "Mistral 7B v0.3",
+   "family": "mistral",
+   "tokenizer": "unsloth/mistral-7b-instruct-v0.3",
+   "params_b": 7.2,
+   "active_b": 7.2,
+   "layers": 32,
+   "kv_heads": 8,
+   "head_dim": 128,
+   "reason_ahead": false,
+   "tier": "strong",
+   "default_quant": "Q4_K_M",
+   "variants": [
+    {
+     "quant": "Q4_K_M",
+     "repo": "bartowski/Mistral-7B-Instruct-v0.3-GGUF",
+     "file": "Mistral-7B-Instruct-v0.3-Q4_K_M.gguf",
+     "bytes": 4372812000
+    },
+    {
+     "quant": "Q5_K_M",
+     "repo": "bartowski/Mistral-7B-Instruct-v0.3-GGUF",
+     "file": "Mistral-7B-Instruct-v0.3-Q5_K_M.gguf",
+     "bytes": 5136175328
+    },
+    {
+     "quant": "Q6_K",
+     "repo": "bartowski/Mistral-7B-Instruct-v0.3-GGUF",
+     "file": "Mistral-7B-Instruct-v0.3-Q6_K.gguf",
+     "bytes": 5947248864
+    },
+    {
+     "quant": "Q8_0",
+     "repo": "bartowski/Mistral-7B-Instruct-v0.3-GGUF",
+     "file": "Mistral-7B-Instruct-v0.3-Q8_0.gguf",
+     "bytes": 7702565088
+    }
+   ]
+  },
+  {
+   "id": "mistral-small-3.2",
+   "name": "Mistral Small 3.2",
+   "family": "mistral",
+   "tokenizer": "unsloth/Mistral-Small-3.2-24B-Instruct-2506",
+   "params_b": 23.6,
+   "active_b": 23.6,
+   "layers": 40,
+   "kv_heads": 8,
+   "head_dim": 128,
+   "reason_ahead": false,
+   "tier": "best",
+   "default_quant": "Q4_K_M",
+   "variants": [
+    {
+     "quant": "Q4_K_M",
+     "repo": "unsloth/Mistral-Small-3.2-24B-Instruct-2506-GGUF",
+     "file": "Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M.gguf",
+     "bytes": 14333922848
+    },
+    {
+     "quant": "Q5_K_M",
+     "repo": "unsloth/Mistral-Small-3.2-24B-Instruct-2506-GGUF",
+     "file": "Mistral-Small-3.2-24B-Instruct-2506-Q5_K_M.gguf",
+     "bytes": 16763997728
+    },
+    {
+     "quant": "Q6_K",
+     "repo": "unsloth/Mistral-Small-3.2-24B-Instruct-2506-GGUF",
+     "file": "Mistral-Small-3.2-24B-Instruct-2506-Q6_K.gguf",
+     "bytes": 19345952288
+    },
+    {
+     "quant": "Q8_0",
+     "repo": "unsloth/Mistral-Small-3.2-24B-Instruct-2506-GGUF",
+     "file": "Mistral-Small-3.2-24B-Instruct-2506-Q8_0.gguf",
+     "bytes": 25054793248
+    }
+   ],
+   "tokenizer_kwargs": {
+    "fix_mistral_regex": true
+   }
+  },
+  {
+   "id": "phi-4-mini",
+   "name": "Phi-4 mini",
+   "family": "phi",
+   "tokenizer": "microsoft/Phi-4-mini-instruct",
+   "params_b": 3.8,
+   "active_b": 3.8,
+   "layers": 32,
+   "kv_heads": 8,
+   "head_dim": 128,
+   "reason_ahead": false,
+   "tier": "balanced",
+   "default_quant": "Q4_K_M",
+   "variants": [
+    {
+     "quant": "Q4_K_M",
+     "repo": "unsloth/Phi-4-mini-instruct-GGUF",
+     "file": "Phi-4-mini-instruct-Q4_K_M.gguf",
+     "bytes": 2491874272
+    },
+    {
+     "quant": "Q5_K_M",
+     "repo": "unsloth/Phi-4-mini-instruct-GGUF",
+     "file": "Phi-4-mini-instruct-Q5_K_M.gguf",
+     "bytes": 2848127968
+    },
+    {
+     "quant": "Q6_K",
+     "repo": "unsloth/Phi-4-mini-instruct-GGUF",
+     "file": "Phi-4-mini-instruct-Q6_K.gguf",
+     "bytes": 3155622880
+    },
+    {
+     "quant": "Q8_0",
+     "repo": "unsloth/Phi-4-mini-instruct-GGUF",
+     "file": "Phi-4-mini-instruct.Q8_0.gguf",
+     "bytes": 4084611040
+    }
+   ]
+  },
+  {
+   "id": "phi-4",
+   "name": "Phi-4",
+   "family": "phi",
+   "tokenizer": "microsoft/phi-4",
+   "params_b": 14.7,
+   "active_b": 14.7,
+   "layers": 40,
+   "kv_heads": 10,
+   "head_dim": 128,
+   "reason_ahead": false,
+   "tier": "very_strong",
+   "default_quant": "Q4_K_M",
+   "variants": [
+    {
+     "quant": "Q4_K_M",
+     "repo": "unsloth/phi-4-GGUF",
+     "file": "phi-4-Q4_K_M.gguf",
+     "bytes": 8890306112
+    },
+    {
+     "quant": "Q5_K_M",
+     "repo": "unsloth/phi-4-GGUF",
+     "file": "phi-4-Q5_K_M.gguf",
+     "bytes": 10412707392
+    },
+    {
+     "quant": "Q6_K",
+     "repo": "unsloth/phi-4-GGUF",
+     "file": "phi-4-Q6_K.gguf",
+     "bytes": 12030258752
+    },
+    {
+     "quant": "Q8_0",
+     "repo": "unsloth/phi-4-GGUF",
+     "file": "phi-4-Q8_0.gguf",
+     "bytes": 15580507712
     }
    ]
   }
