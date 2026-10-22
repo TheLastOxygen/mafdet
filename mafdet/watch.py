@@ -93,6 +93,9 @@ GATHER_SEED_TRAINED = ("<think>\nMaterial for the answer, gathered while the use
                        "number already written, one line with what it is and the facts I know about it, or a partial "
                        "result.\n\n")
 GATHER_HEADER = "\nNew words: \"{new}\"\n"
+# Its steps as long as in training (2 to 5 per message: about 5 words each on a word problem). Given a
+# step every 2 words, it learned that so few words seldom deserve a line: one or two lines per problem.
+GATHER_STEP_WORDS = 5
 NOTES_INTRO = "<think>\nMaterial gathered while the user was typing, by a fast assistant (it may contain mistakes):\n"
 THINK_MIN_WORDS = 3                 # no reasoning ahead on the first couple of words
 AHEAD_CHUNK = 128                   # tokens per request written ahead; the next one carries on from there
@@ -302,6 +305,11 @@ class Session:
                 trained = "mafdet-gatherer" in os.path.basename(self.server.model_path)
                 self.fmt = "trained" if trained else "frame"
                 seed = GATHER_SEED_TRAINED if trained else GATHER_SEED_FRAME
+                if trained:
+                    # Every line starts with "- " and names a word of the message: the penalty on tokens
+                    # already used makes it end its steps early (measured: 1-2 lines per word problem, some
+                    # invented, against 3-5 right ones without it).
+                    self.sampling = {**THINK_SAMPLING, "presence_penalty": 0}
             else:
                 seed = SEED
             self.seed_ids = encode(self.tok, seed)
@@ -354,9 +362,13 @@ class Session:
             notes = notes[:-len(self.last_bridge)]
         with self.tok_lock:
             text = self.tok.decode(notes[len(self.seed_ids):])
-        if self.fmt == "trained":                  # its lines only, not the steps' headers
-            return "\n".join(l for l in text.splitlines() if l.startswith("- "))
-        return "- " + text.strip()
+        if self.fmt == "trained":                  # its lines only, not the steps' headers, each once
+            return "\n".join(dict.fromkeys(l for l in text.splitlines() if l.startswith("- ")))
+        # A line the small model repeats (often, after every few words) is read once; blank lines stay.
+        seen = set()
+        lines = [l for l in ("- " + text.strip()).splitlines()
+                 if not l.strip() or not (l in seen or seen.add(l))]
+        return "\n".join(lines)
 
     def take_notes(self, text: str) -> str:
         """On Enter: stop gathering and hand over the material written so far for `text`."""
@@ -568,7 +580,7 @@ class Session:
                 continue
             if self.fmt == "trained" and self.notes and not self.awaiting:
                 new, _ = self._new_words()
-                if len(new.split()) >= BRIDGE_MIN_WORDS:
+                if len(new.split()) >= GATHER_STEP_WORDS:
                     self._bridge()                 # the next step: the words typed since the last one
                     self._retarget()
                     continue
@@ -585,8 +597,9 @@ class Session:
             paused = time.perf_counter() - self.text_t >= self.debounce
             has_text = bool(self.text.strip())
             # Reasoning starts on whole words: a pause, or a space or punctuation just typed.
+            min_words = GATHER_STEP_WORDS if self.fmt == "trained" else THINK_MIN_WORDS
             can_start = self._ahead_room() and (not self.think or (
-                len(self.text.split()) >= THINK_MIN_WORDS and (paused or not self.text[-1:].isalnum())))
+                len(self.text.split()) >= min_words and (paused or not self.text[-1:].isalnum())))
             # Reasoning goes on while the user types; an answer (no --think) waits for a pause.
             go = paused or (self.think and self.ahead and can_start)
             if (self.ahead and go and has_text and can_start and final and done == final
