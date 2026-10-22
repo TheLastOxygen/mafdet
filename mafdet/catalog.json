@@ -1,0 +1,256 @@
+{
+ "version": 1,
+ "models": [
+  {
+   "id": "qwen3-0.6b",
+   "name": "Qwen3 0.6B",
+   "family": "qwen3",
+   "tokenizer": "Qwen/Qwen3-0.6B",
+   "params_b": 0.6,
+   "active_b": 0.6,
+   "layers": 28,
+   "kv_heads": 8,
+   "head_dim": 128,
+   "reason_ahead": true,
+   "reasoning_tokens": 1100,
+   "tier": "tiny",
+   "default_quant": "Q8_0",
+   "variants": [
+    {
+     "quant": "Q8_0",
+     "repo": "Qwen/Qwen3-0.6B-GGUF",
+     "file": "Qwen3-0.6B-Q8_0.gguf",
+     "bytes": 639446688
+    }
+   ]
+  },
+  {
+   "id": "qwen3-1.7b",
+   "name": "Qwen3 1.7B",
+   "family": "qwen3",
+   "tokenizer": "Qwen/Qwen3-1.7B",
+   "params_b": 1.7,
+   "active_b": 1.7,
+   "layers": 28,
+   "kv_heads": 8,
+   "head_dim": 128,
+   "reason_ahead": true,
+   "reasoning_tokens": 1000,
+   "tier": "light",
+   "default_quant": "Q8_0",
+   "variants": [
+    {
+     "quant": "Q8_0",
+     "repo": "Qwen/Qwen3-1.7B-GGUF",
+     "file": "Qwen3-1.7B-Q8_0.gguf",
+     "bytes": 1834426016
+    }
+   ]
+  },
+  {
+   "id": "qwen3-4b",
+   "name": "Qwen3 4B",
+   "family": "qwen3",
+   "tokenizer": "Qwen/Qwen3-4B",
+   "params_b": 4.0,
+   "active_b": 4.0,
+   "layers": 36,
+   "kv_heads": 8,
+   "head_dim": 128,
+   "reason_ahead": true,
+   "reasoning_tokens": 900,
+   "tier": "balanced",
+   "default_quant": "Q4_K_M",
+   "variants": [
+    {
+     "quant": "Q4_K_M",
+     "repo": "Qwen/Qwen3-4B-GGUF",
+     "file": "Qwen3-4B-Q4_K_M.gguf",
+     "bytes": 2497280256
+    },
+    {
+     "quant": "Q5_K_M",
+     "repo": "Qwen/Qwen3-4B-GGUF",
+     "file": "Qwen3-4B-Q5_K_M.gguf",
+     "bytes": 2889513184
+    },
+    {
+     "quant": "Q6_K",
+     "repo": "Qwen/Qwen3-4B-GGUF",
+     "file": "Qwen3-4B-Q6_K.gguf",
+     "bytes": 3306260704
+    },
+    {
+     "quant": "Q8_0",
+     "repo": "Qwen/Qwen3-4B-GGUF",
+     "file": "Qwen3-4B-Q8_0.gguf",
+     "bytes": 4280404704
+    }
+   ]
+  },
+  {
+   "id": "qwen3-8b",
+   "name": "Qwen3 8B",
+   "family": "qwen3",
+   "tokenizer": "Qwen/Qwen3-8B",
+   "params_b": 8.2,
+   "active_b": 8.2,
+   "layers": 36,
+   "kv_heads": 8,
+   "head_dim": 128,
+   "reason_ahead": true,
+   "reasoning_tokens": 700,
+   "tier": "strong",
+   "default_quant": "Q4_K_M",
+   "variants": [
+    {
+     "quant": "Q4_K_M",
+     "repo": "Qwen/Qwen3-8B-GGUF",
+     "file": "Qwen3-8B-Q4_K_M.gguf",
+     "bytes": 5027783488
+    },
+    {
+     "quant": "Q5_K_M",
+     "repo": "Qwen/Qwen3-8B-GGUF",
+     "file": "Qwen3-8B-Q5_K_M.gguf",
+     "bytes": 5851112224
+    },
+    {
+     "quant": "Q6_K",
+     "repo": "Qwen/Qwen3-8B-GGUF",
+     "file": "Qwen3-8B-Q6_K.gguf",
+     "bytes": 6725899040
+    },
+    {
+     "quant": "Q8_0",
+     "repo": "Qwen/Qwen3-8B-GGUF",
+     "file": "Qwen3-8B-Q8_0.gguf",
+     "bytes": 8709518112
+    }
+   ]
+  },
+  {
+   "id": "qwen3-14b",
+   "name": "Qwen3 14B",
+   "family": "qwen3",
+   "tokenizer": "Qwen/Qwen3-14B",
+   "params_b": 14.8,
+   "active_b": 14.8,
+   "layers": 40,
+   "kv_heads": 8,
+   "head_dim": 128,
+   "reason_ahead": true,
+   "reasoning_tokens": 500,
+   "tier": "very_strong",
+   "default_quant": "Q4_K_M",
+   "variants": [
+    {
+     "quant": "Q4_K_M",
+     "repo": "Qwen/Qwen3-14B-GGUF",
+     "file": "Qwen3-14B-Q4_K_M.gguf",
+     "bytes": 9001752960
+    },
+    {
+     "quant": "Q5_K_M",
+     "repo": "Qwen/Qwen3-14B-GGUF",
+     "file": "Qwen3-14B-Q5_K_M.gguf",
+     "bytes": 10514569568
+    },
+    {
+     "quant": "Q6_K",
+     "repo": "Qwen/Qwen3-14B-GGUF",
+     "file": "Qwen3-14B-Q6_K.gguf",
+     "bytes": 12121937248
+    },
+    {
+     "quant": "Q8_0",
+     "repo": "Qwen/Qwen3-14B-GGUF",
+     "file": "Qwen3-14B-Q8_0.gguf",
+     "bytes": 15698533728
+    }
+   ]
+  },
+  {
+   "id": "qwen3-30b-a3b",
+   "name": "Qwen3 30B-A3B",
+   "family": "qwen3",
+   "tokenizer": "Qwen/Qwen3-30B-A3B",
+   "params_b": 30.5,
+   "active_b": 3.3,
+   "layers": 48,
+   "kv_heads": 4,
+   "head_dim": 128,
+   "reason_ahead": true,
+   "reasoning_tokens": 600,
+   "tier": "moe",
+   "default_quant": "Q4_K_M",
+   "variants": [
+    {
+     "quant": "Q4_K_M",
+     "repo": "Qwen/Qwen3-30B-A3B-GGUF",
+     "file": "Qwen3-30B-A3B-Q4_K_M.gguf",
+     "bytes": 18556685824
+    },
+    {
+     "quant": "Q5_K_M",
+     "repo": "Qwen/Qwen3-30B-A3B-GGUF",
+     "file": "Qwen3-30B-A3B-Q5_K_M.gguf",
+     "bytes": 21725580800
+    },
+    {
+     "quant": "Q6_K",
+     "repo": "Qwen/Qwen3-30B-A3B-GGUF",
+     "file": "Qwen3-30B-A3B-Q6_K.gguf",
+     "bytes": 25092531712
+    },
+    {
+     "quant": "Q8_0",
+     "repo": "Qwen/Qwen3-30B-A3B-GGUF",
+     "file": "Qwen3-30B-A3B-Q8_0.gguf",
+     "bytes": 32483931648
+    }
+   ]
+  },
+  {
+   "id": "qwen3-32b",
+   "name": "Qwen3 32B",
+   "family": "qwen3",
+   "tokenizer": "Qwen/Qwen3-32B",
+   "params_b": 32.8,
+   "active_b": 32.8,
+   "layers": 64,
+   "kv_heads": 8,
+   "head_dim": 128,
+   "reason_ahead": true,
+   "reasoning_tokens": 450,
+   "tier": "best",
+   "default_quant": "Q4_K_M",
+   "variants": [
+    {
+     "quant": "Q4_K_M",
+     "repo": "Qwen/Qwen3-32B-GGUF",
+     "file": "Qwen3-32B-Q4_K_M.gguf",
+     "bytes": 19762149024
+    },
+    {
+     "quant": "Q5_K_M",
+     "repo": "Qwen/Qwen3-32B-GGUF",
+     "file": "Qwen3-32B-Q5_K_M.gguf",
+     "bytes": 23214831232
+    },
+    {
+     "quant": "Q6_K",
+     "repo": "Qwen/Qwen3-32B-GGUF",
+     "file": "Qwen3-32B-Q6_K.gguf",
+     "bytes": 26883306112
+    },
+    {
+     "quant": "Q8_0",
+     "repo": "Qwen/Qwen3-32B-GGUF",
+     "file": "Qwen3-32B-Q8_0.gguf",
+     "bytes": 34817718912
+    }
+   ]
+  }
+ ]
+}
