@@ -190,7 +190,7 @@
  "settings.about.version": "Version {v}",
  "settings.about.license": "Licence Apache-2.0",
  "settings.about.source": "Code source",
- "settings.about.body": "Préremplissage incrémental pour LLM locaux : le cache KV suit votre texte pendant la saisie.",
+ "settings.about.body": "Des LLM locaux qui lisent et réfléchissent pendant que vous tapez : le message est lu au fil de la saisie, et un modèle de raisonnement commence à y réfléchir avant que vous l'envoyiez.",
  "settings.setup_again": "Relancer la configuration",
  "onboarding.step.welcome": "Bienvenue",
  "onboarding.step.hardware": "Votre ordinateur",

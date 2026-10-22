@@ -190,7 +190,7 @@
  "settings.about.version": "Version {v}",
  "settings.about.license": "Apache-2.0 license",
  "settings.about.source": "Source code",
- "settings.about.body": "Incremental prefill for local LLMs: the KV cache follows your text while you type.",
+ "settings.about.body": "Local LLMs that read and think while you type: the message is read as you write it, and a reasoning model starts thinking about it before you send it.",
  "settings.setup_again": "Run the setup again",
  "onboarding.step.welcome": "Welcome",
  "onboarding.step.hardware": "Your machine",

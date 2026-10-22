@@ -14,8 +14,8 @@
 
 ### You type. It already knows.
 
-MAFDET reads your message while you type it and gets your local LLM ready to answer.<br>
-Hit enter, and the response starts right away.
+MAFDET reads your message while you type it, and **starts thinking about it before you send it**.<br>
+Hit Enter, and most of the work is already done.
 
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-EEEAE2?labelColor=0E0D0C)](LICENSE)
 [![Runtime: local](https://img.shields.io/badge/runtime-local-D4892A?labelColor=0E0D0C)](#requirements)
@@ -29,15 +29,17 @@ Hit enter, and the response starts right away.
 
 ## Why
 
-Chat interfaces make the model wait for you to press enter before it does anything. While you type, the GPU sits idle. When you send, the model first has to *read* your whole message (prefill), and only then can it start answering.
+Chat interfaces make the model wait for you to press Enter before it does anything. While you type, the GPU sits idle. When you send, the model first has to *read* your whole message (prefill). Then a reasoning model, like Qwen3 in thinking mode, *thinks* for hundreds of tokens before the first word of its answer. On a mid-range GPU that thinking is the longest wait of all: ten seconds and more on a word problem, minutes on a model larger than the VRAM.
 
-On expensive hardware, reading is fast enough that nobody notices. On a mid-range GPU, a laptop or a CPU, reading a long prompt can take whole seconds, and that is exactly what MAFDET hides.
+MAFDET uses the time you spend typing for both. It **reads** your message as you write it, so the prefill is done before Enter. And it **thinks ahead**: the model starts reasoning about your message while you are still typing it, and keeps that reasoning when you change the text. On Qwen3-4B, with 24 word problems typed in real time, the mean wait after Enter goes from **12.2 s to 3.2 s**, with the same 24/24 correct answers; on Qwen3-14B, from **108 s to 47 s**.
 
 MAFDET is built for the hardware most people actually own. The reference machine is an **RTX 2060 with 6 GB of VRAM**, and everything also runs on **CPU only**.
 
 > Named after Mafdet, the ancient Egyptian feline goddess known as "the runner", who struck snakes and scorpions before they could attack.
 
 ## How it works
+
+### Reading ahead
 
 An LLM processes text in two phases:
 
@@ -56,6 +58,12 @@ MAFDET keeps the KV cache in sync with the text **while you type**:
 4. When you hit enter, only a handful of tokens are left to process.
 
 **Correctness does not depend on how you type.** Backspaces, edits in the middle of the text, pasted blocks, missing punctuation or spaces: the common-prefix check always brings the cache back to exactly what a from-scratch computation would produce. Heuristics such as hold-back and debounce only affect how much work is wasted, never the result.
+
+### Thinking ahead
+
+Reading ahead takes the prefill out of the wait; the reasoning is still there. So the model also **reasons while you type**: in short chunks, on the message as it is at that moment. When you change the text, the reasoning is not thrown away. It stays in the prompt as notes after the new version of the message, which costs only a prefill, and the model goes on from there. On Enter it finishes reasoning from where it got to and answers. On Qwen3-4B about two thirds of the reasoning is done before Enter. How the notes are framed, and what that changed, is in [Thinking ahead, in detail](#thinking-ahead-in-detail) below.
+
+Reading ahead is exact. Thinking ahead is not, because the model reasons on versions of the message that are not final yet; that is why it was measured on answers that can be checked.
 
 ## Quick start
 
@@ -112,7 +120,7 @@ The same app comes in two forms, on the same engine:
 
 The app needs no PyTorch: llama.cpp runs the models, and transformers only provides the tokenizers. PyTorch is needed only for the measurements on the PyTorch backend (below): install it first from the CUDA index, then `pip install -e ".[research]"`.
 
-## How the chat thinks ahead
+## Thinking ahead, in detail
 
 In the app this is on by default for Qwen3 (Settings, *Reason while I type*); from the command line it is `mafdet strike`, with the options below. The model **starts thinking about your message while you are still typing it**. It runs Qwen3 in thinking mode, so before answering the model reasons in a hidden block (shown folded above the answer). That reasoning is usually the longest wait, and `strike` moves as much of it as possible to before Enter:
 

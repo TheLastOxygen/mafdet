@@ -156,7 +156,7 @@ def banner() -> str:
         rows = ["  " + " ".join(_LETTERS[c][i] for c in "MAFDET").rstrip() for i in range(5)]
         return "\n".join(rows) + f"\n\n  {TAGLINE}\n"
     rows = [f"  {paint(row, BOLD)}" for row in _BLOCKS]
-    rows.append("  " + paint("incremental prefill · warm KV cache · near-zero TTFT", AMBER))
+    rows.append("  " + paint("reads and thinks while you type · local LLMs", AMBER))
     rows.append("  " + paint(f"v{__version__} · {TAGLINE}", DIM))
     return "\n".join(rows) + "\n"
 

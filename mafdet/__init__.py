@@ -1,7 +1,8 @@
 """MAFDET: you type, it already knows.
 
-Incremental prefill for local LLMs: the KV cache follows the text while the
-user types, so only a handful of tokens are left to process when they hit enter.
+Local LLMs that read and think while you type: the KV cache follows the text
+as it is written, and a reasoning model starts thinking about the message
+before it is sent. On Enter, little is left to do.
 """
 __version__ = "0.1.0"
 

@@ -190,7 +190,7 @@
  "settings.about.version": "Version {v}",
  "settings.about.license": "Apache-2.0-Lizenz",
  "settings.about.source": "Quellcode",
- "settings.about.body": "Inkrementelles Prefill für lokale LLMs: Der KV-Cache folgt deinem Text, während du tippst.",
+ "settings.about.body": "Lokale LLMs, die lesen und denken, während du tippst: Die Nachricht wird beim Schreiben gelesen, und ein denkendes Modell beginnt darüber nachzudenken, bevor du sie sendest.",
  "settings.setup_again": "Einrichtung erneut starten",
  "onboarding.step.welcome": "Willkommen",
  "onboarding.step.hardware": "Dein Rechner",

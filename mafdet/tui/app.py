@@ -15,6 +15,7 @@ from rich.text import Text
 from textual import on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
+from textual.css.query import NoMatches
 from textual.containers import Center, Horizontal, Middle, Vertical, VerticalScroll
 from textual.screen import ModalScreen, Screen
 from textual.theme import Theme
@@ -1069,6 +1070,19 @@ class MafdetTUI(App):
     # ---- polling ---------------------------------------------------------------------
 
     def poll(self):
+        # The timers keep firing while the app shuts down, after the views are gone: nothing to update then.
+        try:
+            self._poll()
+        except NoMatches:
+            pass
+
+    def poll_tasks(self):
+        try:
+            self._poll_tasks()
+        except NoMatches:
+            pass
+
+    def _poll(self):
         s = self.service.status()
         if s["state"] != self.last_state:
             if s["state"] == "ready" and self.last_state == "loading":
@@ -1083,7 +1097,7 @@ class MafdetTUI(App):
                     "Model not loaded" if s["state"] == "error" else "No model loaded")
         self.query_one("#rail-model", Static).update(pill)
 
-    def poll_tasks(self):
+    def _poll_tasks(self):
         tasks = self.service.jobs()
         changed = False
         for t in tasks:

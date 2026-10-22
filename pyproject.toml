@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "mafdet"
 dynamic = ["version"]
-description = "You type. It already knows. Incremental prefill for local LLMs."
+description = "You type. It already knows. Local LLMs that read and think while you type."
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.10"

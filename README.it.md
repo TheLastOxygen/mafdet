@@ -14,8 +14,8 @@
 
 ### You type. It already knows.
 
-MAFDET legge il tuo messaggio mentre lo scrivi e prepara il tuo LLM locale a rispondere.<br>
-Premi invio e la risposta parte subito.
+MAFDET legge il tuo messaggio mentre lo scrivi, e **comincia a ragionarci prima che tu lo invii**.<br>
+Premi Invio, e gran parte del lavoro è già fatta.
 
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-EEEAE2?labelColor=0E0D0C)](LICENSE)
 [![Runtime: local](https://img.shields.io/badge/runtime-local-D4892A?labelColor=0E0D0C)](#requisiti)
@@ -29,15 +29,17 @@ Premi invio e la risposta parte subito.
 
 ## Perché
 
-Le interfacce di chat fanno aspettare il modello finché non premi invio, e solo allora si mette al lavoro. Mentre scrivi, la GPU resta ferma. Quando invii, il modello deve prima *leggere* tutto il messaggio (prefill), e solo dopo può iniziare a rispondere.
+Le interfacce di chat fanno aspettare il modello finché non premi Invio, e solo allora si mette al lavoro. Mentre scrivi, la GPU resta ferma. Quando invii, il modello deve prima *leggere* tutto il messaggio (prefill). Poi un modello che ragiona, come Qwen3 in modalità ragionamento, *pensa* per centinaia di token prima della prima parola della risposta. Su una GPU di fascia media quel ragionamento è l'attesa più lunga di tutte: dieci secondi e più su un problema, minuti con un modello più grande della VRAM.
 
-Su hardware costoso la lettura è così veloce che nessuno se ne accorge. Su una GPU di fascia media, su un portatile o su una CPU, leggere un prompt lungo può richiedere secondi interi: ed è proprio questo che MAFDET nasconde.
+MAFDET usa per entrambe le cose il tempo in cui scrivi. **Legge** il messaggio mentre lo scrivi, così all'Invio il prefill è già fatto. E **ragiona in anticipo**: il modello comincia a pensare al tuo messaggio mentre lo stai ancora scrivendo, e conserva quel ragionamento quando cambi il testo. Su Qwen3-4B, con 24 problemi digitati in tempo reale, l'attesa media dopo l'Invio passa da **12,2 s a 3,2 s**, con le stesse 24 risposte corrette su 24; su Qwen3-14B da **108 s a 47 s**.
 
 MAFDET è pensato per l'hardware che la maggior parte delle persone possiede davvero. La macchina di riferimento è una **RTX 2060 con 6 GB di VRAM**, e tutto funziona anche **solo su CPU**.
 
 > Il nome viene da Mafdet, la dea felina dell'antico Egitto detta "la corritrice", che colpiva serpenti e scorpioni prima che potessero attaccare.
 
 ## Come funziona
+
+### Lettura in anticipo
 
 Un LLM elabora il testo in due fasi:
 
@@ -56,6 +58,12 @@ MAFDET tiene la KV cache allineata al testo **mentre scrivi**:
 4. Quando premi invio, restano da elaborare solo pochi token.
 
 **La correttezza non dipende da come scrivi.** Backspace, modifiche a metà testo, blocchi incollati, punteggiatura o spazi mancanti: il controllo sul prefisso comune riporta sempre la cache esattamente a ciò che produrrebbe un calcolo da zero. Le euristiche come l'holdback e il debounce influiscono solo su quanto lavoro si spreca, mai sul risultato.
+
+### Ragionamento in anticipo
+
+La lettura in anticipo toglie il prefill dall'attesa; il ragionamento però resta. Così il modello **ragiona anche mentre scrivi**: a blocchi brevi, sul messaggio così com'è in quel momento. Quando cambi il testo, il ragionamento non viene buttato. Resta nel prompt come appunti dopo la nuova versione del messaggio, il che costa solo un prefill, e il modello continua da lì. All'Invio finisce di ragionare da dove era arrivato e risponde. Su Qwen3-4B circa due terzi del ragionamento sono fatti prima dell'Invio. Come sono impostati gli appunti, e cosa ha cambiato, è in [Ragionamento in anticipo, nel dettaglio](#ragionamento-in-anticipo-nel-dettaglio) più sotto.
+
+La lettura in anticipo è esatta. Il ragionamento in anticipo no, perché il modello ragiona su versioni del messaggio non ancora definitive: per questo è stato misurato su risposte verificabili.
 
 ## Avvio rapido
 
@@ -112,7 +120,7 @@ La stessa app esiste in due forme, sullo stesso motore:
 
 L'app non ha bisogno di PyTorch: i modelli li esegue llama.cpp, e transformers fornisce solo i tokenizer. PyTorch serve solo per le misure sul backend PyTorch (sotto): installalo prima dall'index CUDA, poi `pip install -e ".[research]"`.
 
-## Come la chat ragiona in anticipo
+## Ragionamento in anticipo, nel dettaglio
 
 Nell'app è attivo di default per Qwen3 (Impostazioni, *Ragiona mentre scrivo*); da riga di comando è `mafdet strike`, con le opzioni qui sotto. Il modello **comincia a pensare al tuo messaggio mentre lo stai ancora scrivendo**. Usa Qwen3 in modalità ragionamento, quindi prima di rispondere il modello ragiona in un blocco nascosto (mostrato chiuso sopra la risposta). Quel ragionamento di solito è l'attesa più lunga, e `strike` ne sposta il più possibile prima dell'invio:
 
