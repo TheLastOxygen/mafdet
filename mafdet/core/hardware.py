@@ -1,0 +1,195 @@
+"""
+What the machine has: GPU (NVIDIA, through nvidia-smi), VRAM, RAM, CPU.
+
+No PyTorch: llama.cpp runs the models, so the chat must be able to tell
+whether there is a GPU without importing a 4 GB library. The memory
+bandwidths feed the speed estimates of the model catalog: generating a token
+reads every weight once, so its time is about size / bandwidth.
+"""
+from __future__ import annotations
+
+import os
+import platform
+import re
+import shutil
+import subprocess
+import time
+from dataclasses import asdict, dataclass, field
+from functools import lru_cache
+
+# Memory bandwidth in GB/s of common NVIDIA cards (manufacturer specifications).
+# Matched against the name nvidia-smi reports, longest key first.
+GPU_BANDWIDTH = {
+    "GTX 1050 TI": 112, "GTX 1050": 112, "GTX 1060": 192, "GTX 1070 TI": 256, "GTX 1070": 256,
+    "GTX 1080 TI": 484, "GTX 1080": 320, "GTX 1650 SUPER": 192, "GTX 1650": 128, "GTX 1660 SUPER": 336,
+    "GTX 1660 TI": 288, "GTX 1660": 192,
+    "RTX 2060 SUPER": 448, "RTX 2060": 336, "RTX 2070 SUPER": 448, "RTX 2070": 448, "RTX 2080 SUPER": 496,
+    "RTX 2080 TI": 616, "RTX 2080": 448,
+    "RTX 3050": 224, "RTX 3060 TI": 448, "RTX 3060": 360, "RTX 3070 TI": 608, "RTX 3070": 448,
+    "RTX 3080 TI": 912, "RTX 3080": 760, "RTX 3090 TI": 1008, "RTX 3090": 936,
+    "RTX 4060 TI": 288, "RTX 4060": 272, "RTX 4070 TI SUPER": 672, "RTX 4070 TI": 504, "RTX 4070 SUPER": 504,
+    "RTX 4070": 504, "RTX 4080 SUPER": 736, "RTX 4080": 717, "RTX 4090": 1008,
+    "RTX 5060 TI": 448, "RTX 5060": 448, "RTX 5070 TI": 896, "RTX 5070": 672, "RTX 5080": 960, "RTX 5090": 1792,
+    "RTX A2000": 288, "RTX A4000": 448, "RTX A5000": 768, "RTX A6000": 768, "RTX 4000 ADA": 360,
+    "RTX 6000 ADA": 960, "TESLA T4": 320, "L4": 300, "A10G": 600, "A100": 1555, "H100": 3350,
+}
+# Laptop parts share the name of a desktop card but run on a narrower, slower bus.
+LAPTOP_FACTOR = 0.75
+
+
+@dataclass
+class GPU:
+    name: str
+    vram_mb: int
+    vram_used_mb: int
+    driver: str
+    bandwidth_gbs: float
+    bandwidth_known: bool             # from the table, not guessed from the amount of VRAM
+
+    @property
+    def vram_free_mb(self) -> int:
+        return max(0, self.vram_mb - self.vram_used_mb)
+
+
+@dataclass
+class Hardware:
+    os: str                           # "Windows 11", "Linux 6.8", ...
+    system: str                       # "windows", "linux", "darwin": what llama.cpp builds are for
+    arch: str
+    cpu: str
+    cores: int
+    threads: int
+    ram_mb: int
+    ram_free_mb: int
+    ram_bandwidth_gbs: float
+    gpus: list[GPU] = field(default_factory=list)
+
+    @property
+    def gpu(self) -> GPU | None:
+        """The card llama.cpp uses first: the one with the most VRAM."""
+        return max(self.gpus, key=lambda g: g.vram_mb) if self.gpus else None
+
+    def to_dict(self) -> dict:
+        d = asdict(self)
+        d["gpu"] = asdict(self.gpu) if self.gpu else None
+        if self.gpu:
+            d["gpu"]["vram_free_mb"] = self.gpu.vram_free_mb
+        return d
+
+
+def gpu_bandwidth(name: str, vram_mb: int) -> tuple[float, bool]:
+    """Bandwidth of a card from its name; a guess from its VRAM when the name is unknown."""
+    upper = re.sub(r"\s+", " ", name.upper().replace("GEFORCE", "").replace("NVIDIA", "")).strip()
+    for key in sorted(GPU_BANDWIDTH, key=len, reverse=True):
+        if re.search(rf"(^|\s){re.escape(key)}(\s|$)", upper):
+            bw = GPU_BANDWIDTH[key]
+            return (bw * LAPTOP_FACTOR if "LAPTOP" in upper or "MOBILE" in upper else bw), True
+    gb = vram_mb / 1024
+    for limit, bw in ((4.5, 128), (6.5, 250), (8.5, 300), (12.5, 400), (16.5, 500), (24.5, 900)):
+        if gb <= limit:
+            return bw, False
+    return 1000, False
+
+
+def parse_nvidia_smi(out: str) -> list[GPU]:
+    """Rows of `nvidia-smi --query-gpu=name,memory.total,memory.used,driver_version --format=csv,noheader,nounits`."""
+    gpus = []
+    for line in out.strip().splitlines():
+        parts = [p.strip() for p in line.split(",")]
+        if len(parts) < 4:
+            continue
+        try:
+            total, used = int(float(parts[1])), int(float(parts[2]))
+        except ValueError:
+            continue
+        bw, known = gpu_bandwidth(parts[0], total)
+        gpus.append(GPU(parts[0], total, used, parts[3], bw, known))
+    return gpus
+
+
+def nvidia_gpus() -> list[GPU]:
+    exe = shutil.which("nvidia-smi")
+    if exe is None and os.name == "nt":
+        candidate = os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "System32", "nvidia-smi.exe")
+        exe = candidate if os.path.exists(candidate) else None
+    if exe is None:
+        return []
+    flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+    try:
+        r = subprocess.run([exe, "--query-gpu=name,memory.total,memory.used,driver_version",
+                            "--format=csv,noheader,nounits"], capture_output=True, text=True, timeout=10,
+                           creationflags=flags)
+    except (OSError, subprocess.SubprocessError):
+        return []
+    return parse_nvidia_smi(r.stdout) if r.returncode == 0 else []
+
+
+def cpu_name() -> str:
+    if os.name == "nt":
+        try:
+            import winreg
+            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"HARDWARE\DESCRIPTION\System\CentralProcessor\0") as k:
+                return winreg.QueryValueEx(k, "ProcessorNameString")[0].strip()
+        except OSError:
+            pass
+    try:
+        with open("/proc/cpuinfo", encoding="utf-8") as f:
+            for line in f:
+                if line.startswith("model name"):
+                    return line.split(":", 1)[1].strip()
+    except OSError:
+        pass
+    return platform.processor() or platform.machine()
+
+
+def os_label() -> str:
+    if platform.system() == "Windows":
+        build = int(platform.version().split(".")[-1] or 0)
+        return f"Windows {'11' if build >= 22000 else platform.release()}"
+    return f"{platform.system()} {platform.release()}"
+
+
+# llama.cpp reads the CPU's share of the weights with every core; a single-threaded
+# copy reaches a fraction of that. Calibrated on the reference PC (DDR4, RTX 2060):
+# with this factor the 14B estimate matches its measured 4.8 tokens/s.
+RAM_COPY_FACTOR = 2.2
+
+
+@lru_cache(maxsize=1)
+def ram_bandwidth_gbs() -> float:
+    """System memory bandwidth, from a 256 MB copy (about 0.1 s), scaled to llama.cpp's multi-threaded reads."""
+    size = 256 << 20
+    try:
+        src = bytearray(size)
+        best = float("inf")
+        for _ in range(3):
+            t0 = time.perf_counter()
+            dst = bytes(src)                  # one read and one write of every byte
+            best = min(best, time.perf_counter() - t0)
+            del dst
+        return round(2 * size / best / 1e9 * RAM_COPY_FACTOR, 1)
+    except MemoryError:
+        return 30.0
+
+
+_cache: Hardware | None = None
+
+
+def detect(refresh: bool = False) -> Hardware:
+    """The machine, measured once per process (refresh=True for the current VRAM and RAM use)."""
+    global _cache
+    if _cache is not None and not refresh:
+        return _cache
+    import psutil
+    vm = psutil.virtual_memory()
+    _cache = Hardware(
+        os=os_label(), system=platform.system().lower(), arch=platform.machine().lower(), cpu=cpu_name(),
+        cores=psutil.cpu_count(logical=False) or os.cpu_count() or 1, threads=os.cpu_count() or 1,
+        ram_mb=vm.total >> 20, ram_free_mb=vm.available >> 20, ram_bandwidth_gbs=ram_bandwidth_gbs(),
+        gpus=nvidia_gpus())
+    return _cache
+
+
+def has_cuda_gpu() -> bool:
+    """An NVIDIA card with a working driver: llama.cpp's CUDA build can use it."""
+    return bool(nvidia_gpus())

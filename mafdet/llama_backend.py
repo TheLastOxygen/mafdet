@@ -25,7 +25,8 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 
-from .engine import DEFAULT_MODEL, Stats, common_prefix_len
+from . import DEFAULT_MODEL
+from .text import Stats, common_prefix_len
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 N_PROBS = 20                        # candidates returned for the comparison with a from-scratch run
@@ -44,23 +45,50 @@ RECYCLE_ARGS = ("--spec-type", "ngram-mod", "--spec-ngram-mod-n-match", "4",
                 "--spec-ngram-mod-n-min", "1", "--spec-ngram-mod-n-max", "8")
 
 
-def find_llama_server() -> str:
-    """llama-server from $MAFDET_LLAMA_DIR, ./llama.cpp or <project>/llama.cpp, in this order."""
-    name = "llama-server.exe" if os.name == "nt" else "llama-server"
+SERVER_EXE = "llama-server.exe" if os.name == "nt" else "llama-server"
+
+
+def llama_search_dirs() -> list[str]:
+    """Where llama-server is looked for, in this order: $MAFDET_LLAMA_DIR, ./llama.cpp,
+    <project>/llama.cpp, then the release the app installs in ~/.mafdet/llama.cpp."""
+    from .core.config import llama_dir
     dirs = [os.environ.get("MAFDET_LLAMA_DIR", ""), os.path.join(os.getcwd(), "llama.cpp"),
-            os.path.join(PROJECT_ROOT, "llama.cpp")]
-    for d in filter(None, dirs):
-        exe = os.path.join(d, name)
+            os.path.join(PROJECT_ROOT, "llama.cpp"), str(llama_dir())]
+    return [d for d in dirs if d]
+
+
+def find_llama_server(required: bool = True) -> str | None:
+    for d in llama_search_dirs():
+        exe = os.path.join(d, SERVER_EXE)
         if os.path.exists(exe):
             return exe
-    raise SystemExit(f"Cannot find {name}. Extract a llama.cpp release into ./llama.cpp, "
-                     f"or set MAFDET_LLAMA_DIR. Looked in: {', '.join(filter(None, dirs))}")
+    if not required:
+        return None
+    raise SystemExit(f"Cannot find {SERVER_EXE}. Install it from the app (Hardware, Install llama.cpp) or with "
+                     f"`mafdet doctor --install`, or extract a llama.cpp release into ./llama.cpp. "
+                     f"Looked in: {', '.join(llama_search_dirs())}")
+
+
+def pick_device(requested: str) -> str:
+    """cuda or cpu for llama-server: auto means the NVIDIA card if there is one (no PyTorch needed)."""
+    from .core.hardware import has_cuda_gpu
+    if requested == "auto":
+        return "cuda" if has_cuda_gpu() else "cpu"
+    if requested == "cuda" and not has_cuda_gpu():
+        raise SystemExit("You asked for the GPU, but no NVIDIA card was found (nvidia-smi): "
+                         "check the driver, or choose the CPU.")
+    return requested
 
 
 def resolve_gguf(spec: str) -> str:
-    """A local path, or 'repo:file' to download from (or find in the cache of) Hugging Face."""
+    """A local path, a file in ~/.mafdet/models, or 'repo:file' to download from (or find in the
+    cache of) Hugging Face."""
     if os.path.exists(spec):
         return spec
+    from .core.config import models_dir
+    local = models_dir() / spec.split(":", 1)[-1]
+    if local.exists():
+        return str(local)
     repo, fname = spec.split(":", 1)
     from huggingface_hub import hf_hub_download
     return hf_hub_download(repo, fname)
@@ -262,8 +290,14 @@ class LlamaPrefill:
         return out
 
 
-def setup_llama(args, device: str, n_slots: int = 1):
+def setup_llama(args, device: str | None = None, n_slots: int = 1):
+    """Return (tokenizer, server, device, quantization). The tokenizer is the only thing taken from
+    transformers: no PyTorch."""
+    # Without PyTorch transformers says at import that models are unavailable: only its tokenizers are used here.
+    os.environ.setdefault("TRANSFORMERS_NO_ADVISORY_WARNINGS", "1")
     from transformers import AutoTokenizer
+
+    device = device or pick_device(args.device)
 
     tok_id = tokenizer_id(args.gguf) if args.model == DEFAULT_MODEL else args.model
     tok = AutoTokenizer.from_pretrained(tok_id)

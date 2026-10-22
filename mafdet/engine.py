@@ -8,7 +8,6 @@ import inspect
 import math
 import time
 from dataclasses import dataclass, field
-from importlib.resources import files
 
 import torch
 import transformers
@@ -16,13 +15,8 @@ from packaging import version
 from transformers import AutoModelForCausalLM, AutoTokenizer, DynamicCache
 
 from . import DEFAULT_GGUF, DEFAULT_MODEL  # noqa: F401  (re-exported for the other modules)
-
-SENTINEL = "<<<USER_TEXT>>>"
-
-
-def read_sample(name: str) -> str:
-    """Raw text of a bundled sample (mafdet/samples), read as package data."""
-    return files("mafdet").joinpath("samples", name).read_text(encoding="utf-8")
+# The parts without PyTorch live in text.py (the chat uses them alone); re-exported for the commands.
+from .text import SENTINEL, Stats, Template, common_prefix_len, encode, read_sample, stable_ids  # noqa: F401
 
 
 # --------------------------------------------------------------------------
@@ -90,12 +84,13 @@ def setup(args, n_slots: int = 1):
     n_slots is for callers that run several engines side by side, each with
     its own cache.
     """
+    if args.backend == "llama":
+        # llama.cpp picks its own GPU: no PyTorch needed to tell whether there is one.
+        from .llama_backend import setup_llama
+        return setup_llama(args, n_slots=n_slots)
     if args.threads:
         torch.set_num_threads(args.threads)
     device = pick_device(args.device)
-    if args.backend == "llama":
-        from .llama_backend import setup_llama
-        return setup_llama(args, device, n_slots)
     dtype = pick_dtype(device, args.dtype)
     tok, model = load(args.model, device, dtype)
     if getattr(args, "compile", False):
@@ -186,54 +181,8 @@ def device_label(device: str) -> str:
 
 
 # --------------------------------------------------------------------------
-# Chat template
-# --------------------------------------------------------------------------
-
-@dataclass
-class Template:
-    """The chat template split into: [prefix] user text [suffix].
-
-    While the user types, only prefix + text go into the cache; the suffix
-    (end of the message and start of the assistant's turn) is added on send.
-    """
-    prefix: str
-    suffix: str
-
-    @classmethod
-    def from_tokenizer(cls, tok, thinking: bool = True) -> "Template":
-        msgs = [{"role": "user", "content": SENTINEL}]
-        s = tok.apply_chat_template(
-            msgs, tokenize=False, add_generation_prompt=True, enable_thinking=thinking
-        )
-        if s.count(SENTINEL) != 1:
-            raise RuntimeError("Unexpected chat template: cannot locate the user text.")
-        pre, suf = s.split(SENTINEL)
-        return cls(pre, suf)
-
-
-def encode(tok, text: str) -> list[int]:
-    return tok(text, add_special_tokens=False).input_ids
-
-
-# --------------------------------------------------------------------------
 # Incremental prefill engine
 # --------------------------------------------------------------------------
-
-def common_prefix_len(a: list[int], b: list[int]) -> int:
-    n = min(len(a), len(b))
-    i = 0
-    while i < n and a[i] == b[i]:
-        i += 1
-    return i
-
-
-@dataclass
-class Stats:
-    forward_passes: int = 0
-    tokens_computed: int = 0
-    tokens_discarded: int = 0
-    syncs: int = 0
-
 
 @dataclass
 class IncrementalPrefill:
@@ -371,11 +320,6 @@ def logits_finite(logits) -> bool:
 def to_host(logits):
     """Copy to the CPU (HF) for comparison; log-probabilities are already Python data."""
     return logits if is_top_logprobs(logits) else logits.float().cpu()
-
-
-def stable_ids(full_ids: list[int], holdback: int) -> list[int]:
-    """The last `holdback` tokens can still change while the user types."""
-    return full_ids[:-holdback] if holdback and len(full_ids) > holdback else ([] if holdback else full_ids)
 
 
 def compare_logits(a: torch.Tensor, b: torch.Tensor, tol: float | None = None) -> dict:

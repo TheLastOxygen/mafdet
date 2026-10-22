@@ -9,14 +9,23 @@ description = "You type. It already knows. Incremental prefill for local LLMs."
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.10"
-# PyTorch is deliberately NOT listed: install it first from the CUDA index
-# (see README). If pip pulled it from PyPI, on Windows it would get the
-# CPU-only build.
+# The app (window and terminal) runs the models on llama.cpp and needs no PyTorch:
+# transformers only provides the tokenizers.
 dependencies = [
     "transformers>=4.51",
+    "huggingface_hub>=0.30",
+    "jinja2>=3.1",        # the chat templates (it came with PyTorch before)
     "packaging",
-    "pywebview>=5",       # the chat window of `mafdet watch`
+    "psutil>=5.9",        # RAM and CPU of the hardware panel
+    "pywebview>=5",       # the window (mafdet gui)
+    "textual>=8.0",       # the terminal app (mafdet tui) and the launcher
 ]
+
+[project.optional-dependencies]
+# The measurements on PyTorch (race, hunt, judge with --backend hf). Install PyTorch
+# first from the CUDA index (see README): from PyPI, on Windows, pip would get the
+# CPU-only build.
+research = ["torch>=2.4", "rich"]
 
 [project.scripts]
 mafdet = "mafdet.cli:main"
@@ -28,4 +37,5 @@ version = { attr = "mafdet.__version__" }
 include = ["mafdet*"]
 
 [tool.setuptools.package-data]
-mafdet = ["samples/*.txt", "ui/*.html", "ui/*.css", "ui/*.js", "ui/*.ico", "ui/fonts/*"]
+mafdet = ["samples/*.txt", "catalog.json", "ui/*.html", "ui/*.css", "ui/*.js", "ui/*.ico", "ui/fonts/*",
+          "ui/i18n/*.json"]

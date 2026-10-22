@@ -1,8 +1,13 @@
-# PyTorch va installato PRIMA, a parte, con l'index CUDA (vedi README):
-#   pip install torch --index-url https://download.pytorch.org/whl/cu128
+# The app: `pip install -e .` installs these (no PyTorch needed).
 transformers>=4.51
+huggingface_hub>=0.30
+jinja2>=3.1             # chat templates
 packaging
-pywebview>=5            # mafdet watch: la finestra della chat
-rich                    # demo_live.py
-# Facoltativo, solo per --compile su Windows (versione abbinata a torch 2.11):
+psutil>=5.9             # hardware panel: RAM and CPU
+pywebview>=5            # mafdet gui: the window
+textual>=8.0            # mafdet tui and the launcher
+# Measurements on PyTorch (race, hunt, judge with --backend hf), and demo_live.py:
+#   pip install torch --index-url https://download.pytorch.org/whl/cu128
+#   pip install rich
+# Optional, only for --compile on Windows (version matched to torch 2.11):
 #   pip install "triton-windows>=3.7,<3.8"

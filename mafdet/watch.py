@@ -280,8 +280,9 @@ class Session:
     # ---- start-up ------------------------------------------------------------
     def _load(self):
         try:
-            # Imported here: PyTorch and transformers take seconds, and the window is already open.
-            from .engine import Template, common_prefix_len, encode, make_engine, setup, stable_ids
+            # Imported here: transformers takes seconds, and the window is already open.
+            from .llama_backend import LlamaPrefill, setup_llama
+            from .text import Template, common_prefix_len, encode, stable_ids
             self._prefix_len, self._encode, self._stable = common_prefix_len, encode, stable_ids
             if self.role == "main" and getattr(self.args, "gatherer", ""):
                 # The gatherer first: it takes a fixed share of VRAM, then the main model fits in what is left.
@@ -291,8 +292,8 @@ class Session:
                 if self.gatherer.state == "error":
                     raise SystemExit(f"Gatherer: {self.gatherer.error}")
             args = self._gatherer_args() if self.role == "gatherer" else self.args
-            self.tok, self.server, device, quant = setup(args, n_slots=1)
-            self.eng = make_engine(self.server, device)
+            self.tok, self.server, device, quant = setup_llama(args, n_slots=1)
+            self.eng = LlamaPrefill(self.server, slot=self.server.take_slot())
             tpl = Template.from_tokenizer(self.tok, thinking=self.think)
             self.sampling = THINK_SAMPLING if self.think else SAMPLING
             self.start_ids = encode(self.tok, tpl.prefix)
