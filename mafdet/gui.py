@@ -32,6 +32,8 @@ UI = files("mafdet").joinpath("ui")
 STATIC = {
     "app.css": "text/css; charset=utf-8",
     "app.js": "text/javascript; charset=utf-8",
+    "chat.js": "text/javascript; charset=utf-8",
+    "views.js": "text/javascript; charset=utf-8",
     "fonts/archivo.woff2": "font/woff2",
     "fonts/jetbrains-mono.woff2": "font/woff2",
     **{f"i18n/{lang}.json": "application/json; charset=utf-8" for lang in ("en", "it", "fr", "de")},

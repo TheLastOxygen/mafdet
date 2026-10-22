@@ -12,34 +12,114 @@
 <script src="/identity.js"></script>
 </head>
 <body>
-<header class="bar">
-  <div class="lockup" id="lockup"></div>
-  <div class="bar-side">
-    <span class="label model" id="model">Waking up</span>
-    <button class="btn" id="new-chat" type="button" title="New chat (Ctrl+N)"></button>
-  </div>
-</header>
 
-<main class="scroll" id="scroll">
-  <div class="thread" id="thread"></div>
-</main>
+<!-- Splash: the mask opens its eyes while the app starts. -->
+<div class="splash" id="splash" aria-hidden="true">
+  <div class="splash-mark" id="splash-mark"></div>
+  <div class="splash-word" id="splash-word"></div>
+  <div class="splash-line"><i></i></div>
+  <div class="splash-text label" data-i18n="splash.loading">Starting up</div>
+</div>
 
-<footer class="composer">
-  <div class="composer-inner">
-    <button class="jump" id="jump" type="button" title="Jump to the latest message" hidden></button>
-    <div class="field" id="field">
-      <textarea id="input" rows="1" placeholder="Message MAFDET" spellcheck="true" autofocus></textarea>
-      <button class="send" id="send" type="button" aria-label="Send" disabled></button>
+<div class="app" id="app">
+  <nav class="rail" aria-label="Main">
+    <div class="rail-top">
+      <div class="rail-logo" id="rail-logo"></div>
+      <div class="rail-nav" id="rail-nav" role="tablist">
+        <button class="nav-item" data-view="chat" role="tab"><span class="nav-icon" data-icon="watch"></span><span class="nav-text" data-i18n="nav.chat">Chat</span></button>
+        <button class="nav-item" data-view="models" role="tab"><span class="nav-icon" data-icon="race"></span><span class="nav-text" data-i18n="nav.models">Models</span></button>
+        <button class="nav-item" data-view="hardware" role="tab"><span class="nav-icon" data-icon="awaken"></span><span class="nav-text" data-i18n="nav.hardware">Hardware</span></button>
+        <button class="nav-item" data-view="settings" role="tab"><span class="nav-icon" data-icon="judge"></span><span class="nav-text" data-i18n="nav.settings">Settings</span></button>
+        <span class="nav-glider" id="nav-glider"></span>
+      </div>
     </div>
-    <div class="status" id="status">
-      <span class="status-icon" id="status-icon"></span>
-      <span class="status-text label" id="status-text"></span>
-      <span class="meter" id="meter" hidden><i id="meter-read"></i></span>
-      <span class="status-side label" id="status-side"></span>
+    <div class="rail-bottom">
+      <button class="model-pill" id="model-pill" type="button">
+        <span class="dot" id="model-dot"></span>
+        <span class="model-pill-text" id="model-pill-text"></span>
+      </button>
+      <div class="lang" id="lang" role="radiogroup" data-i18n-aria-label="lang.label"></div>
     </div>
+  </nav>
+
+  <main class="stage" id="stage">
+    <!-- Chat -->
+    <section class="view view-chat" data-view="chat">
+      <header class="topbar">
+        <h1 class="view-title" data-i18n="nav.chat">Chat</h1>
+        <div class="topbar-side">
+          <span class="label topbar-model" id="topbar-model"></span>
+          <button class="btn" id="new-chat" type="button"></button>
+        </div>
+      </header>
+      <div class="scroll" id="scroll"><div class="thread" id="thread"></div></div>
+      <footer class="composer">
+        <div class="composer-inner">
+          <button class="jump" id="jump" type="button" hidden></button>
+          <div class="field" id="field">
+            <textarea id="input" rows="1" data-i18n-placeholder="chat.placeholder" spellcheck="true"></textarea>
+            <button class="send" id="send" type="button" aria-label="Send" disabled></button>
+          </div>
+          <div class="status" id="status">
+            <span class="status-icon" id="status-icon"></span>
+            <span class="status-text label" id="status-text"></span>
+            <span class="meter" id="meter" hidden><i id="meter-read"></i></span>
+            <span class="status-side label" id="status-side"></span>
+          </div>
+        </div>
+      </footer>
+    </section>
+
+    <!-- Models -->
+    <section class="view view-page" data-view="models">
+      <header class="page-head">
+        <div>
+          <h1 class="view-title" data-i18n="models.title">Models</h1>
+          <p class="page-sub" id="models-sub"></p>
+        </div>
+        <div class="chips" id="models-filter" role="radiogroup"></div>
+      </header>
+      <div class="page-scroll"><div class="cards" id="models-grid"></div></div>
+    </section>
+
+    <!-- Hardware -->
+    <section class="view view-page" data-view="hardware">
+      <header class="page-head">
+        <div>
+          <h1 class="view-title" data-i18n="hardware.title">Hardware</h1>
+          <p class="page-sub" data-i18n="hardware.subtitle"></p>
+        </div>
+        <button class="btn" id="hw-refresh" type="button" data-i18n="action.refresh">Refresh</button>
+      </header>
+      <div class="page-scroll"><div class="hw-grid" id="hw-grid"></div></div>
+    </section>
+
+    <!-- Settings -->
+    <section class="view view-page" data-view="settings">
+      <header class="page-head">
+        <div>
+          <h1 class="view-title" data-i18n="settings.title">Settings</h1>
+          <p class="page-sub" data-i18n="settings.subtitle"></p>
+        </div>
+      </header>
+      <div class="page-scroll"><form class="settings" id="settings" onsubmit="return false"></form></div>
+    </section>
+  </main>
+</div>
+
+<!-- First start: a guided setup over the app. -->
+<div class="onboarding" id="onboarding" hidden>
+  <div class="ob-card">
+    <ol class="ob-steps" id="ob-steps"></ol>
+    <div class="ob-body" id="ob-body"></div>
+    <div class="ob-actions" id="ob-actions"></div>
   </div>
-</footer>
+</div>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
 
 <script src="/static/app.js"></script>
+<script src="/static/chat.js"></script>
+<script src="/static/views.js"></script>
 </body>
 </html>

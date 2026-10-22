@@ -15,7 +15,6 @@ import shutil
 import subprocess
 import time
 from dataclasses import asdict, dataclass, field
-from functools import lru_cache
 
 # Memory bandwidth in GB/s of common NVIDIA cards (manufacturer specifications).
 # Matched against the name nvidia-smi reports, longest key first.
@@ -155,14 +154,17 @@ def os_label() -> str:
 RAM_COPY_FACTOR = 2.2
 
 
-@lru_cache(maxsize=1)
-def ram_bandwidth_gbs() -> float:
-    """System memory bandwidth, from a 256 MB copy (about 0.1 s), scaled to llama.cpp's multi-threaded reads."""
-    size = 256 << 20
+def measure_ram_bandwidth() -> float:
+    """System memory bandwidth from copies of 128 MB, scaled to llama.cpp's multi-threaded reads.
+
+    The best of several copies: a busy moment (a browser starting, a download) only makes a
+    copy slower, never faster.
+    """
+    size = 128 << 20
     try:
         src = bytearray(size)
         best = float("inf")
-        for _ in range(3):
+        for _ in range(8):
             t0 = time.perf_counter()
             dst = bytes(src)                  # one read and one write of every byte
             best = min(best, time.perf_counter() - t0)
@@ -170,6 +172,22 @@ def ram_bandwidth_gbs() -> float:
         return round(2 * size / best / 1e9 * RAM_COPY_FACTOR, 1)
     except MemoryError:
         return 30.0
+
+
+def ram_bandwidth_gbs(cpu: str, ram_mb: int, refresh: bool = False) -> float:
+    """Measured once per machine and kept in ~/.mafdet/hardware.json: the estimates of the
+    catalog depend on it and must not move from one start to the next."""
+    from . import config
+    key = f"{cpu} | {round(ram_mb / 1024)}GB"
+    saved = config.read_json("hardware.json")
+    if not refresh and isinstance(saved.get(key), (int, float)):
+        return saved[key]
+    bw = measure_ram_bandwidth()
+    if refresh and isinstance(saved.get(key), (int, float)):
+        bw = max(bw, saved[key])              # a new measure only replaces a slower one
+    saved[key] = bw
+    config.write_json("hardware.json", saved)
+    return bw
 
 
 _cache: Hardware | None = None
@@ -182,11 +200,12 @@ def detect(refresh: bool = False) -> Hardware:
         return _cache
     import psutil
     vm = psutil.virtual_memory()
+    cpu, ram_mb = cpu_name(), vm.total >> 20
+    bw = _cache.ram_bandwidth_gbs if _cache is not None else ram_bandwidth_gbs(cpu, ram_mb)
     _cache = Hardware(
-        os=os_label(), system=platform.system().lower(), arch=platform.machine().lower(), cpu=cpu_name(),
+        os=os_label(), system=platform.system().lower(), arch=platform.machine().lower(), cpu=cpu,
         cores=psutil.cpu_count(logical=False) or os.cpu_count() or 1, threads=os.cpu_count() or 1,
-        ram_mb=vm.total >> 20, ram_free_mb=vm.available >> 20, ram_bandwidth_gbs=ram_bandwidth_gbs(),
-        gpus=nvidia_gpus())
+        ram_mb=ram_mb, ram_free_mb=vm.available >> 20, ram_bandwidth_gbs=bw, gpus=nvidia_gpus())
     return _cache
 
 
