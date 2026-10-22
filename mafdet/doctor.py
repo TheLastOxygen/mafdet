@@ -8,13 +8,11 @@ llama.cpp in place by itself.
 """
 from __future__ import annotations
 
-import time
-
 from rich.console import Console
-from rich.progress import BarColumn, Progress, TaskProgressColumn
 
 from .core import catalog, config, hardware, llama_setup
 from .core.tasks import TaskManager
+from .progress import follow
 
 
 def run(args) -> int:
@@ -55,14 +53,4 @@ def run(args) -> int:
 
 
 def install(console: Console, cuda: str | None = None):
-    task = TaskManager().start("llama", llama_setup.LLAMA_TAG, lambda t: llama_setup.install(t, cuda=cuda))
-    with Progress("{task.description}", BarColumn(), TaskProgressColumn(), console=console) as bar:
-        row = bar.add_task("llama.cpp", total=1.0)
-        while task.state == "running":
-            bar.update(row, completed=task.progress, description=f"llama.cpp · {task.stage}")
-            time.sleep(0.2)
-        bar.update(row, completed=1.0)
-    if task.state == "done":
-        console.print(f"[green]✓[/] Installed llama.cpp {task.result['build']} ({task.result['label']})")
-    else:
-        console.print(f"[red]llama.cpp: {task.error or task.state}[/]")
+    follow(TaskManager().start("llama", llama_setup.LLAMA_TAG, lambda t: llama_setup.install(t, cuda=cuda)), console)

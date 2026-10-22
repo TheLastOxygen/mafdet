@@ -10,12 +10,17 @@ from __future__ import annotations
 import os
 import urllib.request
 from pathlib import Path
+from urllib.parse import urlparse
 
 from .. import __version__
 from .tasks import Task
 
 CHUNK = 1 << 20
 USER_AGENT = f"mafdet/{__version__}"
+
+
+def size_text(n: int) -> str:
+    return f"{n / 2**30:.1f} GB" if n >= 2**30 else f"{n / 2**20:.0f} MB"
 
 
 def fetch(url: str, dest: Path, task: Task, size: int | None = None, offset: int = 0, total: int | None = None) -> Path:
@@ -33,6 +38,7 @@ def fetch(url: str, dest: Path, task: Task, size: int | None = None, offset: int
     if size is not None and have > size:          # a .part from another file of the same name
         part.unlink()
         have = 0
+    task.detail = f"{dest.name}{f', {size_text(size)}' if size else ''}, from {urlparse(url).hostname}"
     headers = {"User-Agent": USER_AGENT}
     if have:
         headers["Range"] = f"bytes={have}-"

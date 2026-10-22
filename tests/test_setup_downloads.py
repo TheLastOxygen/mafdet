@@ -1,12 +1,15 @@
 """Which llama.cpp build each machine gets, and downloads that resume where they stopped."""
 import http.server
+import io
 import threading
 
 import pytest
+from rich.console import Console
 
 from mafdet.core import downloads, llama_setup
 from mafdet.core.hardware import GPU, Hardware
-from mafdet.core.tasks import Cancelled, Task
+from mafdet.core.tasks import Cancelled, Task, TaskManager
+from mafdet.progress import follow
 
 
 def machine(system="windows", arch="amd64", gpu_name=None, driver="617.42"):
@@ -78,6 +81,19 @@ def test_fetch_cancel_keeps_part(server, tmp_path):
     with pytest.raises(Cancelled):
         downloads.fetch(server, dest, task, size=len(DATA))
     assert not dest.exists() and (tmp_path / "model.gguf.part").exists()
+
+
+def test_follow_names_the_file(server, tmp_path):
+    """The terminal says which file is coming, how big and from where, then where it went."""
+    console = Console(file=io.StringIO(), width=200)
+    def job(t):
+        t.stage = "downloading"                          # as download_model does
+        return {"path": str(downloads.fetch(server, tmp_path / "model.gguf", t, size=len(DATA)))}
+    task = TaskManager().start("download", "qwen3-4b", job)
+    assert follow(task, console)
+    out = console.file.getvalue()
+    assert "qwen3-4b · downloading · model.gguf, 1 MB, from 127.0.0.1" in out
+    assert "✓ qwen3-4b on disk" in out
 
 
 @pytest.mark.parametrize("hw,cuda,flavor", [

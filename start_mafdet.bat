@@ -22,8 +22,10 @@ for /f "delims=" %%H in ('certutil -hashfile pyproject.toml SHA256 ^| findstr /v
 set "SAVED="
 if exist ".venv\mafdet-installed.txt" set /p SAVED=<".venv\mafdet-installed.txt"
 if not "%SAVED%"=="%HASH%" (
-    echo Installing MAFDET and its libraries, about a minute...
-    "%VENV_PY%" -m pip install --disable-pip-version-check -q -e . || goto :failed
+    echo Installing MAFDET and its libraries, about a minute. pip shows each download below,
+    echo with its size and a progress bar.
+    "%VENV_PY%" -m pip install --disable-pip-version-check --progress-bar on -e . || goto :failed
+    echo.
     > ".venv\mafdet-installed.txt" echo %HASH%
 )
 

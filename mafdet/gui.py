@@ -25,6 +25,7 @@ from importlib.resources import files
 from . import __version__
 from .core.chat import ChatService
 from .identity import INK, SHAPES, WORDMARK, WORDMARK_SIZE
+from .progress import watch
 
 UI = files("mafdet").joinpath("ui")
 
@@ -175,9 +176,13 @@ def run(args, overrides=None) -> int:
     app = ChatService(overrides)
     app.autoload()
     server, url = serve(app)
+    # The terminal behind the window shows the downloads and the llama.cpp install as they go.
+    progress = watch(app.tasks) if sys.stdout.isatty() else None
     try:
         open_window(url, getattr(args, "browser", False))
     finally:
+        if progress:
+            progress.set()
         server.shutdown()
         app.close()
     return 0

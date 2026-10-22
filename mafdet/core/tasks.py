@@ -23,6 +23,7 @@ class Task:
     target: str                       # what it works on: a model id, a llama.cpp build
     state: str = "running"            # running, done, error, cancelled
     stage: str = ""                   # a step within the job, for the interface to name
+    detail: str = ""                  # what that step works on: a file, its size and where it comes from
     progress: float = 0.0             # 0..1
     done_bytes: int = 0
     total_bytes: int = 0

@@ -8,16 +8,14 @@ mafdet models: the catalog in the terminal, with what each model does on this ma
 """
 from __future__ import annotations
 
-import time
-
 from rich import box
 from rich.console import Console
-from rich.progress import BarColumn, DownloadColumn, Progress, TimeRemainingColumn, TransferSpeedColumn
 from rich.table import Table
 
 from .core import catalog, hardware
 from .core.downloads import download_model
 from .core.tasks import TaskManager
+from .progress import follow
 
 AMBER = "#D4892A"
 WHERE = {"gpu": ("all on GPU", "green"), "partial": ("{p}% on GPU", AMBER), "cpu": ("on CPU", "white"),
@@ -75,15 +73,4 @@ def download(console: Console, variant_id: str) -> int:
         console.print(f"[red]Unknown model {variant_id}[/]: see `mafdet models --all`.")
         return 1
     task = TaskManager().start("download", v.id, lambda t: download_model(v.id, t))
-    columns = ("{task.description}", BarColumn(), DownloadColumn(), TransferSpeedColumn(), TimeRemainingColumn())
-    with Progress(*columns, console=console) as bar:
-        row = bar.add_task(v.id, total=v.bytes)
-        while task.state == "running":
-            bar.update(row, completed=task.done_bytes)
-            time.sleep(0.2)
-        bar.update(row, completed=task.done_bytes if task.state != "done" else v.bytes)
-    if task.state != "done":
-        console.print(f"[red]{task.error or task.state}[/]")
-        return 1
-    console.print(f"[green]Downloaded[/] {v.id} to {task.result['path']}")
-    return 0
+    return 0 if follow(task, console) else 1

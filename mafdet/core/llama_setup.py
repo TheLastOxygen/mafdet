@@ -117,7 +117,7 @@ def install(task: Task, tag: str = LLAMA_TAG, cuda: str | None = None) -> dict:
     """Download and unpack the release for this machine into ~/.mafdet/llama.cpp, then check it runs."""
     hw = detect()
     build = build_for(hw, cuda)
-    task.stage = "release"
+    task.stage, task.detail = "release", build["label"]
     assets = _release_assets(tag)
     names = [p.format(tag=tag) for p in build["assets"]]
     missing = [n for n in names if n not in assets]
@@ -137,6 +137,7 @@ def install(task: Task, tag: str = LLAMA_TAG, cuda: str | None = None) -> dict:
         offset += assets[n]["size"]
     task.stage = "extracting"
     for f in files:
+        task.detail = f.name
         _extract(f, staging)
         task.check()
     from ..llama_backend import SERVER_EXE
@@ -152,7 +153,7 @@ def install(task: Task, tag: str = LLAMA_TAG, cuda: str | None = None) -> dict:
         for exe in bin_dir.iterdir():
             if exe.is_file() and exe.name.startswith("llama-"):
                 exe.chmod(exe.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
-    task.stage = "checking"
+    task.stage, task.detail = "checking", SERVER_EXE
     version = server_version(str(bin_dir / SERVER_EXE))
     if not version:
         raise RuntimeError("The llama.cpp just installed does not start: see the Hardware page for your driver")
