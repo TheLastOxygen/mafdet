@@ -57,76 +57,60 @@ MAFDET tiene la KV cache allineata al testo **mentre scrivi**:
 
 **La correttezza non dipende da come scrivi.** Backspace, modifiche a metà testo, blocchi incollati, punteggiatura o spazi mancanti: il controllo sul prefisso comune riporta sempre la cache esattamente a ciò che produrrebbe un calcolo da zero. Le euristiche come l'holdback e il debounce influiscono solo su quanto lavoro si spreca, mai sul risultato.
 
-## Comandi
-
-Lancia `mafdet` senza argomenti per la tabella dei comandi, `mafdet --help` per la guida completa (cosa fa ogni comando, con esempi), oppure `mafdet <comando> --help` per le opzioni di uno di essi.
-
-| | Comando | | Cosa fa | Stato |
-|---|---|---|---|---|
-| <img src="assets/icons/awaken.svg" width="22" alt=""> | `mafdet awaken` | il risveglio | controlla la GPU, scarica e carica il modello | disponibile |
-| <img src="assets/icons/watch.svg" width="22" alt=""> | `mafdet watch` | la guardia | apre la finestra della chat: il modello legge mentre scrivi | disponibile |
-| <img src="assets/icons/strike.svg" width="22" alt=""> | `mafdet strike` | il colpo | inizia a ragionare mentre scrivi, e scrive la risposta quando ti fermi | disponibile |
-| <img src="assets/icons/hunt.svg" width="22" alt=""> | `mafdet hunt` | la caccia | simula persone che scrivono e misura l'attesa dopo l'invio | disponibile |
-| <img src="assets/icons/race.svg" width="22" alt=""> | `mafdet race` | la corsa | misura il costo di prefill e decode sulla tua macchina | disponibile |
-| <img src="assets/icons/judge.svg" width="22" alt=""> | `mafdet judge` | il giudizio | confronta i risultati con un calcolo da zero | disponibile |
-
-Ogni comando accetta le opzioni comuni `--model`, `--device`, `--dtype` e `--threads`. Funziona anche `python -m mafdet`.
-
-## Requisiti
-
-- **GPU NVIDIA** con driver aggiornati (obiettivo di test: RTX 2060, 6 GB), oppure solo una CPU
-- **Python 3.12** (vanno bene anche 3.11 e 3.14). PyTorch non ha ancora pacchetti per Python 3.15.
-- Circa **7 GB di spazio su disco** (PyTorch + modello)
-- **16 GB di RAM** consigliati per l'esecuzione solo su CPU
-
-Modello predefinito: **Qwen3-1.7B in fp16**. Le GPU Turing come la 2060 non supportano nativamente bf16.
-
-## Installazione
-
-L'ordine conta: **prima PyTorch dall'index CUDA**, poi MAFDET.
-
-> **PyTorch non è una dipendenza del pacchetto `mafdet`, ed è voluto.** Se lo installasse pip da PyPI, su Windows prenderebbe la versione solo CPU e la GPU resterebbe inutilizzata. Installalo tu dall'index CUDA, come qui sotto, prima di installare MAFDET.
+## Avvio rapido
 
 ```bash
 git clone https://github.com/TheLastOxygen/mafdet.git
 cd mafdet
-
 python -m venv .venv          # Windows: py -3.12 -m venv .venv
 source .venv/bin/activate     # Windows: .venv\Scripts\Activate.ps1
-
-pip install torch --index-url https://download.pytorch.org/whl/cu128
 pip install -e .
+mafdet
 ```
 
-Così il comando `mafdet` viene installato nell'ambiente virtuale (`pip install -e .` lo lascia collegato alla cartella dei sorgenti, quindi le modifiche hanno effetto subito).
+Tutto qui. Niente PyTorch, niente download a mano: `mafdet` chiede se aprire la **finestra** o l'**app nel terminale**, e al primo avvio una procedura guidata fa il resto. Guarda il tuo computer, installa da sola la build giusta di llama.cpp (CUDA per una scheda NVIDIA, CPU altrimenti) e scarica il modello che rende di più sul tuo hardware. Su Windows `start_mafdet.bat` fa lo stesso con un doppio clic.
 
-## Avvio rapido
+<p align="center">
+  <img src="assets/screenshots/gui-chat.png" alt="La finestra di MAFDET: il modello ha ragionato mentre il messaggio veniva scritto (455 token di ragionamento su 571) e ha risposto 1,6 s dopo l'invio" width="49%">
+  <img src="assets/screenshots/gui-models.png" alt="Il catalogo dei modelli: per ogni modello, dove gira su questo computer, la velocità e l'attesa dopo l'invio con e senza MAFDET" width="49%">
+</p>
 
-```bash
-mafdet awaken --load    # controllo della GPU, download del modello (~3,5 GB), generazione di prova
-mafdet watch            # la finestra della chat
-mafdet judge            # deve finire con 0 errori
-mafdet race             # costo di prefill e decode sul tuo hardware
-mafdet hunt             # attesa con e senza prefill incrementale
-```
+## L'app
 
-### Chat
+La stessa app esiste in due forme, sullo stesso motore:
 
-```bash
-mafdet watch
-```
+| | Comando | Cos'è |
+|---|---|---|
+| <img src="assets/icons/watch.svg" width="22" alt=""> | `mafdet gui` | **La finestra**: chat, modelli, hardware e impostazioni, in italiano, inglese, francese o tedesco |
+| <img src="assets/icons/strike.svg" width="22" alt=""> | `mafdet tui` | **L'app nel terminale**: le stesse viste nel terminale, pensate per la tastiera (da F1 a F4) |
+| <img src="assets/icons/race.svg" width="22" alt=""> | `mafdet models` | il catalogo dei modelli per questo computer, e `--download` |
+| <img src="assets/icons/awaken.svg" width="22" alt=""> | `mafdet doctor` | controlla GPU, memoria, llama.cpp e modelli; `--install` installa llama.cpp |
 
-`mafdet watch` apre la finestra della chat di MAFDET. Mentre scrivi, una riga di stato sotto il messaggio mostra quanto il modello ne ha già letto; quando ti fermi legge anche la fine del prompt, così all'invio resta un solo token da calcolare. La conversazione resta nella cache da un turno all'altro. Le risposte sono impaginate in Markdown e puoi scorrerle liberamente mentre vengono scritte.
+`mafdet` da solo apre il launcher, che può ricordare la scelta (`mafdet --ask` lo mostra di nuovo).
 
-Funziona con llama.cpp: estrai una [release di llama.cpp](https://github.com/ggml-org/llama.cpp/releases) in `./llama.cpp` (oppure imposta `MAFDET_LLAMA_DIR`). Il primo avvio scarica Qwen3-4B in Q4_K_M (circa 2,5 GB). Su Windows basta un doppio clic su `avvia_mafdet.bat` (apre `mafdet strike`, qui sotto). Con `--browser` la chat si apre nel browser predefinito invece che nella sua finestra.
+**Chat.** Mentre scrivi, una riga di stato sotto il messaggio mostra cosa sta facendo il modello: quanto ha già letto e quanti token di ragionamento ha scritto in anticipo (il campo si illumina di ambra mentre ragiona). All'invio resta da calcolare solo la coda. Il ragionamento è mostrato chiuso sopra la risposta, e ogni risposta finisce con i suoi numeri: prima parola dopo l'invio, token letti mentre scrivevi, ragionamento fatto prima dell'invio, velocità.
 
-### Ragionamento in anticipo
+**Modelli.** Ogni modello del catalogo dice cosa fa sul *tuo* computer, prima di scaricarlo: se sta nella VRAM o gira in parte sulla CPU, quanto veloce scrive e legge, e quanto arriva la risposta dopo l'invio con e senza MAFDET. La stima viene dal tuo hardware (banda di GPU e RAM, VRAM, ripartizione dei layer di llama.cpp tra GPU e CPU) e sul PC di riferimento sta entro il 12% delle velocità misurate (Qwen3-4B 89,6 stimati / 87,1 misurati tok/s, 8B 16,2 / 16,2, 14B 5,1 / 4,9). Una volta scaricato un modello, **Misura** lo prova in mezzo minuto e i numeri veri sostituiscono la stima. Il modello che rende di più è segnato come *Il migliore per te*.
 
-```bash
-mafdet strike
-```
+**Hardware e impostazioni.** La vista Hardware mostra GPU, CPU, memoria e il runtime llama.cpp, con un pulsante per installarlo o reinstallarlo. Le impostazioni della chat restano da un avvio all'altro (in `~/.mafdet`, oppure `$MAFDET_HOME`).
 
-`mafdet strike` è la stessa chat, un passo più in là: il modello **comincia a pensare al tuo messaggio mentre lo stai ancora scrivendo**. Usa Qwen3 in modalità ragionamento, quindi prima di rispondere il modello ragiona in un blocco nascosto (mostrato chiuso sopra la risposta). Quel ragionamento di solito è l'attesa più lunga, e `strike` ne sposta il più possibile prima dell'invio:
+<p align="center">
+  <img src="assets/screenshots/tui-models.png" alt="L'app nel terminale: il catalogo dei modelli come tabella" width="49%">
+  <img src="assets/screenshots/launcher.png" alt="Il launcher: finestra o terminale" width="49%">
+</p>
+
+## Requisiti
+
+- **Windows o Linux**, con una **GPU NVIDIA** e driver aggiornati (obiettivo di test: RTX 2060, 6 GB), oppure solo una CPU
+- **Python 3.10 o successivo**
+- Spazio su disco per i modelli: da 0,6 GB (Qwen3-0.6B) a 2,3 GB per il 4B consigliato sulle schede da 6-8 GB
+- **16 GB di RAM** consigliati per l'esecuzione solo su CPU e per i modelli più grandi della VRAM
+
+L'app non ha bisogno di PyTorch: i modelli li esegue llama.cpp, e transformers fornisce solo i tokenizer. PyTorch serve solo per le misure sul backend PyTorch (sotto): installalo prima dall'index CUDA, poi `pip install -e ".[research]"`.
+
+## Come la chat ragiona in anticipo
+
+Nell'app è attivo di default (Impostazioni, *Ragiona mentre scrivo*); da riga di comando è `mafdet strike`, con le opzioni qui sotto. Il modello **comincia a pensare al tuo messaggio mentre lo stai ancora scrivendo**. Usa Qwen3 in modalità ragionamento, quindi prima di rispondere il modello ragiona in un blocco nascosto (mostrato chiuso sopra la risposta). Quel ragionamento di solito è l'attesa più lunga, e `strike` ne sposta il più possibile prima dell'invio:
 
 1. **Mentre scrivi**, il modello ragiona a blocchi brevi di 32 token, sul messaggio così com'è in quel momento, a parole intere (dopo uno spazio o un segno di punteggiatura, oppure a una pausa).
 2. **Quando il testo cambia**, il ragionamento non viene buttato. Resta nel prompt come appunti, dopo la nuova versione del messaggio. Spostarlo lì costa solo un prefill: la fase veloce e parallela, circa 60 volte più rapida che riscrivere gli stessi token sul 14B con la RTX 2060. Una nuova riga degli appunti nomina le parole appena scritte, così il modello continua a raccogliere materiale su di esse invece di ricominciare.
@@ -148,11 +132,18 @@ Il ragionamento in anticipo **non è esatto**: il modello ragiona su versioni in
 | `--recycle` | riusa le risposte scritte per le versioni precedenti del messaggio come bozze n-gram per la decodifica speculativa (+4% di velocità misurato con una digitazione naturale, +20% sul codice) |
 | `--draft repo:file` | un modello piccolo della stessa famiglia propone token per la decodifica speculativa (nessun guadagno misurato sulla RTX 2060, vedi sotto) |
 
-`demo_live.py` (`avvia_demo.bat`) è la vista passo passo per il debug: token, cache, holdback e tempi, dal vivo nel terminale.
+`mafdet watch` e `mafdet strike` aprono la finestra con il modello e le opzioni date da riga di comando (`--gguf repo:file`), invece delle impostazioni dell'app. `demo_live.py` (`start_demo.bat`) è la vista passo passo per il debug: token, cache, holdback e tempi, dal vivo nel terminale (`--auto` scrive da sola un esempio).
 
-### Misure
+## Misurare e verificare
 
-Aggiungi `--device cpu` a qualunque comando per misurare il caso senza GPU. I risultati vengono salvati come file CSV in `results/` (si cambia con `--out`).
+| | Comando | | Cosa fa |
+|---|---|---|---|
+| <img src="assets/icons/hunt.svg" width="22" alt=""> | `mafdet hunt` | la caccia | simula persone che scrivono e misura l'attesa dopo l'invio |
+| <img src="assets/icons/race.svg" width="22" alt=""> | `mafdet race` | la corsa | misura il costo di prefill e decode sulla tua macchina |
+| <img src="assets/icons/judge.svg" width="22" alt=""> | `mafdet judge` | il giudizio | confronta i risultati con un calcolo da zero: deve finire con 0 errori |
+| <img src="assets/icons/awaken.svg" width="22" alt=""> | `mafdet awaken` | il risveglio | controlla PyTorch e la GPU, per il backend PyTorch |
+
+Girano su llama.cpp con `--backend llama` (senza PyTorch), oppure su PyTorch/transformers con il predefinito `--backend hf` (`pip install -e ".[research]"` dopo aver installato PyTorch dall'index CUDA: da PyPI, su Windows, pip prenderebbe la versione solo CPU). `mafdet --help` è la guida completa, `mafdet <comando> --help` le opzioni di uno. Aggiungi `--device cpu` a qualunque comando per misurare il caso senza GPU. I risultati vengono salvati come file CSV in `results/` (si cambia con `--out`).
 
 ### Scenari di digitazione
 
@@ -196,7 +187,20 @@ Stessa precisione, meno ragionamento in totale (il materiale raccolto mentre scr
 | Qwen3-8B | no, in parte sulla CPU | circa 13 tok/s | da 130 a 280 token |
 | Qwen3-14B | no, in parte sulla CPU | 5 tok/s | 130 token |
 
-Sull'8B e sul 14B il ragionamento è di 400-1500 token, quindi prima dell'invio se ne fa al massimo una parte, e nelle singole prove la differenza di lunghezza del ragionamento tra due campionamenti è più grande del guadagno (esempi: 8B da 32 s a 20 s su un problema, da 74 s a 83 s su un altro; 14B da 235 s a 146 s). La lettura in anticipo invece guadagna di più quanto più il modello è grande: il 14B legge un documento incollato da 3.000 token in circa 10 s, tutti nascosti mentre scrivi.
+Anche così, sul 14B (6 problemi digitati in tempo reale, 6/6 corretti in entrambi i casi) il ragionamento in anticipo dimezza l'attesa media dopo l'invio: **da 108 s a 47 s**, con 164 token di ragionamento scritti prima dell'invio in media. Le singole prove variano molto (lo stesso problema ha richiesto 106 s una volta e 154 s un'altra), quindi 6 problemi danno l'ordine di grandezza, non una cifra precisa. La lettura in anticipo guadagna di più quanto più il modello è grande: il 14B legge un documento incollato da 3.000 token in circa 10 s, tutti nascosti mentre scrivi.
+
+**Un modello piccolo che raccoglie per uno grande (`--gatherer`, sperimentale).** Per i modelli più grandi della VRAM abbiamo provato a far scrivere materiale mentre scrivi a un modello piccolo e veloce (Qwen3-0.6B, anche allenato apposta con `training/`), che il 14B legge all'invio. Sulla RTX 2060 non batte il 14B che ragiona in anticipo da solo:
+
+| 14B, attesa media dopo l'invio | |
+|---|---|
+| Senza ragionamento in anticipo | 108 s |
+| **Ragionamento in anticipo da solo** | **47 s** |
+| Raccoglitore, Qwen3-0.6B non allenato | 60 s |
+| Raccoglitore, Qwen3-0.6B allenato | 79-86 s |
+| Materiale ideale scritto a mano (tutti i risultati parziali giusti), presentato come "di un assistente veloce" | 62 s |
+| Lo stesso materiale ideale, presentato come ragionamento del modello | 49 s |
+
+Anche il materiale perfetto pareggia soltanto il ragionamento in anticipo: il 14B lo legge, poi rifà e ricontrolla i calcoli, tranne sui problemi più facili (17-24 s invece di 37-63 s). Conta più come il materiale viene presentato che la sua qualità (da 62 s a 49 s). Domande aperte per chi vuole portare avanti questa ricerca: combinare le due cose (il modello grande ragiona in anticipo *e* legge il materiale come suo), insegnare al modello grande a fidarsi dei risultati parziali, oppure un raccoglitore dove il modello grande non riesce affatto a ragionare in anticipo (solo CPU).
 
 **Provate, e perché non sono attive di default:**
 
@@ -211,8 +215,11 @@ Sull'8B e sul 14B il ragionamento è di 400-1500 token, quindi prima dell'invio 
 - [x] `mafdet watch`: la finestra della chat
 - [x] Backend llama.cpp con modelli quantizzati (GGUF)
 - [x] `mafdet strike`: ragionamento in anticipo mentre scrivi, conservato tra le modifiche; la risposta esatta in anticipo a una pausa
-- [ ] Un modello piccolo ragiona mentre scrivi, uno grande risponde: ragionamento in anticipo per i modelli più grandi della VRAM
-- [ ] Misure ripetute sui modelli più grandi della VRAM
+- [x] L'app: finestra e terminale, catalogo dei modelli con le stime per il tuo hardware, installazione automatica di llama.cpp, primo avvio guidato, quattro lingue
+- [x] Un modello piccolo raccoglie mentre scrivi, uno grande risponde: provato e misurato (nessun guadagno sulla RTX 2060, vedi Risultati)
+- [ ] Ragionamento in anticipo per i modelli più grandi della VRAM che batta il modello grande che ragiona da solo
+- [ ] Famiglie di modelli diverse da Qwen3 (ognuna richiede di misurare la sua cornice)
+- [ ] macOS (Metal) e GPU AMD
 
 ## Ricerca correlata
 

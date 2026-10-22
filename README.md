@@ -57,76 +57,60 @@ MAFDET keeps the KV cache in sync with the text **while you type**:
 
 **Correctness does not depend on how you type.** Backspaces, edits in the middle of the text, pasted blocks, missing punctuation or spaces: the common-prefix check always brings the cache back to exactly what a from-scratch computation would produce. Heuristics such as hold-back and debounce only affect how much work is wasted, never the result.
 
-## Commands
-
-Run `mafdet` with no arguments for the table of commands, `mafdet --help` for the full guide (what each command does, with examples), or `mafdet <command> --help` for the options of one.
-
-| | Command | | What it does | Status |
-|---|---|---|---|---|
-| <img src="assets/icons/awaken.svg" width="22" alt=""> | `mafdet awaken` | the awakening | checks the GPU, downloads and loads the model | available |
-| <img src="assets/icons/watch.svg" width="22" alt=""> | `mafdet watch` | the guard | opens the chat window: the model reads while you type | available |
-| <img src="assets/icons/strike.svg" width="22" alt=""> | `mafdet strike` | the strike | starts reasoning while you type, and writes the answer when you pause | available |
-| <img src="assets/icons/hunt.svg" width="22" alt=""> | `mafdet hunt` | the hunt | simulates people typing and measures the wait after sending | available |
-| <img src="assets/icons/race.svg" width="22" alt=""> | `mafdet race` | the race | benchmarks prefill and decode on your machine | available |
-| <img src="assets/icons/judge.svg" width="22" alt=""> | `mafdet judge` | the judgement | checks results against a from-scratch computation | available |
-
-Every command accepts the common options `--model`, `--device`, `--dtype` and `--threads`. `python -m mafdet` works too.
-
-## Requirements
-
-- **NVIDIA GPU** with up-to-date drivers (tested target: RTX 2060, 6 GB), or just a CPU
-- **Python 3.12** (3.11 and 3.14 also work). PyTorch does not ship wheels for Python 3.15 yet.
-- About **7 GB of disk space** (PyTorch + model)
-- **16 GB of RAM** recommended for CPU-only runs
-
-Default model: **Qwen3-1.7B in fp16**. Turing GPUs such as the 2060 have no native bf16 support.
-
-## Installation
-
-Order matters: **install PyTorch from the CUDA index first**, then MAFDET.
-
-> **PyTorch is not a dependency of the `mafdet` package, on purpose.** If pip installed it from PyPI, on Windows it would pick the CPU-only build and the GPU would sit unused. Install it yourself from the CUDA index, as below, before installing MAFDET.
+## Quick start
 
 ```bash
 git clone https://github.com/TheLastOxygen/mafdet.git
 cd mafdet
-
 python -m venv .venv          # Windows: py -3.12 -m venv .venv
 source .venv/bin/activate     # Windows: .venv\Scripts\Activate.ps1
-
-pip install torch --index-url https://download.pytorch.org/whl/cu128
 pip install -e .
+mafdet
 ```
 
-This installs the `mafdet` command in the virtual environment (`pip install -e .` keeps it linked to the source folder, so edits take effect right away).
+That is all. No PyTorch, no manual downloads: `mafdet` asks whether to open the **window** or the **terminal app**, and the first start guides you through the rest. It looks at your machine, installs the right build of llama.cpp by itself (CUDA for an NVIDIA card, CPU otherwise) and downloads the model that runs best on your hardware. On Windows, `start_mafdet.bat` does the same with a double-click.
 
-## Quick start
+<p align="center">
+  <img src="assets/screenshots/gui-chat.png" alt="The MAFDET window: the model reasoned ahead while the message was typed (455 of 571 reasoning tokens) and answered 1.6 s after Enter" width="49%">
+  <img src="assets/screenshots/gui-models.png" alt="The model catalog: for each model, where it runs on this machine, its speed and the wait after Enter with and without MAFDET" width="49%">
+</p>
 
-```bash
-mafdet awaken --load    # GPU check, model download (~3.5 GB), test generation
-mafdet watch            # the chat window
-mafdet judge            # must end with 0 errors
-mafdet race             # prefill and decode cost on your hardware
-mafdet hunt             # wait time with and without incremental prefill
-```
+## The app
 
-### Chat
+The same app comes in two forms, on the same engine:
 
-```bash
-mafdet watch
-```
+| | Command | What it is |
+|---|---|---|
+| <img src="assets/icons/watch.svg" width="22" alt=""> | `mafdet gui` | **The window**: chat, models, hardware and settings, in English, Italian, French or German |
+| <img src="assets/icons/strike.svg" width="22" alt=""> | `mafdet tui` | **The terminal app**: the same views in the terminal, keyboard first (F1 to F4) |
+| <img src="assets/icons/race.svg" width="22" alt=""> | `mafdet models` | the model catalog for this machine, and `--download` |
+| <img src="assets/icons/awaken.svg" width="22" alt=""> | `mafdet doctor` | checks the GPU, memory, llama.cpp and the models; `--install` installs llama.cpp |
 
-`mafdet watch` opens the MAFDET chat window. While you type, a status line under the message shows how much of it the model has already read; when you pause it also reads the end of the prompt, so on Enter a single token is left to compute. The conversation stays in the cache from one turn to the next. Answers render as Markdown and scroll freely while they are written.
+`mafdet` alone opens the launcher, which can remember your choice (`mafdet --ask` shows it again).
 
-It runs on llama.cpp: extract a [llama.cpp release](https://github.com/ggml-org/llama.cpp/releases) into `./llama.cpp` (or set `MAFDET_LLAMA_DIR`). The first start downloads Qwen3-4B in Q4_K_M (about 2.5 GB). On Windows, double-click `avvia_mafdet.bat` (it opens `mafdet strike`, below). `--browser` opens the chat in the default browser instead of its own window.
+**Chat.** While you type, a status line under the message shows what the model is doing with it: how much it has read, and how many reasoning tokens it has written ahead (the field glows amber while it thinks). On Enter only the tail is left to compute. The reasoning is shown folded above the answer, and every answer ends with its numbers: first word after Enter, tokens read while you typed, reasoning done before Enter, speed.
 
-### Reasoning ahead
+**Models.** Every model of the catalog comes with what it does on *your* machine, before you download it: whether it fits in VRAM or runs partly on the CPU, how fast it writes and reads, and how long the answer takes after Enter with and without MAFDET. The estimate comes from your hardware (GPU and RAM bandwidth, VRAM, llama.cpp's split of layers between GPU and CPU) and is within 12% of the measured speeds on the reference PC (Qwen3-4B 89.6 estimated / 87.1 measured tok/s, 8B 16.2 / 16.2, 14B 5.1 / 4.9). Once a model is downloaded, **Measure** benchmarks it in half a minute and the real numbers replace the estimate. The model that runs best here is marked *Best for you*.
 
-```bash
-mafdet strike
-```
+**Hardware and settings.** The Hardware view shows the GPU, CPU, memory and the llama.cpp runtime, with a button to install or reinstall it. Settings keep the chat options from one start to the next (in `~/.mafdet`, or `$MAFDET_HOME`).
 
-`mafdet strike` is the same chat, one step further: the model **starts thinking about your message while you are still typing it**. It runs Qwen3 in thinking mode, so before answering the model reasons in a hidden block (shown folded above the answer). That reasoning is usually the longest wait, and `strike` moves as much of it as possible to before Enter:
+<p align="center">
+  <img src="assets/screenshots/tui-models.png" alt="The terminal app: the model catalog as a table" width="49%">
+  <img src="assets/screenshots/launcher.png" alt="The launcher: window or terminal" width="49%">
+</p>
+
+## Requirements
+
+- **Windows or Linux**, with an **NVIDIA GPU** and up-to-date drivers (tested target: RTX 2060, 6 GB), or just a CPU
+- **Python 3.10 or later**
+- Disk space for the models: from 0.6 GB (Qwen3-0.6B) to 2.3 GB for the 4B recommended on 6-8 GB cards
+- **16 GB of RAM** recommended for CPU-only runs and for models larger than the VRAM
+
+The app needs no PyTorch: llama.cpp runs the models, and transformers only provides the tokenizers. PyTorch is needed only for the measurements on the PyTorch backend (below): install it first from the CUDA index, then `pip install -e ".[research]"`.
+
+## How the chat thinks ahead
+
+In the app this is on by default (Settings, *Reason while I type*); from the command line it is `mafdet strike`, with the options below. The model **starts thinking about your message while you are still typing it**. It runs Qwen3 in thinking mode, so before answering the model reasons in a hidden block (shown folded above the answer). That reasoning is usually the longest wait, and `strike` moves as much of it as possible to before Enter:
 
 1. **While you type**, the model reasons in short chunks of 32 tokens, on the message as it is at that moment, on whole words (after a space or punctuation, or at a pause).
 2. **When the text changes**, the reasoning is not thrown away. It stays in the prompt as notes, after the new version of the message. Moving it there only costs a prefill: the fast, parallel phase, about 60 times faster than writing the same tokens again for the 14B on the RTX 2060. A new line of the notes names the words just typed, so the model goes on gathering material on them instead of starting over.
@@ -148,11 +132,18 @@ Reasoning ahead is **not exact**: the model reasons on intermediate versions of 
 | `--recycle` | reuse the answers written for earlier versions of the message as n-gram drafts for speculative decoding (+4% decode speed measured with natural typing, +20% on code) |
 | `--draft repo:file` | a small model of the same family drafts tokens for speculative decoding (no gain measured on the RTX 2060, see below) |
 
-`demo_live.py` (`avvia_demo.bat`) is the step-by-step view for debugging: tokens, cache, hold-back and timings, live in the terminal.
+`mafdet watch` and `mafdet strike` open the window with the model and options given on the command line (`--gguf repo:file`), instead of the app's settings. `demo_live.py` (`start_demo.bat`) is the step-by-step view for debugging: tokens, cache, hold-back and timings, live in the terminal (`--auto` types an example by itself).
 
-### Measurements
+## Measure and verify
 
-Add `--device cpu` to any command to measure the no-GPU case. Results are saved as CSV files in `results/` (change it with `--out`).
+| | Command | | What it does |
+|---|---|---|---|
+| <img src="assets/icons/hunt.svg" width="22" alt=""> | `mafdet hunt` | the hunt | simulates people typing and measures the wait after sending |
+| <img src="assets/icons/race.svg" width="22" alt=""> | `mafdet race` | the race | benchmarks prefill and decode on your machine |
+| <img src="assets/icons/judge.svg" width="22" alt=""> | `mafdet judge` | the judgement | checks results against a from-scratch computation: must end with 0 errors |
+| <img src="assets/icons/awaken.svg" width="22" alt=""> | `mafdet awaken` | the awakening | checks PyTorch and the GPU, for the PyTorch backend |
+
+They run on llama.cpp with `--backend llama` (no PyTorch needed), or on PyTorch/transformers with the default `--backend hf` (`pip install -e ".[research]"` after installing PyTorch from the CUDA index: from PyPI, on Windows, pip would get the CPU-only build). `mafdet --help` is the full guide, `mafdet <command> --help` the options of one. Add `--device cpu` to any command to measure the no-GPU case. Results are saved as CSV files in `results/` (change it with `--out`).
 
 ### Typing scenarios
 
@@ -196,7 +187,20 @@ Same accuracy, less reasoning in total (the material gathered while typing saves
 | Qwen3-8B | no, partly on the CPU | about 13 tok/s | 130 to 280 tokens |
 | Qwen3-14B | no, partly on the CPU | 5 tok/s | 130 tokens |
 
-On the 8B and 14B the reasoning is 400 to 1500 tokens, so at most a fraction of it is done before Enter, and in single runs the variation in reasoning length between two samples is larger than the gain (examples: 8B 32 s → 20 s on one problem, 74 s → 83 s on another; 14B 235 s → 146 s). Reading ahead, on the other hand, gains more the larger the model: the 14B reads a 3,000-token pasted document in about 10 s, all of it hidden while you type.
+Even so, on the 14B (6 word problems typed in real time, 6/6 correct both ways) reasoning ahead halves the mean wait after Enter: **108 s → 47 s**, with 164 reasoning tokens written before Enter on average. Single runs vary a lot (the same problem took 106 s once and 154 s another time), so 6 problems give the order of magnitude, not a precise figure. Reading ahead gains more the larger the model: the 14B reads a 3,000-token pasted document in about 10 s, all of it hidden while you type.
+
+**A small model gathering for a large one (`--gatherer`, experimental).** For models larger than the VRAM we tried having a small, fast model (Qwen3-0.6B, also fine-tuned for it with `training/`) write material while you type, for the 14B to read on Enter. On the RTX 2060 it does not beat the 14B reasoning ahead by itself:
+
+| 14B, mean wait after Enter | |
+|---|---|
+| No reasoning ahead | 108 s |
+| **Reasoning ahead by itself** | **47 s** |
+| Gatherer, untrained Qwen3-0.6B | 60 s |
+| Gatherer, fine-tuned Qwen3-0.6B | 79-86 s |
+| Ideal material, written by hand (every partial result right), presented as "from a fast assistant" | 62 s |
+| The same ideal material, presented as the model's own reasoning | 49 s |
+
+Even perfect material only matches reasoning ahead: the 14B reads it, then redoes and double-checks the calculations, except on the easiest problems (17-24 s instead of 37-63 s). How the material is presented matters more than its quality (62 s → 49 s). Open questions for anyone who wants to take this further: combining both (the large model reasons ahead *and* reads the material as its own), teaching the large model to trust partial results, or a gatherer where the large model cannot reason ahead at all (CPU only).
 
 **Tried, and why they are not on by default:**
 
@@ -211,8 +215,11 @@ On the 8B and 14B the reasoning is 400 to 1500 tokens, so at most a fraction of 
 - [x] `mafdet watch`: the chat window
 - [x] llama.cpp backend with quantized (GGUF) models
 - [x] `mafdet strike`: reasoning ahead while you type, kept across edits; the exact answer ahead at a pause
-- [ ] A small model reasons while you type, a large one answers: reasoning ahead for models larger than the VRAM
-- [ ] Repeated measurements on models larger than the VRAM
+- [x] The app: window and terminal, model catalog with estimates for your hardware, automatic llama.cpp setup, guided first start, four languages
+- [x] A small model gathers while you type, a large one answers: tried and measured (no gain on the RTX 2060, see Results)
+- [ ] Reasoning ahead for models larger than the VRAM that beats the large model thinking by itself
+- [ ] Model families other than Qwen3 (each needs its frame measured)
+- [ ] macOS (Metal) and AMD GPUs
 
 ## Related research
 

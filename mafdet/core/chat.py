@@ -14,6 +14,7 @@ States, in the order a first start goes through them:
 """
 from __future__ import annotations
 
+import dataclasses
 import socket
 import threading
 import time
@@ -55,15 +56,29 @@ class ChatService:
         self.variant_id = ""
         self.overrides = overrides
         self._lock = threading.RLock()
+        # The VRAM other programs use, measured before any model of ours is loaded: the catalog
+        # estimates what fits in the card, and our own model must not count against itself.
+        gpu = hardware.detect(refresh=True).gpu
+        self._others_vram_mb = gpu.vram_used_mb if gpu else 0
 
     # ---- what the interfaces show ------------------------------------------------
 
     def hardware(self, refresh: bool = False) -> dict:
-        return hardware.detect(refresh).to_dict()
+        hw = hardware.detect(refresh)
+        if refresh and self.session is None and hw.gpu:
+            self._others_vram_mb = hw.gpu.vram_used_mb
+        return hw.to_dict()
+
+    def machine(self) -> hardware.Hardware:
+        """The machine as the estimates see it: the VRAM taken by our own model counts as free."""
+        hw = hardware.detect()
+        if hw.gpu is None:
+            return hw
+        gpus = [dataclasses.replace(g, vram_used_mb=self._others_vram_mb) if g is hw.gpu else g for g in hw.gpus]
+        return dataclasses.replace(hw, gpus=gpus)
 
     def catalog(self) -> dict:
-        hw = hardware.detect()
-        out = catalog.listing(hw, self.settings["device"], self.settings["ctx"])
+        out = catalog.listing(self.machine(), self.settings["device"], self.settings["ctx"])
         out["loaded"] = self.variant_id if self.session is not None else ""
         return out
 
