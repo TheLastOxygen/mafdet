@@ -83,14 +83,14 @@ La stessa app esiste in due forme, sullo stesso motore:
 |---|---|---|
 | <img src="assets/icons/watch.svg" width="22" alt=""> | `mafdet gui` | **La finestra**: chat, modelli, hardware e impostazioni, in italiano, inglese, francese o tedesco |
 | <img src="assets/icons/strike.svg" width="22" alt=""> | `mafdet tui` | **L'app nel terminale**: le stesse viste nel terminale, pensate per la tastiera (da F1 a F4) |
-| <img src="assets/icons/race.svg" width="22" alt=""> | `mafdet models` | il catalogo dei modelli per questo computer, e `--download` |
+| <img src="assets/icons/race.svg" width="22" alt=""> | `mafdet models` | il catalogo dei modelli per questo computer (`--family`, `--download`) |
 | <img src="assets/icons/awaken.svg" width="22" alt=""> | `mafdet doctor` | controlla GPU, memoria, llama.cpp e modelli; `--install` installa llama.cpp |
 
 `mafdet` da solo apre il launcher, che può ricordare la scelta (`mafdet --ask` lo mostra di nuovo).
 
 **Chat.** Mentre scrivi, una riga di stato sotto il messaggio mostra cosa sta facendo il modello: quanto ha già letto e quanti token di ragionamento ha scritto in anticipo (il campo si illumina di ambra mentre ragiona). All'invio resta da calcolare solo la coda. Il ragionamento è mostrato chiuso sopra la risposta, e ogni risposta finisce con i suoi numeri: prima parola dopo l'invio, token letti mentre scrivevi, ragionamento fatto prima dell'invio, velocità.
 
-**Modelli.** Ogni modello del catalogo dice cosa fa sul *tuo* computer, prima di scaricarlo: se sta nella VRAM o gira in parte sulla CPU, quanto veloce scrive e legge, e quanto arriva la risposta dopo l'invio con e senza MAFDET. La stima viene dal tuo hardware (banda di GPU e RAM, VRAM, ripartizione dei layer di llama.cpp tra GPU e CPU) e sul PC di riferimento sta entro il 12% delle velocità misurate (Qwen3-4B 89,6 stimati / 87,1 misurati tok/s, 8B 16,2 / 16,2, 14B 5,1 / 4,9). Una volta scaricato un modello, **Misura** lo prova in mezzo minuto e i numeri veri sostituiscono la stima. Il modello che rende di più è segnato come *Il migliore per te*.
+**Modelli.** Cinque famiglie: **Qwen3**, **Llama 3**, **Gemma 3**, **Mistral** e **Phi-4**, da 0,6 a 32 miliardi di parametri, ognuna in più quantizzazioni. Con ogni modello MAFDET legge il messaggio mentre scrivi e, a una pausa, scrive la risposta in anticipo; Qwen3 in più **ragiona in anticipo**, l'unica famiglia di cui è stata misurata la cornice di ragionamento. Ogni modello del catalogo dice cosa fa sul *tuo* computer, prima di scaricarlo: se sta nella VRAM o gira in parte sulla CPU, quanto veloce scrive e legge, e quanto arriva la risposta dopo l'invio con e senza MAFDET. La stima viene dal tuo hardware (banda di GPU e RAM, VRAM, ripartizione dei layer di llama.cpp tra GPU e CPU) e sul PC di riferimento sta entro il 12% delle velocità misurate (Qwen3-4B 89,6 stimati / 87,1 misurati tok/s, 8B 16,2 / 16,2, 14B 5,1 / 4,9). Una volta scaricato un modello, **Misura** lo prova in mezzo minuto e i numeri veri sostituiscono la stima. Il modello che rende di più è segnato come *Il migliore per te*, e ogni famiglia ha il suo migliore. Per aggiungere un modello basta una riga in `tools/build_catalog.py`: legge da Hugging Face le dimensioni dei file e la forma del modello.
 
 **Hardware e impostazioni.** La vista Hardware mostra GPU, CPU, memoria e il runtime llama.cpp, con un pulsante per installarlo o reinstallarlo. Le impostazioni della chat restano da un avvio all'altro (in `~/.mafdet`, oppure `$MAFDET_HOME`).
 
@@ -110,7 +110,7 @@ L'app non ha bisogno di PyTorch: i modelli li esegue llama.cpp, e transformers f
 
 ## Come la chat ragiona in anticipo
 
-Nell'app è attivo di default (Impostazioni, *Ragiona mentre scrivo*); da riga di comando è `mafdet strike`, con le opzioni qui sotto. Il modello **comincia a pensare al tuo messaggio mentre lo stai ancora scrivendo**. Usa Qwen3 in modalità ragionamento, quindi prima di rispondere il modello ragiona in un blocco nascosto (mostrato chiuso sopra la risposta). Quel ragionamento di solito è l'attesa più lunga, e `strike` ne sposta il più possibile prima dell'invio:
+Nell'app è attivo di default per Qwen3 (Impostazioni, *Ragiona mentre scrivo*); da riga di comando è `mafdet strike`, con le opzioni qui sotto. Il modello **comincia a pensare al tuo messaggio mentre lo stai ancora scrivendo**. Usa Qwen3 in modalità ragionamento, quindi prima di rispondere il modello ragiona in un blocco nascosto (mostrato chiuso sopra la risposta). Quel ragionamento di solito è l'attesa più lunga, e `strike` ne sposta il più possibile prima dell'invio:
 
 1. **Mentre scrivi**, il modello ragiona a blocchi brevi di 32 token, sul messaggio così com'è in quel momento, a parole intere (dopo uno spazio o un segno di punteggiatura, oppure a una pausa).
 2. **Quando il testo cambia**, il ragionamento non viene buttato. Resta nel prompt come appunti, dopo la nuova versione del messaggio. Spostarlo lì costa solo un prefill: la fase veloce e parallela, circa 60 volte più rapida che riscrivere gli stessi token sul 14B con la RTX 2060. Una nuova riga degli appunti nomina le parole appena scritte, così il modello continua a raccogliere materiale su di esse invece di ricominciare.
@@ -218,7 +218,8 @@ Anche il materiale perfetto pareggia soltanto il ragionamento in anticipo: il 14
 - [x] L'app: finestra e terminale, catalogo dei modelli con le stime per il tuo hardware, installazione automatica di llama.cpp, primo avvio guidato, quattro lingue
 - [x] Un modello piccolo raccoglie mentre scrivi, uno grande risponde: provato e misurato (nessun guadagno sulla RTX 2060, vedi Risultati)
 - [ ] Ragionamento in anticipo per i modelli più grandi della VRAM che batta il modello grande che ragiona da solo
-- [ ] Famiglie di modelli diverse da Qwen3 (ognuna richiede di misurare la sua cornice)
+- [x] Cinque famiglie di modelli: Qwen3, Llama 3, Gemma 3, Mistral, Phi-4
+- [ ] Ragionamento in anticipo oltre Qwen3, anche per i modelli di ragionamento con formati propri (DeepSeek-R1, gpt-oss): ognuno richiede di misurare la sua cornice
 - [ ] macOS (Metal) e GPU AMD
 
 ## Ricerca correlata

@@ -389,37 +389,44 @@ class ChatView(Vertical):
 # =====================================================================================
 
 class ModelsView(Vertical):
+    """The catalog as one table: a row per model, its quantization switched in place (Q).
+
+    Everything is said once: the table has the numbers, the line under it what the numbers do
+    not say (the family, what the model is good at, where it runs), the footer the keys.
+    """
+
     DEFAULT_CSS = """
     ModelsView { height: 1fr; padding: 0 2; }
-    #models-head { height: auto; margin: 1 0; }
+    #models-head { height: 2; margin: 1 0 1 0; }
     #models-table { height: 1fr; }
-    #detail { height: auto; border: round #3A3733; padding: 0 1; margin: 1 0 0 0; }
-    #detail.recommended { border: round #D4892A; }
-    #detail-actions { height: auto; margin-top: 1; }
-    #detail-actions Button { margin-right: 1; }
-    #detail-progress { margin-top: 1; }
+    #models-line { height: 2; margin-top: 1; }
     """
-    FILTERS = {"all": "All", "fits": "Fits my GPU", "installed": "Downloaded"}
+    BINDINGS = [
+        Binding("enter", "use", "Use"),
+        Binding("d", "download", "Download"),
+        Binding("m", "measure", "Measure"),
+        Binding("x", "cancel", "Cancel"),
+        Binding("q", "quant(1)", "Quant"),
+        Binding("tab", "family(1)", "Family"),
+        Binding("shift+tab", "family(-1)", show=False),
+        Binding("f", "only('fits')", "Fits GPU"),
+        Binding("i", "only('installed')", "Downloaded"),
+    ]
+    COLUMNS = [("", "rec"), ("Model", "name"), ("Quant", "quant"), ("Runs", "where"), ("Writes", "tps"),
+               ("Thinks after Enter", "think"), ("300-token answer", "answer"), ("Size", "size"), ("", "state")]
 
     def compose(self) -> ComposeResult:
         yield Static("", id="models-head")
         yield DataTable(cursor_type="row", zebra_stripes=True, id="models-table")
-        with Vertical(id="detail"):
-            yield Static("", id="detail-text")
-            yield ProgressBar(total=100, show_eta=False, id="detail-progress")
-            with Horizontal(id="detail-actions"):
-                yield Button("Use", variant="primary", id="m-use")
-                yield Button("Download and use", variant="warning", id="m-get")
-                yield Button("Download", id="m-dl")
-                yield Button("Measure", id="m-bench")
-                yield Button("Cancel", variant="error", id="m-cancel")
+        yield Static("", id="models-line")
 
     def on_mount(self):
-        self.filter = "all"
-        self.selected = ""
+        self.family = "all"
+        self.only = ""                        # "", "fits" or "installed"
+        self.picked: dict[str, str] = {}      # model id → quantization
+        self.selected = ""                    # model id under the cursor
         table = self.query_one(DataTable)
-        for label, key in [("", "rec"), ("Model", "name"), ("Quant", "quant"), ("Runs on", "where"), ("Writes", "tps"),
-                           ("Answer after Enter", "wait"), ("Without MAFDET", "without"), ("Size", "size"), ("", "state")]:
+        for label, key in self.COLUMNS:
             table.add_column(label, key=key)
         self.refresh_table()
 
@@ -427,171 +434,198 @@ class ModelsView(Vertical):
     def service(self) -> ChatService:
         return self.app.service
 
-    def entries(self) -> tuple[list[dict], str]:
-        cat = self.service.catalog()
-        es = cat["models"]
-        if self.filter == "fits":
-            es = [e for e in es if e["placement"] == "gpu"]
-        elif self.filter == "installed":
-            es = [e for e in es if e["installed"]]
-        best = cat["recommended"] or ""
-        es.sort(key=lambda e: (e["model_id"] != best.split(":")[0], e["params_b"], not e["default"]))
-        return es, best
+    # ---- data ----------------------------------------------------------------------
+
+    def models(self, cat: dict) -> list[list[dict]]:
+        """The variants of each model shown, in catalog order, the recommended one first."""
+        groups: dict[str, list[dict]] = {}
+        for e in cat["models"]:
+            groups.setdefault(e["model_id"], []).append(e)
+        out = [vs for vs in groups.values() if self.family in ("all", vs[0]["family"])]
+        if self.only == "fits":
+            out = [vs for vs in out if any(v["placement"] == "gpu" for v in vs)]
+        elif self.only == "installed":
+            out = [vs for vs in out if any(v["installed"] for v in vs)]
+        best = self.best(cat).split(":")[0]
+        return sorted(out, key=lambda vs: vs[0]["model_id"] != best)
+
+    def best(self, cat: dict) -> str:
+        return (cat["recommended"] if self.family == "all" else cat["family_best"].get(self.family)) or ""
+
+    def shown(self, vs: list[dict]) -> dict:
+        """The quantization picked, else the one in use, else a downloaded one, else the default."""
+        loaded = self.service.status().get("model_id")
+        mid = vs[0]["model_id"]
+        return (next((v for v in vs if v["quant"] == self.picked.get(mid)), None)
+                or next((v for v in vs if v["id"] == loaded), None)
+                or next((v for v in vs if v["installed"] and v["default"]), None)
+                or next((v for v in vs if v["default"]), vs[0]))
+
+    def task(self, kind: str, target: str) -> dict | None:
+        return next((t for t in self.service.jobs()
+                     if t["kind"] == kind and t["target"] == target and t["state"] == "running"), None)
+
+    # ---- cells ---------------------------------------------------------------------
 
     def state_cell(self, e: dict) -> Text:
         s = self.service.status()
-        dl = self.task("download", e["id"])
-        bench = self.task("bench", e["id"])
+        dl, bench = self.task("download", e["id"]), self.task("bench", e["id"])
         if dl:
-            return Text(f"↓ {dl['progress']:.0%}", style=AMBER)
+            speed = f" {dl['speed_bps'] / 2**20:.0f} MB/s" if dl["speed_bps"] else ""
+            return Text(f"↓ {dl['progress']:.0%}{speed}", style=AMBER)
         if bench:
-            return Text("measuring", style=AMBER)
+            return Text(f"{SPIN[int(time.time() * 4) % len(SPIN)]} measuring", style=AMBER)
         if s.get("model_id") == e["id"] and s["state"] in ("ready", "loading"):
             return Text("● in use" if s["state"] == "ready" else "◌ loading", style=GREEN)
-        return Text("downloaded", style=PAPER) if e["installed"] else Text("")
+        return Text("✓ on disk", style=FAINT) if e["installed"] else Text("")
 
-    def task(self, kind: str, target: str) -> dict | None:
-        for t in self.service.jobs():
-            if t["kind"] == kind and t["target"] == target and t["state"] == "running":
-                return t
-        return None
+    def cells(self, vs: list[dict], best: str) -> list:
+        e = self.shown(vs)
+        label, colour = PLACEMENT[e["placement"]]
+        tps = Text(f"{e['decode_tps']:.0f}" if e["decode_tps"] >= 20 else f"{e['decode_tps']:.1f}")
+        tps.append(" tok/s", style=FAINT)
+        tps.append(" ✓" if e["measured"] else "", style=GREEN)
+        quant = Text(e["quant"])
+        if len(vs) > 1:
+            quant.append(f" +{len(vs) - 1}", style=FAINT)
+        think = (Text(f"≈ {dur(e['with_mafdet_s'])}", style=AMBER) + Text(f" ({dur(e['without_s'])})", style=FAINT)
+                 if e["reason_ahead"] else Text("–", style=FAINT))
+        return [Text("★", style=AMBER) if e["model_id"] == best.split(":")[0] else Text(""),
+                Text(e["name"], style=Style(bold=True)), quant,
+                Text(label.format(p=round(e["gpu_share"] * 100)), style=colour), tps, think,
+                Text(f"≈ {dur(e['answer_s'])}"), Text(gb(e["bytes"] / 2**20), style=MUTED), self.state_cell(e)]
+
+    # ---- drawing ---------------------------------------------------------------------
 
     def refresh_table(self):
+        cat = self.service.catalog()
+        groups = self.models(cat)
+        best = self.best(cat)
+
         hw = self.service.hardware()
-        gpu = hw.get("gpu")
+        g = hw.get("gpu")
         head = Text()
-        head.append("MODELS\n", style=Style(color=PAPER, bold=True))
-        head.append(f"Estimated for your {gpu['name'] if gpu else hw['cpu']} and {gb(hw['ram_mb'])} of RAM"
-                    f"{'' if gpu else ', without a GPU'}. Measure a downloaded model for exact numbers.\n", style=MUTED)
-        for key, label in self.FILTERS.items():
-            head.append(f" {list(self.FILTERS).index(key) + 1} {label} ", style=Style(color=INK, bgcolor=PAPER, bold=True)
-                        if key == self.filter else Style(color=MUTED))
-            head.append("  ")
-        head.append("   Enter use · D download · B measure · X cancel", style=FAINT)
+        head.append("MODELS  ", style=Style(color=PAPER, bold=True))
+        machine = f"{g['name'].replace('NVIDIA GeForce ', '')} {g['vram_mb'] / 1024:.0f} GB" if g else "CPU only"
+        head.append(f"{machine} · {hw['ram_mb'] / 1024:.0f} GB RAM", style=MUTED)
+        if cat.get("vram_others_mb", 0) > 1024:
+            head.append(f" · {gb(cat['vram_others_mb'])} of VRAM in use elsewhere", style=AMBER)
+        head.append("     ★ best for you  ✓ measured  (…) without MAFDET  ⏎ use\n", style=FAINT)
+        fams = [("all", "All")] + [(f["id"], f["name"]) for f in cat["families"]]
+        for fid, name in fams:
+            on = fid == self.family
+            head.append(f" {name} ", style=Style(color=INK, bgcolor=PAPER, bold=True) if on else Style(color=MUTED))
+            head.append(" ")
+        if self.only:
+            head.append(f"  ▣ {'fits my GPU' if self.only == 'fits' else 'downloaded'} only", style=AMBER)
         self.query_one("#models-head", Static).update(head)
 
         table = self.query_one(DataTable)
-        keep = table.cursor_row
+        keep = self.selected
         table.clear()
-        es, best = self.entries()
-        for e in es:
-            label, colour = PLACEMENT[e["placement"]]
-            where = Text(label.format(p=round(e["gpu_share"] * 100)), style=colour)
-            tps = Text(f"{e['decode_tps']:.0f} tok/s" if e["decode_tps"] >= 20 else f"{e['decode_tps']:.1f} tok/s")
-            tps.append(" ✓" if e["measured"] else "", style=GREEN)
-            table.add_row(Text("★", style=AMBER) if e["id"] == best else Text(""),
-                          Text(e["name"], style=Style(bold=e["default"])), e["quant"], where, tps,
-                          Text(f"≈ {dur(e['with_mafdet_s'])}", style=AMBER), Text(dur(e["without_s"]), style=FAINT),
-                          gb(e["bytes"] / 2**20), self.state_cell(e), key=e["id"])
-        if es:
-            table.move_cursor(row=min(keep, len(es) - 1))
-            self.selected = es[min(keep, len(es) - 1)]["id"]
-        self.render_detail()
+        for vs in groups:
+            table.add_row(*self.cells(vs, best), key=vs[0]["model_id"])
+        ids = [vs[0]["model_id"] for vs in groups]
+        if ids:
+            row = ids.index(keep) if keep in ids else 0
+            table.move_cursor(row=row)
+            self.selected = ids[row]
+        else:
+            self.selected = ""
+        self.describe()
 
     def update_states(self):
-        """Progress only: the state column and the detail, not the whole table."""
+        """Progress only: the state column and the line under the table."""
         table = self.query_one(DataTable)
-        for e in self.service.catalog()["models"]:
+        cat = self.service.catalog()
+        groups = {vs[0]["model_id"]: vs for vs in self.models(cat)}
+        for mid, vs in groups.items():
             try:
-                table.update_cell(e["id"], "state", self.state_cell(e))
+                table.update_cell(mid, "state", self.state_cell(self.shown(vs)))
             except Exception:
-                pass                             # filtered out
-        self.render_detail()
+                pass
+        self.describe()
 
-    def render_detail(self):
-        e = next((x for x in self.service.catalog()["models"] if x["id"] == self.selected), None)
-        detail = self.query_one("#detail")
-        if e is None:
-            detail.display = False
-            return
-        detail.display = True
-        best = self.service.catalog()["recommended"]
-        detail.set_class(e["id"] == best, "recommended")
-        t = Text()
-        t.append(f"{e['name']}  {e['quant']}", style=Style(color=PAPER, bold=True))
-        if e["id"] == best:
-            t.append("   ★ BEST FOR YOU", style=Style(color=AMBER, bold=True))
-        moe = f", {e['active_b']}B active" if e["active_b"] < e["params_b"] else ""
-        t.append(f"\n{e['params_b']}B parameters{moe} · {gb(e['bytes'] / 2**20)} · "
-                 f"{'reasons while you type' if e['reason_ahead'] else ''}\n", style=MUTED)
-        t.append(TIER[e["tier"]] + "\n", style=PAPER)
-        t.append("In VRAM  ", style=MUTED)
-        t.append_text(bar(e["gpu_share"], 30, GREEN if e["placement"] == "gpu" else AMBER))
-        t.append(f"  {e['gpu_share']:.0%}\n", style=MUTED)
-        stamp = "measured" if e["measured"] else "estimated"
-        t.append(f"Writes {e['decode_tps']:,.1f} tok/s · reads {e['prefill_tps']:,} tok/s ({stamp})\n", style=PAPER)
-        t.append("Answer after Enter  ", style=MUTED)
-        t.append(f"≈ {dur(e['with_mafdet_s'])}", style=Style(color=AMBER, bold=True))
-        t.append(f"   {dur(e['without_s'])} without MAFDET\n", style=FAINT)
-        t.append(HINT[e["placement"]], style=MUTED)
-        self.query_one("#detail-text", Static).update(t)
+    def current(self) -> tuple[list[dict], dict] | None:
+        cat = self.service.catalog()
+        vs = [e for e in cat["models"] if e["model_id"] == self.selected]
+        return (vs, self.shown(vs)) if vs else None
 
-        s = self.service.status()
-        dl, bench = self.task("download", e["id"]), self.task("bench", e["id"])
-        running = dl or bench
-        progress = self.query_one("#detail-progress", ProgressBar)
-        progress.display = bool(running)
-        if dl:
-            progress.update(total=100, progress=dl["progress"] * 100)
-        elif bench:
-            progress.update(total=None)
-        in_use = s.get("model_id") == e["id"] and s["state"] in ("ready", "loading")
-        self.query_one("#m-use").display = e["installed"] and not running and not in_use
-        self.query_one("#m-get").display = not e["installed"] and not running
-        self.query_one("#m-dl").display = not e["installed"] and not running
-        self.query_one("#m-bench").display = e["installed"] and not running
-        self.query_one("#m-bench", Button).label = "Measure again" if e["measured"] else "Measure"
-        self.query_one("#m-cancel").display = bool(dl)
+    def describe(self):
+        cur = self.current()
+        line = Text()
+        if cur is None:
+            line.append("No model matches: Tab for another family, F or I to show everything.", style=MUTED)
+        else:
+            _, e = cur
+            line.append(f"{e['name']} · {e['vendor']} · {e['license']}", style=Style(color=PAPER, bold=True))
+            line.append(f"   {TIER[e['tier']]}\n", style=PAPER)
+            line.append(HINT[e["placement"]], style=MUTED)
+            line.append("   Reasons while you type." if e["reason_ahead"] else
+                        "   Reads while you type; writes the answer ahead at your pauses.", style=FAINT)
+        self.query_one("#models-line", Static).update(line)
+
+    # ---- events and keys ---------------------------------------------------------------
 
     @on(DataTable.RowHighlighted)
     def highlight(self, event: DataTable.RowHighlighted):
-        if event.row_key is not None:
+        if event.row_key is not None and event.row_key.value:
             self.selected = event.row_key.value
-            self.render_detail()
+            self.describe()
 
     @on(DataTable.RowSelected)
-    def choose(self, event: DataTable.RowSelected):
+    def chosen(self, event: DataTable.RowSelected):
         self.action_use()
 
-    def set_filter(self, key: str):
-        self.filter = key
+    def action_quant(self, step: int):
+        cur = self.current()
+        if cur is None or len(cur[0]) < 2:
+            return
+        vs, e = cur
+        quants = [v["quant"] for v in vs]
+        self.picked[self.selected] = quants[(quants.index(e["quant"]) + step) % len(quants)]
+        best = self.best(self.service.catalog())
+        for (_, key), value in zip(self.COLUMNS, self.cells(vs, best)):
+            self.query_one(DataTable).update_cell(self.selected, key, value)
+        self.describe()
+
+    def action_family(self, step: int):
+        ids = ["all"] + [f["id"] for f in self.service.catalog()["families"]]
+        self.family = ids[(ids.index(self.family) + step) % len(ids)]
+        self.refresh_table()
+
+    def action_only(self, what: str):
+        self.only = "" if self.only == what else what
         self.refresh_table()
 
     def action_use(self):
-        e = next((x for x in self.service.catalog()["models"] if x["id"] == self.selected), None)
-        if e is None:
+        cur = self.current()
+        if cur is None:
             return
+        e = cur[1]
         if e["installed"]:
             self.app.load_model(e["id"])
             self.app.show("chat")
         else:
-            self.app.pending_use.add(e["id"])
+            self.app.pending_use.add(e["id"])          # download, then load
             self.service.download(e["id"])
-        self.update_states()
+            self.update_states()
 
-    @on(Button.Pressed, "#m-use")
-    def use_pressed(self):
-        self.action_use()
+    def action_download(self):
+        cur = self.current()
+        if cur and not cur[1]["installed"]:
+            self.service.download(cur[1]["id"])
+            self.update_states()
 
-    @on(Button.Pressed, "#m-get")
-    def get_pressed(self):
-        self.app.pending_use.add(self.selected)
-        self.service.download(self.selected)
-        self.update_states()
+    def action_measure(self):
+        cur = self.current()
+        if cur and cur[1]["installed"]:
+            self.service.benchmark(cur[1]["id"])
+            self.update_states()
 
-    @on(Button.Pressed, "#m-dl")
-    def download(self):
-        self.service.download(self.selected)
-        self.update_states()
-
-    @on(Button.Pressed, "#m-bench")
-    def bench(self):
-        self.service.benchmark(self.selected)
-        self.update_states()
-
-    @on(Button.Pressed, "#m-cancel")
-    def cancel(self):
-        task = self.task("download", self.selected)
+    def action_cancel(self):
+        cur = self.current()
+        task = cur and self.task("download", cur[1]["id"])
         if task:
             self.service.cancel(task["id"])
 
@@ -961,12 +995,6 @@ class MafdetTUI(App):
         Binding("f4", "show('settings')", "Settings"),
         Binding("ctrl+n", "new_chat", "New chat"),
         Binding("escape", "stop", "Stop", show=False),
-        Binding("d", "models_key('download')", "Download", show=False),
-        Binding("b", "models_key('bench')", "Measure", show=False),
-        Binding("x", "models_key('cancel')", "Cancel", show=False),
-        Binding("1", "models_key('all')", show=False),
-        Binding("2", "models_key('fits')", show=False),
-        Binding("3", "models_key('installed')", show=False),
         Binding("r", "refresh_hardware", show=False),
         Binding("ctrl+q", "quit", "Quit"),
     ]
@@ -1034,19 +1062,6 @@ class MafdetTUI(App):
     def action_refresh_hardware(self):
         if self.query_one("#views", ContentSwitcher).current == "hardware":
             self.query_one(HardwareView).refresh_view(fresh=True)
-
-    def action_models_key(self, what: str):
-        if self.query_one("#views", ContentSwitcher).current != "models" or isinstance(self.focused, Input):
-            return
-        mv = self.query_one(ModelsView)
-        if what in ModelsView.FILTERS:
-            mv.set_filter(what)
-        elif what == "download":
-            mv.download()
-        elif what == "bench":
-            mv.bench()
-        elif what == "cancel":
-            mv.cancel()
 
     def load_model(self, variant_id: str):
         self.run_worker(lambda: self.service.load(variant_id), thread=True, exclusive=True, group="load")

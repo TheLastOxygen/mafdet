@@ -9,7 +9,6 @@
  "top.loading": "Loading {model}",
  "top.error": "Model not loaded",
  "lang.label": "Language",
-
  "action.install_runtime": "Install llama.cpp",
  "action.open_models": "Open the catalog",
  "action.retry": "Try again",
@@ -31,7 +30,6 @@
  "action.refresh": "Refresh",
  "action.reinstall": "Reinstall",
  "action.download_and_use": "Download and use",
-
  "state.no_runtime.title": "One step left: the runtime",
  "state.no_runtime.body": "MAFDET runs models with llama.cpp. Install it once: it takes about a minute.",
  "state.no_model.title": "Choose a model to start",
@@ -40,7 +38,6 @@
  "state.loading.title": "Waking up",
  "state.loading.body": "Starting llama.cpp and loading {model}. The very first start of a new runtime can take up to a minute.",
  "state.error.title": "The model did not start",
-
  "chat.hero.body": "MAFDET reads your message while you write it, and starts thinking about it before you press Enter.",
  "chat.key.send": "send",
  "chat.key.newline": "new line",
@@ -60,7 +57,6 @@
  "chat.meta.stopped": "stopped",
  "chat.meta.cut": "cut at the token limit",
  "chat.connection_lost": "Connection lost: {error}",
-
  "status.loading": "Waking up · starting llama.cpp and loading the model",
  "status.answering": "Answering · Esc to stop",
  "status.watching": "Watching · start typing, MAFDET reads as you write",
@@ -78,14 +74,15 @@
  "status.context": "context {n} / {max}",
  "status.no_model": "No model loaded · choose one in Models",
  "status.no_runtime": "llama.cpp is not installed · see Hardware",
-
  "models.title": "Models",
- "models.subtitle_gpu": "Estimated for your {gpu} and {ram} of RAM. Measure a downloaded model for exact numbers.",
+ "models.subtitle_gpu": "Estimated for your {gpu}{others} and {ram} of RAM. Measure a downloaded model for exact numbers.",
+ "models.vram_others": " ({n} of its VRAM in use by other programs)",
  "models.subtitle_cpu": "Estimated for your {cpu} and {ram} of RAM, without a GPU. Measure a downloaded model for exact numbers.",
  "models.filter.all": "All",
  "models.filter.fits": "Fits my GPU",
  "models.filter.installed": "Downloaded",
  "models.recommended": "Best for you",
+ "models.recommended_family": "Best {family} for you",
  "models.placement.gpu": "All on GPU",
  "models.placement.partial": "{p}% on GPU",
  "models.placement.cpu": "On CPU",
@@ -98,11 +95,14 @@
  "models.wait": "Answer after Enter",
  "models.wait_value": "≈ {s}",
  "models.wait_without": "{s} without MAFDET",
+ "models.answer_time": "A 300-token answer",
+ "models.answer_note": "Starts at once: the message is read while you type, and the answer is written ahead during your pauses.",
  "models.size": "Size",
  "models.vram_fit": "In VRAM",
  "models.params": "{n}B parameters",
  "models.params_moe": "{n}B parameters, {a}B active",
  "models.reason_ahead": "Reasons while you type",
+ "models.answers_ahead": "Answers ahead at pauses",
  "models.tier.tiny": "Tiny and instant: simple chats and quick drafts.",
  "models.tier.light": "Light and quick: everyday questions.",
  "models.tier.balanced": "Balanced: solid reasoning at full speed on most GPUs.",
@@ -126,7 +126,6 @@
  "models.toast.measured": "{model}: {n} tok/s measured",
  "models.toast.failed": "{model}: {error}",
  "models.empty": "No model matches this filter.",
-
  "hardware.title": "Hardware",
  "hardware.subtitle": "What MAFDET found on this machine, and the runtime that runs the models.",
  "hardware.gpu": "Graphics card",
@@ -155,7 +154,6 @@
  "hardware.stage.extracting": "Unpacking",
  "hardware.stage.checking": "Checking",
  "hardware.toast.installed": "llama.cpp {build} installed",
-
  "settings.title": "Settings",
  "settings.subtitle": "Saved on this computer, kept from one start to the next.",
  "settings.section.general": "General",
@@ -194,7 +192,6 @@
  "settings.about.source": "Source code",
  "settings.about.body": "Incremental prefill for local LLMs: the KV cache follows your text while you type.",
  "settings.setup_again": "Run the setup again",
-
  "onboarding.step.welcome": "Welcome",
  "onboarding.step.hardware": "Your machine",
  "onboarding.step.runtime": "Runtime",
@@ -213,7 +210,6 @@
  "onboarding.model.body": "Chosen for your hardware. You can change it at any time in Models.",
  "onboarding.ready.title": "All set",
  "onboarding.ready.body": "Start typing and watch the line under the message: MAFDET reads and thinks while you write.",
-
  "error.llama_missing": "llama.cpp is not installed.",
  "error.port_busy": "The port is taken by another program.",
  "error.server_exited": "llama.cpp stopped while loading the model.",
@@ -222,7 +218,6 @@
  "error.server_stopped": "llama.cpp stopped answering.",
  "error.load_failed": "The model could not be loaded.",
  "error.not_ready": "The model is not ready yet.",
-
  "unit.s": "{n} s",
  "unit.min": "{n} min",
  "unit.h": "{n} h"

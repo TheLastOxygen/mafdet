@@ -9,7 +9,6 @@
  "top.loading": "Chargement de {model}",
  "top.error": "Modèle non chargé",
  "lang.label": "Langue",
-
  "action.install_runtime": "Installer llama.cpp",
  "action.open_models": "Ouvrir le catalogue",
  "action.retry": "Réessayer",
@@ -31,7 +30,6 @@
  "action.refresh": "Actualiser",
  "action.reinstall": "Réinstaller",
  "action.download_and_use": "Télécharger et utiliser",
-
  "state.no_runtime.title": "Plus qu'une étape : le moteur",
  "state.no_runtime.body": "MAFDET exécute les modèles avec llama.cpp. Installez-le une fois : cela prend environ une minute.",
  "state.no_model.title": "Choisissez un modèle pour commencer",
@@ -40,7 +38,6 @@
  "state.loading.title": "Réveil",
  "state.loading.body": "Démarrage de llama.cpp et chargement de {model}. Le tout premier démarrage d'un nouveau moteur peut prendre jusqu'à une minute.",
  "state.error.title": "Le modèle n'a pas démarré",
-
  "chat.hero.body": "MAFDET lit votre message pendant que vous l'écrivez, et commence à y réfléchir avant que vous appuyiez sur Entrée.",
  "chat.key.send": "envoyer",
  "chat.key.newline": "nouvelle ligne",
@@ -60,7 +57,6 @@
  "chat.meta.stopped": "arrêtée",
  "chat.meta.cut": "coupée à la limite de tokens",
  "chat.connection_lost": "Connexion perdue : {error}",
-
  "status.loading": "Réveil · démarrage de llama.cpp et chargement du modèle",
  "status.answering": "Réponse en cours · Échap pour arrêter",
  "status.watching": "À l'écoute · commencez à écrire, MAFDET lit pendant la saisie",
@@ -78,14 +74,15 @@
  "status.context": "contexte {n} / {max}",
  "status.no_model": "Aucun modèle chargé · choisissez-en un dans Modèles",
  "status.no_runtime": "llama.cpp n'est pas installé · voir Matériel",
-
  "models.title": "Modèles",
- "models.subtitle_gpu": "Estimations pour votre {gpu} et {ram} de RAM. Mesurez un modèle téléchargé pour des chiffres exacts.",
+ "models.subtitle_gpu": "Estimations pour votre {gpu}{others} et {ram} de RAM. Mesurez un modèle téléchargé pour des chiffres exacts.",
+ "models.vram_others": " ({n} de sa VRAM utilisés par d'autres programmes)",
  "models.subtitle_cpu": "Estimations pour votre {cpu} et {ram} de RAM, sans GPU. Mesurez un modèle téléchargé pour des chiffres exacts.",
  "models.filter.all": "Tous",
  "models.filter.fits": "Tiennent dans le GPU",
  "models.filter.installed": "Téléchargés",
  "models.recommended": "Le meilleur pour vous",
+ "models.recommended_family": "Le meilleur {family} pour vous",
  "models.placement.gpu": "Tout sur le GPU",
  "models.placement.partial": "{p} % sur le GPU",
  "models.placement.cpu": "Sur le CPU",
@@ -98,11 +95,14 @@
  "models.wait": "Réponse après Entrée",
  "models.wait_value": "≈ {s}",
  "models.wait_without": "{s} sans MAFDET",
+ "models.answer_time": "Une réponse de 300 tokens",
+ "models.answer_note": "Démarre aussitôt : le message est lu pendant la saisie, et la réponse est écrite d'avance pendant vos pauses.",
  "models.size": "Taille",
  "models.vram_fit": "En VRAM",
  "models.params": "{n} milliards de paramètres",
  "models.params_moe": "{n} milliards de paramètres, {a} actifs",
  "models.reason_ahead": "Réfléchit pendant la saisie",
+ "models.answers_ahead": "Répond d'avance pendant les pauses",
  "models.tier.tiny": "Minuscule et instantané : conversations simples et brouillons rapides.",
  "models.tier.light": "Léger et rapide : questions du quotidien.",
  "models.tier.balanced": "Équilibré : un raisonnement solide à pleine vitesse sur la plupart des GPU.",
@@ -126,7 +126,6 @@
  "models.toast.measured": "{model} : {n} tok/s mesurés",
  "models.toast.failed": "{model} : {error}",
  "models.empty": "Aucun modèle ne correspond à ce filtre.",
-
  "hardware.title": "Matériel",
  "hardware.subtitle": "Ce que MAFDET a trouvé sur cet ordinateur, et le moteur qui exécute les modèles.",
  "hardware.gpu": "Carte graphique",
@@ -155,7 +154,6 @@
  "hardware.stage.extracting": "Décompression",
  "hardware.stage.checking": "Vérification",
  "hardware.toast.installed": "llama.cpp {build} installé",
-
  "settings.title": "Réglages",
  "settings.subtitle": "Enregistrés sur cet ordinateur, conservés d'un démarrage à l'autre.",
  "settings.section.general": "Général",
@@ -194,7 +192,6 @@
  "settings.about.source": "Code source",
  "settings.about.body": "Préremplissage incrémental pour LLM locaux : le cache KV suit votre texte pendant la saisie.",
  "settings.setup_again": "Relancer la configuration",
-
  "onboarding.step.welcome": "Bienvenue",
  "onboarding.step.hardware": "Votre ordinateur",
  "onboarding.step.runtime": "Moteur",
@@ -213,7 +210,6 @@
  "onboarding.model.body": "Choisi pour votre matériel. Vous pouvez le changer à tout moment dans Modèles.",
  "onboarding.ready.title": "Tout est prêt",
  "onboarding.ready.body": "Commencez à écrire et regardez la ligne sous le message : MAFDET lit et réfléchit pendant que vous écrivez.",
-
  "error.llama_missing": "llama.cpp n'est pas installé.",
  "error.port_busy": "Le port est occupé par un autre programme.",
  "error.server_exited": "llama.cpp s'est arrêté pendant le chargement du modèle.",
@@ -222,7 +218,6 @@
  "error.server_stopped": "llama.cpp ne répond plus.",
  "error.load_failed": "Le modèle n'a pas pu être chargé.",
  "error.not_ready": "Le modèle n'est pas encore prêt.",
-
  "unit.s": "{n} s",
  "unit.min": "{n} min",
  "unit.h": "{n} h"

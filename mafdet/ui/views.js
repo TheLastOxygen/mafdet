@@ -9,7 +9,8 @@
   // Models
   // =====================================================================================
 
-  let filter = "all";
+  let filter = "all";                     // all, fits, installed
+  let family = "all";                     // all, or a family id
   const picked = {};                      // model id → quantization chosen on its card
   let animateNext = true;
 
@@ -36,13 +37,27 @@
     installed: (vs) => vs.some((v) => v.installed),
   };
 
+  const inFamily = (vs) => family === "all" || vs[0].family === family;
+
+  // Two rows of chips: the family, then what to show of it.
   function renderFilter() {
     const gs = groups();
-    $("models-filter").innerHTML = ["all", "fits", "installed"].map((f) =>
-      `<button type="button" class="chip${f === filter ? " on" : ""}" data-f="${f}" role="radio" aria-checked="${f === filter}">` +
-      `${t(`models.filter.${f}`)}<span class="count">${gs.filter(keep[f]).length}</span></button>`).join("");
-    $("models-filter").querySelectorAll(".chip").forEach((b) => b.addEventListener("click", () => {
-      filter = b.dataset.f;
+    const fams = M.state.catalog?.families || [];
+    const chip = (attr, val, on, label, n) =>
+      `<button type="button" class="chip${on ? " on" : ""}" ${attr}="${val}" role="radio" aria-checked="${on}">` +
+      `${esc(label)}<span class="count">${n}</span></button>`;
+    $("models-filter").innerHTML =
+      `<div class="chips">${chip("data-fam", "all", family === "all", t("models.filter.all"), gs.length)}` +
+      fams.map((f) => chip("data-fam", f.id, family === f.id, f.name, gs.filter((vs) => vs[0].family === f.id).length)).join("") + `</div>` +
+      `<div class="chips">${["fits", "installed"].map((f) =>
+        chip("data-f", f, filter === f, t(`models.filter.${f}`), gs.filter(inFamily).filter(keep[f]).length)).join("")}</div>`;
+    $("models-filter").querySelectorAll("[data-fam]").forEach((b) => b.addEventListener("click", () => {
+      family = b.dataset.fam;
+      animateNext = true;
+      renderModels();
+    }));
+    $("models-filter").querySelectorAll("[data-f]").forEach((b) => b.addEventListener("click", () => {
+      filter = filter === b.dataset.f ? "all" : b.dataset.f;       // a second click shows everything again
       animateNext = true;
       renderModels();
     }));
@@ -51,8 +66,10 @@
   function renderSubtitle() {
     const hw = M.state.hardware;
     if (!hw) return;
+    const others = M.state.catalog?.vram_others_mb || 0;
     $("models-sub").textContent = hw.gpu
-      ? t("models.subtitle_gpu", { gpu: hw.gpu.name.replace(/^NVIDIA (GeForce )?/, ""), ram: M.mb(hw.ram_mb) })
+      ? t("models.subtitle_gpu", { gpu: hw.gpu.name.replace(/^NVIDIA (GeForce )?/, ""), ram: M.mb(hw.ram_mb),
+          others: others > 1024 ? t("models.vram_others", { n: M.mb(others) }) : "" })
       : t("models.subtitle_cpu", { cpu: hw.cpu, ram: M.mb(hw.ram_mb) });
   }
 
@@ -92,7 +109,10 @@
   function card(vs, i, animate) {
     const e = shownVariant(vs);
     const s = M.state.status || {};
-    const rec = (M.state.catalog?.recommended || "").startsWith(e.model_id + ":");
+    // The overall pick in the full catalog; the best of the family when one family is shown.
+    const pick = family === "all" ? M.state.catalog?.recommended : M.state.catalog?.family_best?.[family];
+    const rec = (pick || "").startsWith(e.model_id + ":");
+    const ribbon = family === "all" ? t("models.recommended") : t("models.recommended_family", { family: e.family_name });
     const loaded = vs.some((v) => v.id === s.model_id && s.state === "ready");
     const params = e.active_b < e.params_b ? t("models.params_moe", { n: M.num(e.params_b, 1), a: M.num(e.active_b, 1) })
       : t("models.params", { n: M.num(e.params_b, 1) });
@@ -100,11 +120,12 @@
     const stamp = e.measured ? `<span class="tag-measured">${t("models.measured")}</span>` : t("models.estimated");
     return `<article class="card${rec ? " recommended" : ""}${loaded ? " loaded" : ""}${e.placement === "too_big" ? " dim" : ""}${animate ? " enter" : ""}" style="--i:${i}" data-model="${e.model_id}">
       <div class="card-head">
-        <div><h3 class="card-name">${esc(e.name)}</h3><div class="card-params label">${esc(params)}</div></div>
-        ${rec ? `<span class="ribbon">${M.glyph("bolt", 10)}${t("models.recommended")}</span>` : ""}
+        <div><h3 class="card-name">${esc(e.name)}</h3><div class="card-params label">${esc(params)}</div>
+          <div class="card-vendor">${esc(e.vendor)} · ${esc(e.license)}</div></div>
+        ${rec ? `<span class="ribbon">${M.glyph("bolt", 10)}${esc(ribbon)}</span>` : ""}
       </div>
       <p class="card-blurb">${t(`models.tier.${e.tier}`)}</p>
-      <div class="card-tags">${placementBadge(e)}<span class="badge">${M.bytes(e.bytes)}</span>${e.reason_ahead ? `<span class="badge">◆ ${t("models.reason_ahead")}</span>` : ""}</div>
+      <div class="card-tags">${placementBadge(e)}<span class="badge">${M.bytes(e.bytes)}</span><span class="badge">◆ ${t(e.reason_ahead ? "models.reason_ahead" : "models.answers_ahead")}</span></div>
       <div class="gauge">
         <div class="gauge-row"><span class="label">${t("models.vram_fit")}</span><span class="label">${Math.round(e.gpu_share * 100)}%</span></div>
         <div class="gauge-bar ${e.placement}"><i data-w="${Math.round(e.gpu_share * 100)}"></i></div>
@@ -112,14 +133,17 @@
       <div class="stats">
         <div class="stat"><span class="label">${t("models.speed")}</span><span class="stat-value" data-count="${e.decode_tps}" data-digits="${e.decode_tps < 20 ? 1 : 0}" data-suffix="<small>tok/s</small>"></span><span class="stat-note label">${stamp}</span></div>
         <div class="stat"><span class="label">${t("models.read_speed")}</span><span class="stat-value" data-count="${e.prefill_tps}" data-suffix="<small>tok/s</small>"></span><span class="stat-note label">${stamp}</span></div>
-        <div class="wait-compare">
+        ${e.reason_ahead ? `<div class="wait-compare">
           <div class="gauge-row"><span class="label">${t("models.wait")}</span><span class="stat-value">${t("models.wait_value", { s: M.dur(withM) })}</span></div>
           <div class="wait-bars">
             <div class="wait-bar with"><i data-w="${without ? Math.max(2, (100 * withM) / without) : 0}"></i></div>
             <div class="wait-bar without"><i data-w="${without ? 100 : 0}"></i></div>
           </div>
           <span class="stat-note">${t("models.wait_without", { s: M.dur(without) })}</span>
-        </div>
+        </div>` : `<div class="wait-compare">
+          <div class="gauge-row"><span class="label">${t("models.answer_time")}</span><span class="stat-value">${t("models.wait_value", { s: M.dur(e.answer_s) })}</span></div>
+          <span class="stat-note">${t("models.answer_note")}</span>
+        </div>`}
       </div>
       ${vs.length > 1 ? `<div class="quants">${vs.map((v) => `<button type="button" data-q="${v.quant}" class="${v.id === e.id ? "on" : ""}">${v.quant}${v.installed ? '<span class="tick">●</span>' : ""}</button>`).join("")}</div>` : ""}
       <p class="card-hint">${t(`models.hint.${e.placement}`)}</p>
@@ -151,9 +175,9 @@
     const grid = $("models-grid");
     renderFilter();
     renderSubtitle();
-    // The recommended model first, then by size.
-    const best = (M.state.catalog?.recommended || "").split(":")[0];
-    const gs = groups().filter(keep[filter]).sort((a, b) => (b[0].model_id === best) - (a[0].model_id === best));
+    // The recommended model first (overall, or of the family shown), then the catalog's order.
+    const best = ((family === "all" ? M.state.catalog?.recommended : M.state.catalog?.family_best?.[family]) || "").split(":")[0];
+    const gs = groups().filter(inFamily).filter(keep[filter]).sort((a, b) => (b[0].model_id === best) - (a[0].model_id === best));
     const animate = animateNext && M.view === "models";
     animateNext = false;
     grid.innerHTML = gs.length ? gs.map((vs, i) => card(vs, i, animate)).join("")
@@ -307,7 +331,7 @@
   function renderSettings() {
     const st = M.state.settings;
     if (!st) return;
-    const small = (M.state.catalog?.models || []).filter((m) => m.installed && m.params_b <= 1.7);
+    const small = (M.state.catalog?.models || []).filter((m) => m.installed && m.family === "qwen3" && m.params_b <= 1.7);
     const gatherer = `<select data-key="gatherer"><option value="">${t("settings.gatherer.none")}</option>` +
       small.map((m) => `<option value="${m.id}"${st.gatherer === m.id ? " selected" : ""}>${esc(m.name)} · ${m.quant}</option>`).join("") + `</select>`;
     const ctx = `<select data-key="ctx">${[4096, 8192, 16384, 32768].map((n) => `<option value="${n}"${st.ctx === n ? " selected" : ""}>${M.num(n)}</option>`).join("")}</select>`;
