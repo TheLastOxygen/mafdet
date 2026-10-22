@@ -59,6 +59,10 @@ MAFDET keeps the KV cache in sync with the text **while you type**:
 
 ## Quick start
 
+**On Windows, with a double-click.** Download MAFDET (on GitHub, *Code → Download ZIP*, and unzip it; or `git clone https://github.com/TheLastOxygen/mafdet.git`) and double-click **`start_mafdet.bat`**. The first time it creates a Python environment in `.venv` and installs MAFDET in it, which takes about a minute and needs [Python](https://www.python.org/downloads/) 3.10 or later. After that, a double-click opens MAFDET in under a second, and after an update it installs the new libraries by itself.
+
+**From a terminal:**
+
 ```bash
 git clone https://github.com/TheLastOxygen/mafdet.git
 cd mafdet
@@ -68,7 +72,7 @@ pip install -e .
 mafdet
 ```
 
-That is all. No PyTorch, no manual downloads: `mafdet` asks whether to open the **window** or the **terminal app**, and the first start guides you through the rest. It looks at your machine, installs the right build of llama.cpp by itself (CUDA for an NVIDIA card, CPU otherwise) and downloads the model that runs best on your hardware. On Windows, `start_mafdet.bat` does the same with a double-click.
+Either way, no PyTorch and no manual downloads: MAFDET asks whether to open the **window** or the **terminal app**, and the first start guides you through the rest. It looks at your machine, installs the right build of llama.cpp by itself (CUDA for an NVIDIA card, CPU otherwise) and downloads the model that runs best on your hardware.
 
 <p align="center">
   <img src="assets/screenshots/gui-chat.png" alt="The MAFDET window: the model reasoned ahead while the message was typed (455 of 571 reasoning tokens) and answered 1.6 s after Enter" width="49%">

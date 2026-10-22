@@ -59,6 +59,10 @@ MAFDET tiene la KV cache allineata al testo **mentre scrivi**:
 
 ## Avvio rapido
 
+**Su Windows, con un doppio clic.** Scarica MAFDET (su GitHub, *Code → Download ZIP*, ed estrai lo zip; oppure `git clone https://github.com/TheLastOxygen/mafdet.git`) e fai doppio clic su **`start_mafdet.bat`**. La prima volta crea un ambiente Python in `.venv` e ci installa MAFDET: ci vuole circa un minuto, e serve [Python](https://www.python.org/downloads/) 3.10 o successivo. Dopo, un doppio clic apre MAFDET in meno di un secondo, e dopo un aggiornamento installa da solo le librerie nuove.
+
+**Da terminale:**
+
 ```bash
 git clone https://github.com/TheLastOxygen/mafdet.git
 cd mafdet
@@ -68,7 +72,7 @@ pip install -e .
 mafdet
 ```
 
-Tutto qui. Niente PyTorch, niente download a mano: `mafdet` chiede se aprire la **finestra** o l'**app nel terminale**, e al primo avvio una procedura guidata fa il resto. Guarda il tuo computer, installa da sola la build giusta di llama.cpp (CUDA per una scheda NVIDIA, CPU altrimenti) e scarica il modello che rende di più sul tuo hardware. Su Windows `start_mafdet.bat` fa lo stesso con un doppio clic.
+In entrambi i casi niente PyTorch e niente download a mano: MAFDET chiede se aprire la **finestra** o l'**app nel terminale**, e al primo avvio una procedura guidata fa il resto. Guarda il tuo computer, installa da sola la build giusta di llama.cpp (CUDA per una scheda NVIDIA, CPU altrimenti) e scarica il modello che rende di più sul tuo hardware.
 
 <p align="center">
   <img src="assets/screenshots/gui-chat.png" alt="La finestra di MAFDET: il modello ha ragionato mentre il messaggio veniva scritto (455 token di ragionamento su 571) e ha risposto 1,6 s dopo l'invio" width="49%">
