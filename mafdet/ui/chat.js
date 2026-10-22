@@ -60,7 +60,7 @@
   const LIST_ITEM = /^(\s*)([-*+]|\d{1,9}[.)])\s+(.*)$/;
   const indent = (l) => l.match(/^\s*/)[0].length;
   const startsBlock = (l) =>
-    /^\s*(#{1,6}\s|```|~~~|>|([-*+]|\d{1,9}[.)])\s|(---|\*\*\*|___)\s*$)/.test(l) || /^\s*\|.*\|\s*$/.test(l);
+    /^\s*(#{1,6}\s|```|~~~|>|\$\$|\\\[|([-*+]|\d{1,9}[.)])\s|(---|\*\*\*|___)\s*$)/.test(l) || /^\s*\|.*\|\s*$/.test(l);
 
   function codeBlock(code, lang) {
     return `<div class="code"><div class="code-head"><span class="label">${esc(lang || "code")}</span>` +
@@ -121,6 +121,19 @@
         while (i < lines.length && !lines[i].trim().startsWith(fence)) body.push(lines[i++]);
         i++;                                               // closing fence (absent while streaming)
         out.push(codeBlock(body.join("\n"), m[2]));
+      } else if (/^\s*(\$\$|\\\[)/.test(line)) {
+        // Display math over several lines: $$ on its own line, the formula, $$ (or \[ ... \]).
+        const open = line.trim().startsWith("$$") ? "$$" : "\\[", close = open === "$$" ? "$$" : "\\]";
+        const rest = line.trim().slice(open.length), body = [];
+        i++;
+        if (rest.includes(close)) body.push(rest.slice(0, rest.indexOf(close)));
+        else {
+          if (rest.trim()) body.push(rest);
+          while (i < lines.length && !lines[i].includes(close)) body.push(lines[i++]);
+          if (i < lines.length) body.push(lines[i].slice(0, lines[i].indexOf(close)));
+          i++;                                             // the closing line (absent while streaming)
+        }
+        out.push(`<div class="math-block">${math(`\\[${esc(body.join(" "))}\\]`)}</div>`);
       } else if ((m = line.match(/^\s*(#{1,6})\s+(.*?)\s*#*\s*$/))) {
         out.push(`<h${m[1].length}>${inline(m[2])}</h${m[1].length}>`);
         i++;

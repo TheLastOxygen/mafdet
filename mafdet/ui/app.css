@@ -409,6 +409,8 @@ svg { display: block; flex: none; }
 .md ol > li::marker { font: 600 13px "JetBrains Mono", monospace; color: var(--muted); }
 .md blockquote { margin: 0 0 14px; padding: 2px 0 2px 18px; border-left: 2px solid var(--amber); color: var(--soft); }
 .md hr { margin: 24px 0; border: 0; border-top: 1px solid var(--line-strong); }
+.md .math-block { margin: 4px 0 14px; text-align: center; }
+.md .math-block .math { font-size: 1em; }
 .md .math { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: .92em; color: var(--strong); }
 .md code { padding: 2px 5px; border-radius: 3px; background: var(--raised); color: var(--strong); font: 400 .88em/1.5 "JetBrains Mono", ui-monospace, monospace; }
 .code { margin: 0 0 16px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface); }
