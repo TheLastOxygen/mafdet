@@ -1,48 +1,29 @@
 """
-mafdet watch: the chat window.
+The chat session: a conversation on one llama-server slot, its cache following the draft.
 
-A desktop window (pywebview) shows the conversation; behind it a small local
-HTTP server connects the page to llama-server. While the user types, the page
-sends the draft on every change and the session keeps the slot's KV cache
-aligned with it: common prefix, hold-back, threshold and debounce, the same
+The interfaces (the window of mafdet gui, the terminal app of mafdet tui) send
+the draft on every change, through core/chat.py, and the session keeps the
+slot's KV cache aligned with it: common prefix, hold-back, threshold and debounce, the same
 rules measured by `mafdet hunt`. On Enter only the tail is left to compute,
-then the answer streams into the window.
+then the answer streams back.
 
 The whole conversation stays in the cache: after an answer the next user turn
 is appended to the tokens already there, so every turn starts where the
 previous one ended instead of rereading the history.
 
-    mafdet watch
-    mafdet watch --device cpu
-    mafdet watch --browser          # in the default browser instead of a window
+    mafdet watch                    # the window, with the model and options of these commands
+    mafdet strike --no-think
 """
 from __future__ import annotations
 
 import http.client
-import http.server
 import json
 import os
 import re
-import secrets
 import socket
-import sys
-import tempfile
 import threading
 import time
-import webbrowser
-from importlib.resources import files
 
-from .identity import INK, SHAPES, WORDMARK, WORDMARK_SIZE
-
-UI = files("mafdet").joinpath("ui")
-
-# Files the page may load: nothing else under ui/ (or outside it) is served.
-STATIC = {
-    "app.css": "text/css; charset=utf-8",
-    "app.js": "text/javascript; charset=utf-8",
-    "fonts/archivo.woff2": "font/woff2",
-    "fonts/jetbrains-mono.woff2": "font/woff2",
-}
 
 # Qwen3 in non-thinking and thinking mode: the sampling settings recommended by its authors.
 # In thinking mode the presence penalty (which they suggest between 0 and 2) keeps the 4B
@@ -275,7 +256,8 @@ class Session:
         self.chunk_t = 0.0                         # when the last chunk written ahead started or ended
         self.busy = self.generating = False
         self.stop = threading.Event()
-        threading.Thread(target=self._load, daemon=True).start()
+        self._loader = threading.Thread(target=self._load, daemon=True)
+        self._loader.start()
 
     # ---- start-up ------------------------------------------------------------
     def _load(self):
@@ -324,11 +306,36 @@ class Session:
             name = os.path.basename(self.server.model_path).removesuffix(".gguf").removesuffix(f"-{quant}")
             self.label = f"{name} · {quant} · {'GPU' if device == 'llama-cuda' else 'CPU'}"
             self._retarget()
+            if self.state == "closed":             # closed while loading: close() shuts the servers down
+                return
             self.state = "ready"
         except BaseException as e:                 # SystemExit included: it carries the message for the user
-            self.state, self.error = "error", str(e) or type(e).__name__
+            if self.state != "closed":
+                self.state, self.error = "error", str(e) or type(e).__name__
             return
         self._prefill_loop()
+
+    def close(self):
+        """Stop for good: no more reads, the answer in progress stops, both llama-servers are shut down.
+
+        Safe while still loading: the server being started is closed as soon as it is up.
+        """
+        self.stop.set()
+        loading = self.state == "loading"
+        self.state = "closed"
+        if loading:
+            def later():
+                self._loader.join()
+                self._shutdown()
+            threading.Thread(target=later, daemon=True).start()
+        else:
+            self._shutdown()
+
+    def _shutdown(self):
+        for s in (self, self.gatherer):
+            server = getattr(s, "server", None) if s is not None else None
+            if server is not None:
+                server.close()
 
     # ---- draft and prefill -------------------------------------------------------
     def draft(self, text: str):
@@ -552,7 +559,7 @@ class Session:
         reasoning is kept across edits: it becomes notes that follow the new
         text, a prefill away (parallel and fast) rather than a decode away.
         """
-        while True:
+        while self.state != "closed":
             time.sleep(0.02)
             if self.gatherer is not None and not self.generating and self.gatherer.notes is not self._g_notes:
                 # New material from the gatherer: read at the next pause, like the rest of the prompt.
@@ -844,130 +851,9 @@ class Session:
             self.generating = False
 
 
-# --------------------------------------------------------------------------
-# Local HTTP server: the page, its files and a small JSON API
-# --------------------------------------------------------------------------
-
-def identity_js() -> bytes:
-    data = {"shapes": {k: [[d, a, o] for d, a, o in v] for k, v in SHAPES.items()},
-            "wordmark": {"size": WORDMARK_SIZE, "letters": WORDMARK}}
-    return f"window.MAFDET_SHAPES = {json.dumps(data)};\n".encode("utf-8")
-
-
-def make_handler(session: Session, token: str, port_box: list):
-    class Handler(http.server.BaseHTTPRequestHandler):
-        def log_message(self, *a):
-            pass
-
-        def _reply(self, code: int, body: bytes = b"", ctype: str = "application/json"):
-            self.send_response(code)
-            self.send_header("Content-Type", ctype)
-            self.send_header("Content-Length", str(len(body)))
-            self.send_header("Cache-Control", "no-store")
-            self.end_headers()
-            self.wfile.write(body)
-
-        def _json(self, data: dict):
-            self._reply(200, json.dumps(data).encode("utf-8"))
-
-        def _allowed(self, api: bool) -> bool:
-            # Only this machine, by its own address (no DNS rebinding), and the API only with the page's token.
-            if self.headers.get("Host") != f"127.0.0.1:{port_box[0]}":
-                return False
-            return not api or secrets.compare_digest(self.headers.get("X-Mafdet-Token", ""), token)
-
-        def do_GET(self):
-            path = self.path.split("?", 1)[0]
-            if not self._allowed(api=path.startswith("/api/")):
-                return self._reply(403)
-            if path == "/":
-                page = UI.joinpath("index.html").read_text(encoding="utf-8").replace("{{TOKEN}}", token)
-                return self._reply(200, page.encode("utf-8"), "text/html; charset=utf-8")
-            if path == "/identity.js":
-                return self._reply(200, identity_js(), "text/javascript; charset=utf-8")
-            if path == "/favicon.ico":
-                return self._reply(200, UI.joinpath("mafdet.ico").read_bytes(), "image/x-icon")
-            if path.startswith("/static/") and path[8:] in STATIC:
-                return self._reply(200, UI.joinpath(*path[8:].split("/")).read_bytes(), STATIC[path[8:]])
-            if path == "/api/status":
-                return self._json(session.status())
-            self._reply(404)
-
-        def do_POST(self):
-            if not self._allowed(api=True):
-                return self._reply(403)
-            length = int(self.headers.get("Content-Length") or 0)
-            data = json.loads(self.rfile.read(length) or b"{}")
-            if self.path == "/api/draft":
-                session.draft(str(data.get("text", "")))
-                return self._json(session.status())
-            if self.path == "/api/stop":
-                session.stop.set()
-                return self._json({})
-            if self.path == "/api/new":
-                session.new_chat()
-                return self._json({})
-            if self.path == "/api/open":
-                url = str(data.get("url", ""))
-                if url.startswith(("http://", "https://")):
-                    webbrowser.open(url)           # links open in the browser, not in the chat window
-                return self._json({})
-            if self.path == "/api/send":
-                self.send_response(200)
-                self.send_header("Content-Type", "text/event-stream; charset=utf-8")
-                self.send_header("Cache-Control", "no-store")
-                self.end_headers()
-                try:
-                    for event in session.send(str(data.get("text", ""))):
-                        self.wfile.write(f"data: {json.dumps(event)}\n\n".encode("utf-8"))
-                        self.wfile.flush()
-                except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
-                    session.stop.set()             # the window went away
-                return
-            self._reply(404)
-
-    return Handler
-
-
-# --------------------------------------------------------------------------
-# Window
-# --------------------------------------------------------------------------
-
-def open_window(url: str, browser: bool):
-    if not browser:
-        try:
-            import webview
-        except ImportError:
-            print("pywebview is not installed (pip install pywebview): opening the browser instead.")
-            browser = True
-    if browser:
-        webbrowser.open(url)
-        print(f"MAFDET is running at {url}\nPress Ctrl+C to stop.", flush=True)
-        try:
-            while True:
-                time.sleep(3600)
-        except KeyboardInterrupt:
-            return
-    webview.create_window("MAFDET", url, width=1180, height=840, min_size=(760, 560),
-                          background_color=INK, text_select=True)
-    webview.start(icon=str(UI.joinpath("mafdet.ico")))
-
-
 def run(args) -> int:
+    """mafdet watch / strike: the window (mafdet gui), loading the model given by this command's options."""
     if args.backend != "llama":
         raise SystemExit("mafdet watch runs on llama.cpp: drop --backend hf.")
-    if sys.stdout is None or sys.stderr is None:
-        # Started without a console (pythonw): keep the output somewhere for when something goes wrong.
-        log = open(os.path.join(tempfile.gettempdir(), "mafdet-watch.log"), "w", encoding="utf-8")
-        sys.stdout = sys.stderr = log
-    session = Session(args)
-    token, port_box = secrets.token_urlsafe(24), [0]
-    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), make_handler(session, token, port_box))
-    server.daemon_threads = True
-    port_box[0] = server.server_address[1]
-    threading.Thread(target=server.serve_forever, daemon=True).start()
-    open_window(f"http://127.0.0.1:{port_box[0]}/", args.browser)
-    server.shutdown()
-    if getattr(session, "server", None):
-        session.server.close()
-    return 0
+    from .gui import run as run_window
+    return run_window(args, overrides=args)
