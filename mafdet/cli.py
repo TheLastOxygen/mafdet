@@ -25,16 +25,34 @@ class Command(NamedTuple):
     summary: str                # one line, for the command table
     details: str                # a paragraph, for --help
     examples: tuple[str, ...]
-    group: str                  # "use" or "measure"
+    group: str                  # "app", "use" or "measure"
     available: bool = True
+    common: bool = True         # takes the model and backend options (the app keeps its own settings)
 
 
 COMMANDS = [
-    Command("awaken", "the awakening", "check the GPU, download and load the model",
+    Command("gui", "the window", "the app in its own window",
+            "Opens MAFDET in its own window: chat, model catalog with the speed of each model on this machine, "
+            "hardware and settings, in English, Italian, French or German. The first start guides you through "
+            "installing llama.cpp and choosing a model.",
+            ("mafdet gui", "mafdet gui --browser"), "app", common=False),
+    Command("tui", "the terminal", "the same app in the terminal",
+            "The whole app in this terminal (Textual): chat, models, hardware and settings, keyboard first "
+            "(F1 to F4 move between views).", ("mafdet tui",), "app", common=False),
+    Command("models", "the catalog", "which models run well on this machine",
+            "Lists the models MAFDET can download, with where each one runs here (all on the GPU, partly on the "
+            "CPU), how fast it writes and how long the answer takes after Enter, with and without MAFDET. "
+            "Estimated from the hardware, or measured once you benchmark a model in the app.",
+            ("mafdet models", "mafdet models --all", "mafdet models --download qwen3-4b"), "app", common=False),
+    Command("doctor", "the check-up", "check the machine, llama.cpp and the models",
+            "Checks the GPU, memory, llama.cpp and the downloaded models, and says what is missing. With "
+            "--install it downloads the llama.cpp build for this machine by itself.",
+            ("mafdet doctor", "mafdet doctor --install"), "app", common=False),
+    Command("awaken", "the awakening", "check PyTorch and the GPU (for the measurements)",
             "Checks that PyTorch sees the GPU (CUDA build, free VRAM, bf16 support) and says what to fix "
             "if it does not. With --load it also downloads the model (about 3.5 GB the first time), "
             "loads it and generates a few tokens. Run it first, and whenever something does not work.",
-            ("mafdet awaken", "mafdet awaken --load", "mafdet awaken --load --backend llama"), "use"),
+            ("mafdet awaken", "mafdet awaken --load", "mafdet awaken --load --backend llama"), "measure"),
     Command("watch", "the guard", "chat with your local model: it reads while you type",
             "Opens the MAFDET chat window. The model reads your message while you type, so the answer "
             "starts as soon as you press Enter, and the whole conversation stays in its cache from one "
@@ -70,15 +88,14 @@ COMMANDS = [
             ("mafdet judge", "mafdet judge --trials 50 --holdback 0"), "measure"),
 ]
 
-GROUPS = [("use", "Use it"), ("measure", "Measure and verify")]
+GROUPS = [("app", "Open the app"), ("use", "Chat with explicit options"), ("measure", "Measure and verify")]
 
 GETTING_STARTED = [
-    ("mafdet awaken --load", "check the GPU and download the model"),
-    ("mafdet watch", "chat with the model: it reads while you type"),
-    ("mafdet strike", "the same chat, with the answer written ahead at every pause"),
-    ("mafdet judge", "must end with 0 errors"),
-    ("mafdet race", "cost of prefill and decode on your hardware"),
-    ("mafdet hunt", "wait after Enter, with and without incremental prefill"),
+    ("mafdet", "choose the window or the terminal, then the setup guides you"),
+    ("mafdet models", "which models run well on this machine"),
+    ("mafdet doctor", "check the GPU, llama.cpp and the models"),
+    ("mafdet judge --backend llama", "must end with 0 errors"),
+    ("mafdet hunt --backend llama", "wait after Enter, with and without incremental prefill"),
 ]
 
 _LETTERS = {  # figlet "standard" font
@@ -157,7 +174,7 @@ def command_table() -> str:
             row = f"  {paint(f'{c.name:<{name_w}}', BOLD)}   {c.summary:<{summary_w}}   {paint(status, DIM)}"
             lines.append(row.rstrip())
         lines.append("")
-    lines.append("First time? Start with " + paint("`mafdet awaken --load`", AMBER) + ".")
+    lines.append("First time? Just run " + paint("`mafdet`", AMBER) + " in a terminal.")
     lines.append("Run `mafdet --help` for the full guide to every command,")
     lines.append("or `mafdet <command> --help` for the options of one.")
     return "\n".join(lines)
@@ -221,6 +238,27 @@ def add_common_args(p):
                         "speculative decoding, 'repo:file' or a path (e.g. Qwen/Qwen3-0.6B-GGUF:Qwen3-0.6B-Q8_0.gguf)")
     p.add_argument("--llama-args", default="",
                    help='--backend llama only: extra llama-server options, with an equals sign: --llama-args="-ub 256"')
+
+
+def _gui_args(p):
+    p.add_argument("--browser", action="store_true",
+                   help="open the app in the default browser instead of its own window")
+
+
+def _tui_args(p):
+    pass
+
+
+def _models_args(p):
+    p.add_argument("--all", action="store_true", help="every quantization, not only the recommended one")
+    p.add_argument("--download", metavar="ID", default="",
+                   help="download a model: an id from the list (qwen3-4b) or with its quantization (qwen3-4b:Q8_0)")
+    p.add_argument("--device", default="auto", choices=["auto", "cuda", "cpu"],
+                   help="estimate for the GPU (auto, cuda) or as if there were none (cpu)")
+
+
+def _doctor_args(p):
+    p.add_argument("--install", action="store_true", help="download and install the llama.cpp build for this machine")
 
 
 def _awaken_args(p):
@@ -307,7 +345,7 @@ def _judge_args(p):
                         "or shifted probability (llama, default 0.25)")
 
 
-_ARGS = {"awaken": _awaken_args, "watch": _watch_args, "strike": _strike_args, "race": _race_args,
+_ARGS = {"gui": _gui_args, "tui": _tui_args, "models": _models_args, "doctor": _doctor_args, "awaken": _awaken_args, "watch": _watch_args, "strike": _strike_args, "race": _race_args,
          "hunt": _hunt_args, "judge": _judge_args}
 
 
@@ -346,7 +384,8 @@ def build_parser() -> argparse.ArgumentParser:
                             epilog=examples)
         # Each command gets its own copy of the common options (not a shared parent
         # parser), so a command can change their defaults without touching the others.
-        add_common_args(sp.add_argument_group("common options"))
+        if c.common:
+            add_common_args(sp.add_argument_group("common options"))
         if c.available:
             _ARGS[c.name](sp)
             sp.set_defaults(func=_runner(c.name))
@@ -355,16 +394,43 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def launch(ask: bool = False) -> int:
+    """`mafdet` alone: the launcher asks which interface to open (or opens the one remembered).
+
+    Without a terminal to ask in (output redirected, a script) it prints the commands instead.
+    """
+    if not (sys.stdin and sys.stdin.isatty() and sys.stdout and sys.stdout.isatty()):
+        print(banner())
+        print(command_table())
+        return 0
+    from .core import config
+    choice = "" if ask else config.load()["launcher"]
+    if choice not in ("gui", "tui"):
+        from .tui.launcher import choose
+        picked = choose()
+        if picked is None:
+            return 0
+        choice, remember = picked
+        if remember:
+            config.save({"launcher": choice})
+    else:
+        print(paint(f"Opening the {'window' if choice == 'gui' else 'terminal app'} "
+                    "(remembered; `mafdet --ask` to choose again)", DIM))
+    if choice == "gui":
+        from .gui import run as run_gui
+        return run_gui(argparse.Namespace(browser=False))
+    from .tui import run as run_tui
+    return run_tui()
+
+
 def main(argv: list[str] | None = None) -> int:
     # Never crash on a character the console cannot show (e.g. output redirected to a cp1252 file).
     for stream in (sys.stdout, sys.stderr):
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(errors="replace")
     argv = sys.argv[1:] if argv is None else argv
-    if not argv:
-        print(banner())
-        print(command_table())
-        return 0
+    if not argv or argv == ["--ask"]:
+        return launch(ask=bool(argv))
     args = build_parser().parse_args(argv)
     if not hasattr(args, "func"):          # e.g. only --version-like flags handled by argparse
         print(command_table())
