@@ -8,3 +8,7 @@ llama.cpp/
 
 # Report di lavoro, resta in locale
 report_ottimizzazioni.pdf
+
+# Gatherer training on a local PC (training/gatherer_local.ipynb): data, checkpoints, models
+training/mafdet-gatherer/
+*.gguf
