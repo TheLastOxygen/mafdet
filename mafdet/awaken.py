@@ -6,8 +6,12 @@ mafdet awaken: check that PyTorch sees the GPU and that the model loads and gene
 """
 import platform
 
-import torch
-import transformers
+try:
+    import torch
+    import transformers
+except ImportError:
+    raise SystemExit("mafdet awaken checks PyTorch, for the measurements on the PyTorch backend, and PyTorch is "
+                     "not installed. To check the app (GPU, llama.cpp, models) run `mafdet doctor`.") from None
 
 from .engine import Template, encode, logits_finite, make_engine, model_label, peak_mem_mb, setup, timed
 

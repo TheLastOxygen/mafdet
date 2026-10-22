@@ -9,10 +9,19 @@ import math
 import time
 from dataclasses import dataclass, field
 
-import torch
-import transformers
 from packaging import version
-from transformers import AutoModelForCausalLM, AutoTokenizer, DynamicCache
+
+# PyTorch is needed only by the PyTorch backend (--backend hf). The measurements on llama.cpp
+# (--backend llama) use this module too, and must run where PyTorch is not installed.
+try:
+    import torch
+    import transformers
+    from transformers import AutoModelForCausalLM, AutoTokenizer, DynamicCache
+except ImportError:
+    torch = transformers = AutoModelForCausalLM = AutoTokenizer = DynamicCache = None
+_no_grad = torch.no_grad() if torch is not None else (lambda f: f)
+NO_TORCH = ("The PyTorch backend needs PyTorch: install it from the CUDA index (see the README), "
+            "or run this command on llama.cpp with --backend llama.")
 
 from . import DEFAULT_GGUF, DEFAULT_MODEL  # noqa: F401  (re-exported for the other modules)
 # The parts without PyTorch live in text.py (the chat uses them alone); re-exported for the commands.
@@ -88,6 +97,8 @@ def setup(args, n_slots: int = 1):
         # llama.cpp picks its own GPU: no PyTorch needed to tell whether there is one.
         from .llama_backend import setup_llama
         return setup_llama(args, n_slots=n_slots)
+    if torch is None:
+        raise SystemExit(NO_TORCH)
     if args.threads:
         torch.set_num_threads(args.threads)
     device = pick_device(args.device)
@@ -236,7 +247,7 @@ class IncrementalPrefill:
         self.ids = []
         self.stats = Stats()
 
-    @torch.no_grad()
+    @_no_grad
     def _forward(self, new_ids: list[int]) -> torch.Tensor:
         logits = None
         for i in range(0, len(new_ids), self.max_chunk):
@@ -277,7 +288,7 @@ class IncrementalPrefill:
         self.ids = list(target_ids)
         return logits
 
-    @torch.no_grad()
+    @_no_grad
     def greedy(self, first_logits: torch.Tensor, n_tokens: int) -> list[int]:
         """Generate n_tokens greedily, starting from the logits of the first token."""
         out = []
