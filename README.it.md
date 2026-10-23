@@ -233,6 +233,7 @@ La colonna del ragionamento in anticipo è stata rimisurata per questo confronto
 
 - `--recycle` (le risposte alle versioni precedenti del messaggio come bozze n-gram): +4% di velocità di scrittura con una digitazione naturale, +20% sul codice, primo token un po' più tardi.
 - `--draft` (Qwen3-0.6B che propone token al 14B): sulla GPU toglie VRAM al 14B, che porta più layer sulla CPU (da 4,8 a 3,5 tok/s); sulla CPU guadagna l'8% con bozze da 4 token e dimezza la velocità di lettura.
+- Il ragionamento in anticipo come bozza per la decodifica speculativa dopo l'Invio (`--spec-type ngram-simple`: le note sono nel prompt, e dopo l'Invio il modello rifà gli stessi passaggi). Simulata offline, la prompt lookup scriverebbe da 1,5 a 1,7 token per passo di decodifica su Qwen3-4B, contro 1,3-1,5 senza note. Dal vero non è più veloce sul 4B (73 tok/s in entrambi i casi) ed è più lenta sul 14B (da 5,0 a 3,1 tok/s): verificare una bozza di 9 token costa al 14B 2,4 passi di decodifica, perché i suoi layer sulla CPU calcolano ogni token della bozza, e solo l'11% dei token proposti era giusto. Script e dati: `research/notes_as_draft.py`.
 
 ## Roadmap
 

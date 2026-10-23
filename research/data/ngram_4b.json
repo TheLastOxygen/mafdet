@@ -1,0 +1,134 @@
+[
+ {
+  "config": "reason ahead",
+  "k": 0,
+  "ok": true,
+  "answer_ms": 1491,
+  "think_tokens": 763,
+  "think_ahead": 658,
+  "cut": false,
+  "tps": 78.9,
+  "tail": "  \n- Totale speso: $12 + 2 = 14$ euro.  \n\nSottraendo il totale speso dal denaro iniziale:  \n$25 - 14 = 11$ euro.  \n\n**Risposta:** Luca ha **11 euro** rimanenti."
+ },
+ {
+  "config": "reason ahead",
+  "k": 1,
+  "ok": true,
+  "answer_ms": 2479,
+  "think_tokens": 835,
+  "think_ahead": 652,
+  "cut": false,
+  "tps": 78.1,
+  "tail": " $$\n\n5. **Calcolo dell'area:**\n   $$\n   A = b \\times h = 10 \\, \\text{cm} \\times 5 \\, \\text{cm} = 50 \\, \\text{cm}^2\n   $$\n\n**Risposta finale:** $\\boxed{50}$ cm²."
+ },
+ {
+  "config": "reason ahead",
+  "k": 2,
+  "ok": true,
+  "answer_ms": 3122,
+  "think_tokens": 1108,
+  "think_ahead": 893,
+  "cut": false,
+  "tps": 78.6,
+  "tail": "tudenti) hanno un cane. La metà di questi 24 studenti (12 studenti) ha anche un gatto.  \n\n**Risultato:**  \n$\\boxed{12}$ studenti hanno sia un cane sia un gatto."
+ },
+ {
+  "config": "reason ahead",
+  "k": 3,
+  "ok": true,
+  "answer_ms": 5469,
+  "think_tokens": 1094,
+  "think_ahead": 738,
+  "cut": false,
+  "tps": 68.4,
+  "tail": "0 × (1 - 0,15) = 240 × 0,85 = 204 euro**.  \n\nPoi si applica un ulteriore sconto di **10 euro**:  \n**204 - 10 = 194 euro**.  \n\n**Risposta finale:** **194 euro**."
+ },
+ {
+  "config": "reason ahead",
+  "k": 4,
+  "ok": true,
+  "answer_ms": 3265,
+  "think_tokens": 870,
+  "think_ahead": 653,
+  "cut": false,
+  "tps": 70.9,
+  "tail": "iorni} = 216 \\text{ pagine} $.  \n\nIl libro ha 400 pagine in totale. Le pagine rimanenti sono:  \n$ 400 - 216 = 184 $.  \n\n**Risposta:** Le mancano **184 pagine**."
+ },
+ {
+  "config": "reason ahead",
+  "k": 5,
+  "ok": true,
+  "answer_ms": 5172,
+  "think_tokens": 987,
+  "think_ahead": 682,
+  "cut": false,
+  "tps": 64.6,
+  "tail": "06 $ litri per chilometro.  \n- Con 45 litri, la distanza massima è:  \n  $$\n  \\frac{45}{0.06} = 750 \\text{ km}.\n  $$  \n\n**Risultato finale:**  \n$\\boxed{750}$ km."
+ },
+ {
+  "config": "ngram n1 m8",
+  "k": 0,
+  "ok": true,
+  "answer_ms": 1417,
+  "think_tokens": 614,
+  "think_ahead": 523,
+  "cut": false,
+  "tps": 69.6,
+  "tail": "- **Totale speso**: 12 euro + 2 euro = **14 euro**  \n\n**Euro rimanenti**: 25 euro - 14 euro = **11 euro**  \n\n**Risposta finale**: Luca ha **11 euro** rimanenti."
+ },
+ {
+  "config": "ngram n1 m8",
+  "k": 1,
+  "ok": true,
+  "answer_ms": 2727,
+  "think_tokens": 839,
+  "think_ahead": 675,
+  "cut": false,
+  "tps": 71.1,
+  "tail": "ot 5 = 10 \\, \\text{cm}\n   $$\n\n5. **Calcoliamo l'area**:  \n   $$\n   A = b \\cdot h = 10 \\cdot 5 = 50 \\, \\text{cm}^2\n   $$\n\n**Risposta finale:**  \n$$\n\\boxed{50}\n$$"
+ },
+ {
+  "config": "ngram n1 m8",
+  "k": 2,
+  "ok": true,
+  "answer_ms": 2795,
+  "think_tokens": 1106,
+  "think_ahead": 931,
+  "cut": false,
+  "tps": 68.0,
+  "tail": "i questi, la metà ha anche un gatto:  \n$$ \\frac{1}{2} \\times 24 = 12 \\text{ studenti} $$  \n\n**Risultato:** $\\boxed{12}$ studenti hanno sia un cane che un gatto."
+ },
+ {
+  "config": "ngram n1 m8",
+  "k": 3,
+  "ok": true,
+  "answer_ms": 1733,
+  "think_tokens": 940,
+  "think_ahead": 772,
+  "cut": false,
+  "tps": 85.6,
+  "tail": "imes 0.15 = 36 $ euro.  \n\nPoi, si applica un ulteriore sconto di **10 euro**.  \n\n**Prezzo finale:**  \n$ 240 - 36 - 10 = 194 $ euro.\n\n**Risposta:** **194 euro**."
+ },
+ {
+  "config": "ngram n1 m8",
+  "k": 4,
+  "ok": true,
+  "answer_ms": 2957,
+  "think_tokens": 850,
+  "think_ahead": 641,
+  "cut": false,
+  "tps": 74.7,
+  "tail": " × 12 giorni = **216 pagine**.  \n\nLe pagine rimanenti sono:  \n400 pagine totale - 216 pagine lette = **184 pagine**.  \n\n**Risposta:** Le mancano **184 pagine**."
+ },
+ {
+  "config": "ngram n1 m8",
+  "k": 5,
+  "ok": true,
+  "answer_ms": 2717,
+  "think_tokens": 797,
+  "think_ahead": 620,
+  "cut": false,
+  "tps": 70.6,
+  "tail": "- Distanza totale:  \n  $$\n  \\frac{45\\ \\text{litri}}{6\\ \\text{litri/100 km}} \\times 100\\ \\text{km} = 750\\ \\text{km}.\n  $$\n\n**Risposta finale:** $\\boxed{750}$ km."
+ }
+]

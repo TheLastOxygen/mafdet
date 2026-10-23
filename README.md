@@ -233,6 +233,7 @@ The reasoning-ahead column was measured again for this comparison, the same day 
 
 - `--recycle` (answers to earlier versions of the message as n-gram drafts): +4% decode speed with natural typing, +20% on code, slightly later first token.
 - `--draft` (Qwen3-0.6B drafting for the 14B): on the GPU it takes VRAM from the 14B, which then runs more of its layers on the CPU (4.8 → 3.5 tok/s); on the CPU it gains 8% with 4-token drafts and halves the reading speed.
+- The reasoning ahead as the draft for speculative decoding after Enter (`--spec-type ngram-simple`: the notes are in the prompt, and after Enter the model works the same steps out again). Replayed offline, prompt lookup would write 1.5 to 1.7 tokens per decoding step on Qwen3-4B, against 1.3 to 1.5 without notes. For real it is no faster on the 4B (73 tok/s either way) and slower on the 14B (5.0 → 3.1 tok/s): checking a 9-token draft costs the 14B 2.4 decoding steps, because its layers on the CPU compute every token of the draft, and only 11% of the drafted tokens were right. Script and data: `research/notes_as_draft.py`.
 
 ## Roadmap
 

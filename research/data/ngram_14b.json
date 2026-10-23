@@ -1,0 +1,46 @@
+[
+ {
+  "config": "reason ahead",
+  "k": 0,
+  "ok": true,
+  "answer_ms": 23330,
+  "think_tokens": 301,
+  "think_ahead": 185,
+  "cut": false,
+  "tps": 5.0,
+  "tail": "ro (penna) = **14 euro**.  \n\n4. **Euro rimasti**:  \n   25 euro (iniziali) - 14 euro (spesi) = **11 euro**.  \n\n**Risposta finale**: Luca gli restano **11 euro**."
+ },
+ {
+  "config": "reason ahead",
+  "k": 4,
+  "ok": true,
+  "answer_ms": 97093,
+  "think_tokens": 604,
+  "think_ahead": 152,
+  "cut": false,
+  "tps": 4.8,
+  "tail": " di 400 pagine. Le pagine che le mancano sono:  \n**400 pagine totali − 216 pagine lette = 184 pagine**.  \n\n**Risposta finale:** Marta le mancano **184 pagine**."
+ },
+ {
+  "config": "ngram n2 m8",
+  "k": 0,
+  "ok": true,
+  "answer_ms": 38043,
+  "think_tokens": 294,
+  "think_ahead": 181,
+  "cut": false,
+  "tps": 3.1,
+  "tail": "  \n  $ 2 $ euro.  \n\n**Totale speso**:  \n$ 12 + 2 = 14 $ euro.  \n\n**Euro rimasti**:  \n$ 25 - 14 = 11 $ euro.  \n\n**Risposta finale:** Luca ha **11 euro** rimasti."
+ },
+ {
+  "config": "ngram n2 m8",
+  "k": 4,
+  "ok": true,
+  "answer_ms": 146592,
+  "think_tokens": 601,
+  "think_ahead": 157,
+  "cut": false,
+  "tps": 3.2,
+  "tail": "$\n\nIl libro ha 400 pagine in totale. Le pagine che le mancano sono:\n\n$$\n400 - 216 = 184 \\text{ pagine}\n$$\n\n**Risposta finale:** Marta le mancano **184 pagine**."
+ }
+]

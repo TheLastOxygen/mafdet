@@ -14,6 +14,7 @@ import argparse
 import json
 import random
 import re
+import shlex
 import statistics
 import sys
 import time
@@ -110,7 +111,7 @@ if __name__ == "__main__":
     rows = json.load(open(a.out, encoding="utf-8")) if a.append and Path(a.out).exists() else []
     for name, extra in configs.items():
         model = ["--gguf", a.gguf] if a.gguf else []
-        s = Session(build_parser().parse_args(["strike", "--max-tokens", a.max_tokens] + model + extra.split()))
+        s = Session(build_parser().parse_args(["strike", "--max-tokens", a.max_tokens] + model + shlex.split(extra)))
         wait(lambda: s.state != "loading")
         assert s.state == "ready", s.error
         if a.warm_up:
@@ -128,11 +129,12 @@ if __name__ == "__main__":
                     d = ev
             ok = correct(answer, expect)
             rows.append({"config": name, "k": k, "ok": ok, "answer_ms": d["answer_ms"], "think_tokens": d["think_tokens"],
-                         "think_ahead": d["think_ahead"], "cut": d["cut"], "tail": answer[-160:],
+                         "think_ahead": d["think_ahead"], "cut": d["cut"], "tps": d["tps"], "tail": answer[-160:],
                          **({"branch": d["branch"]} if "branch" in d else {})})
             b = d.get("branch")
             print(f"{name:12s} #{k:2d} {'OK ' if ok else 'BAD'} answer after {d['answer_ms']:5d} ms | reasoning "
                   f"{d['think_tokens']:4d} ({d['think_ahead']:4d} ahead){' CUT' if d['cut'] else ''}"
+                  f" | {d['tps']} tok/s"
                   + (f" | branch {b['adopted'] or '-'} {b['agreement']:.2f} of {b['guesses']} guesses" if b else ""),
                   flush=True)
             json.dump(rows, open(a.out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
