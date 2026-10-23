@@ -30,6 +30,7 @@ DEFAULTS = {
     "recycle": False,
     "gatherer": "",                   # experimental: a small model gathering material (catalog id or path)
     "branches": False,                # experimental: reason on a guessed ending of the message (--branches 1)
+    "effects": True,                  # the terminal app: boot sequence, decrypting text, interference
 }
 
 

@@ -7,6 +7,7 @@ F1 Chat · F2 Models · F3 Hardware · F4 Settings · Ctrl+N new chat · Esc sto
 """
 from __future__ import annotations
 
+import random
 import time
 
 from rich.style import Style
@@ -24,15 +25,21 @@ from textual.widgets import (Button, Collapsible, ContentSwitcher, DataTable, Fo
 
 from .. import __version__
 from ..core.chat import ChatService
-from ..identity import AMBER, INK, PAPER
+from ..identity import AMBER, INK
 from . import art, mathtext
+from .fx import (ALARM, BLACK, DEEP, DIM, FAINT, HOT, LINE, PANEL, RAIL, SOFT, SURFACE, TEXT, Decrypt, Rain,
+                 effects_on, glitch)
 
-MUTED, FAINT, GREEN, RUST, LINE = "#A39D92", "#7D776D", "#7FA36B", "#C46A3A", "#3A3733"
+# The amber phosphor of fx.py, under the names the views use.
+PAPER, MUTED, GREEN, RUST = TEXT, DIM, HOT, ALARM
 
-THEME = Theme(name="mafdet", primary=AMBER, secondary=PAPER, accent=AMBER, foreground="#E4E0D8",
-              background=INK, surface="#121211", panel="#191816", success=GREEN, warning=AMBER, error=RUST,
-              dark=True, variables={"footer-key-foreground": AMBER, "block-cursor-background": AMBER,
-                                    "block-cursor-foreground": INK, "input-selection-background": "#D4892A55"})
+THEME = Theme(name="mafdet", primary=AMBER, secondary=TEXT, accent=HOT, foreground=TEXT,
+              background=BLACK, surface=SURFACE, panel=PANEL, success=HOT, warning=AMBER, error=ALARM,
+              dark=True, variables={"footer-key-foreground": HOT, "footer-background": RAIL,
+                                    "footer-description-foreground": DIM, "block-cursor-background": AMBER,
+                                    "block-cursor-foreground": BLACK, "input-selection-background": "#D4892A55",
+                                    "input-cursor-background": HOT, "scrollbar": DEEP, "scrollbar-hover": LINE,
+                                    "scrollbar-active": DIM, "scrollbar-background": BLACK})
 
 PLACEMENT = {"gpu": ("All on GPU", GREEN), "partial": ("{p}% on GPU", AMBER), "cpu": ("On CPU", PAPER),
              "too_big": ("Too large", RUST)}
@@ -51,7 +58,7 @@ ERRORS = {"llama_missing": "llama.cpp is not installed.", "port_busy": "The port
           "server_timeout": "llama.cpp did not answer for 10 minutes.",
           "no_gpu": "No NVIDIA card found: set Run on to CPU in Settings.",
           "server_stopped": "llama.cpp stopped answering.", "load_failed": "The model could not be loaded."}
-SPIN = "◆◇◆◇◆◇◆◈"
+SPIN = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
 
 
 def gb(mb: float) -> str:
@@ -77,59 +84,135 @@ def model_name(service: ChatService, variant_id: str) -> str:
 
 
 # =====================================================================================
-# Splash
+# Boot
 # =====================================================================================
 
-class Splash(Screen):
-    """The mask, first without eyes, then with them; the wordmark; a scanning line."""
+class Boot(Screen):
+    """The start: glyphs falling behind the mask, the wordmark through interference, and a boot log of
+    what was really found on this machine. Under two seconds; any key skips it."""
 
     DEFAULT_CSS = """
-    Splash { align: center middle; background: $background; }
-    #splash-box { width: auto; height: auto; align: center middle; }
-    #splash-mark, #splash-word, #splash-tag, #splash-scan { width: auto; content-align: center middle; }
-    #splash-word { margin-top: 1; }
-    #splash-tag { color: #7D776D; margin-top: 1; }
-    #splash-scan { margin-top: 1; }
+    Boot { layers: rain front; background: #050302; align: center middle; }
+    Boot Rain { layer: rain; dock: top; }
+    #boot-box { layer: front; width: 64; height: auto; background: #050302; border: solid #4A3312; padding: 1 2; }
+    #boot-mark, #boot-word { width: 100%; content-align: center middle; }
+    #boot-word { margin-top: 1; }
+    #boot-log { margin-top: 1; height: 7; }
     """
+    WIDTH = 56                          # a log line: status, label, dots, value
 
     def compose(self) -> ComposeResult:
-        with Center(), Middle(), Vertical(id="splash-box"):
-            yield Center(Static(art.mark("mask", 32, eyes=False), id="splash-mark"))
-            yield Center(Static(art.wordmark(), id="splash-word"))
-            yield Center(Static(Text("YOU TYPE. IT ALREADY KNOWS.", style=Style(color=FAINT)), id="splash-tag"))
-            yield Center(Static("", id="splash-scan"))
+        yield Rain()
+        with Vertical(id="boot-box"):
+            yield Static(art.mark("mask", 28, eyes=False, ink=DIM), id="boot-mark")
+            yield Static("", id="boot-word")
+            yield Static("", id="boot-log")
 
     def on_mount(self):
-        self.frame = 0
-        for w in ("#splash-word", "#splash-tag"):
-            self.query_one(w).styles.opacity = 0
-        self.set_timer(0.35, lambda: self.query_one("#splash-word").styles.animate("opacity", 1.0, duration=0.5))
-        self.set_timer(0.6, lambda: self.query_one("#splash-mark", Static).update(art.mark("mask", 32)))
-        self.set_timer(0.8, lambda: self.query_one("#splash-tag").styles.animate("opacity", 1.0, duration=0.5))
-        self.set_interval(0.06, self.scan)
-        self.set_timer(1.9, self.leave)
+        self.leaving = False
+        if not effects_on(self.app):
+            self.leave()
+            return
+        self.t0, self.rng = time.perf_counter(), random.Random()
+        self.lines: list[tuple[str, str, str]] | None = None
+        self.typed = 0
+        self.gather()
+        self.set_interval(1 / 30, self.frame)
 
-    def scan(self):
-        self.frame += 1
-        width, pos = 30, self.frame % 40
-        line = Text()
-        for i in range(width):
-            line.append("━", style=AMBER if pos - 8 <= i <= pos else LINE)
-        self.query_one("#splash-scan", Static).update(line)
+    @work(thread=True)
+    def gather(self):
+        """The log: what MAFDET found here (llama.cpp's version comes from running it: not on the UI thread)."""
+        service: ChatService = self.app.service
+        st, hw, rt = service.settings, service.hardware(), service.runtime()
+        g = hw.get("gpu")
+        lines = [("OK", "mafdet", f"v{__version__}"),
+                 ("OK", "gpu", f"{g['name'].replace('NVIDIA GeForce ', '')} · {gb(g['vram_mb'])}") if g
+                 else ("--", "gpu", "none · cpu mode"),
+                 ("OK", "llama.cpp", rt["build"] or "found") if rt["installed"] else ("!!", "llama.cpp", "not installed"),
+                 ("OK", "model", model_name(service, st["model"])) if st["model"] else ("--", "model", "none chosen"),
+                 ("**", "thinking ahead", "armed") if st["think"] else ("--", "thinking ahead", "off")]
+        if st.get("branches") and st["think"]:
+            lines.append(("**", "guess the ending", "armed"))
+        self.lines = lines
+
+    def log_lines(self) -> list[Text]:
+        colours = {"OK": HOT, "**": AMBER, "--": DIM, "!!": ALARM}
+        out = []
+        for status, label, value in self.lines or []:
+            line = Text()
+            line.append("[", style=FAINT)
+            line.append(status.center(4), style=Style(color=colours[status], bold=True))
+            line.append("] ", style=FAINT)
+            line.append(label + " ", style=SOFT)
+            line.append("." * max(3, self.WIDTH - 9 - len(label) - len(value)) + " ", style=LINE)
+            line.append(value, style=TEXT)
+            out.append(line)
+        return out
+
+    @staticmethod
+    def typed_out(lines: list[Text], typed: int) -> Text:
+        """The first `typed` characters of the log, as if typed one after the other."""
+        out = Text()
+        for line in lines:
+            if typed <= 0:
+                break
+            out.append_text(line[:typed])
+            typed -= len(line)
+            if typed > 0:
+                out.append("\n")
+        return out
+
+    def frame(self):
+        if self.leaving:
+            return
+        t = time.perf_counter() - self.t0
+        word = self.query_one("#boot-word", Static)
+        if t < 0.25:
+            word.update("")
+        elif t < 0.6 or self.rng.random() < 0.03:
+            word.update(glitch(art.WORDMARK, self.rng, Style(color=TEXT, bold=True)))
+        else:
+            word.update(art.wordmark())
+        if 0.7 < t < 0.75 or 0.82 < t:                   # the eyes open, flicker once, and stay
+            self.query_one("#boot-mark", Static).update(art.mark("mask", 28))
+        elif 0.75 <= t <= 0.82:
+            self.query_one("#boot-mark", Static).update(art.mark("mask", 28, eyes=False, ink=DIM))
+        if t > 0.35 and self.lines is not None:
+            lines = self.log_lines()
+            total = sum(len(line) + 1 for line in lines)
+            self.typed = total if t > 1.5 else self.typed + 10       # about 300 characters a second
+            log = self.typed_out(lines, self.typed)
+            if self.typed >= total:
+                log.append("\n> ", style=AMBER)
+                log.append("SYSTEM READY", style=Style(color=HOT, bold=True))
+                log.append(" █" if int(t * 4) % 2 else "  ", style=HOT)
+            self.query_one("#boot-log", Static).update(log)
+        if t > 1.85:
+            self.leave()
+
+    def on_key(self, event):
+        event.stop()
+        self.leave()
 
     def leave(self):
-        self.styles.animate("opacity", 0.0, duration=0.35, on_complete=self.dismiss)
+        if not self.leaving:
+            self.leaving = True
+            self.styles.animate("opacity", 0.0, duration=0.15, on_complete=self.dismiss)
 
 
 # =====================================================================================
 # Chat
 # =====================================================================================
 
+def tag(name: str, colour: str) -> Text:
+    """A message's header, as a terminal would frame it: ┌─[ NAME ]"""
+    return Text.assemble(("┌─[ ", LINE), (name, Style(color=colour, bold=True)), (" ]", LINE))
+
+
 class UserMessage(Vertical):
     DEFAULT_CSS = """
     UserMessage { height: auto; margin: 1 0 0 0; }
-    UserMessage .who { color: #A39D92; }
-    UserMessage .body { background: $surface; border: round #3A3733; padding: 0 1; color: #EEEAE2; }
+    UserMessage .body { border-left: tall #4A3312; padding: 0 1; color: #F2CB8E; }
     """
 
     def __init__(self, text: str):
@@ -137,26 +220,28 @@ class UserMessage(Vertical):
         self.text = text
 
     def compose(self) -> ComposeResult:
-        yield Label("YOU", classes="who")
+        yield Label(tag("YOU", DIM))
         yield Static(self.text, classes="body", markup=False)
 
 
 class BotMessage(Vertical):
     DEFAULT_CSS = """
     BotMessage { height: auto; margin: 1 0 0 0; }
-    BotMessage .who { color: #D4892A; }
     BotMessage Collapsible { border: none; padding: 0; margin: 0; background: transparent; }
     BotMessage Collapsible > Contents { padding: 0 0 0 2; }
-    BotMessage .reasoning { color: #A39D92; }
+    BotMessage CollapsibleTitle { color: #A8742F; }
+    BotMessage .reasoning { color: #A8742F; }
+    BotMessage .answer { border-left: tall #D4892A; padding: 0 0 0 1; height: auto; }
     BotMessage Markdown { margin: 0; padding: 0; background: transparent; }
-    BotMessage .meta { color: #7D776D; }
+    BotMessage .meta { color: #7A5424; }
     """
 
     def compose(self) -> ComposeResult:
-        yield Label("◆ MAFDET", classes="who")
-        with Collapsible(title="Thinking", collapsed=True, id="think"):
+        yield Decrypt("┌─[ MAFDET ]", Style(color=AMBER, bold=True))
+        with Collapsible(title="THOUGHT STREAM", collapsed=True, id="think"):
             yield Static("", classes="reasoning", markup=False)
-        yield Markdown("▍")
+        with Vertical(classes="answer"):
+            yield Markdown("▌")
         yield Static("", classes="meta")
 
     def on_mount(self):
@@ -169,20 +254,20 @@ class ChatView(Vertical):
     #thread { height: 1fr; padding: 0 2; scrollbar-size-vertical: 1; }
     #empty { height: auto; align: center middle; padding: 2 0; }
     #empty Static { width: auto; text-align: center; }
-    #empty .title { color: #EEEAE2; text-style: bold; margin-top: 1; }
-    #empty .body { color: #C9C4BA; max-width: 70; }
+    #empty .title { color: #F2CB8E; text-style: bold; margin-top: 1; }
+    #empty .body { color: #D9AE6E; max-width: 70; }
     #empty Button { margin-top: 1; }
     #empty LoadingIndicator { height: 1; color: #D4892A; margin-top: 1; }
     #status { height: 1; padding: 0 2; }
-    #input { margin: 0 1 0 1; border: tall #3A3733; background: $surface; }
-    #input:focus { border: tall #A39D92; }
-    #input.ahead { border: tall #D4892A; }
+    #input { margin: 0 1 0 1; border: solid #4A3312; background: #0F0A05; }
+    #input:focus { border: solid #A8742F; }
+    #input.ahead { border: heavy #D4892A; }
     """
 
     def compose(self) -> ComposeResult:
         with VerticalScroll(id="thread"):
             yield Vertical(id="empty")
-        yield Input(placeholder="Message MAFDET   ·   Enter send · Esc stop · Ctrl+N new chat", id="input")
+        yield Input(placeholder="> message mafdet_      Enter send · Esc stop · Ctrl+N new chat", id="input")
         yield Static("", id="status")
 
     def on_mount(self):
@@ -190,6 +275,20 @@ class ChatView(Vertical):
         self.generating = False
         self.spin = 0
         self.model_seen = None
+        self.rng = random.Random()
+        self.set_interval(4.0, self.interference)
+
+    def interference(self):
+        """Now and then the wordmark of the empty chat catches a little interference, for a few frames."""
+        if not effects_on(self.app) or self.rng.random() < 0.5:
+            return
+        try:
+            word = self.query_one("#hero-word", Static)
+        except NoMatches:
+            return
+        for delay in (0.0, 0.07):
+            self.set_timer(delay, lambda: word.update(glitch(art.WORDMARK, self.rng, Style(color=TEXT, bold=True))))
+        self.set_timer(0.15, lambda: word.update(art.wordmark()))
 
     @property
     def service(self) -> ChatService:
@@ -214,8 +313,9 @@ class ChatView(Vertical):
             return
         state = s["state"]
         if state == "ready":
-            self.show_empty("hero", Static(art.mark("mask", 24)), Static(art.wordmark()),
-                            Static("You type. It already knows.", classes="title"),
+            self.show_empty("hero", Static(art.mark("mask", 24)), Static(art.wordmark(), id="hero-word"),
+                            Decrypt("YOU TYPE. IT ALREADY KNOWS.", Style(color=HOT, bold=True), duration=0.8,
+                                    classes="title"),
                             Static("MAFDET reads your message while you write it, and starts thinking about it "
                                    "before you press Enter.", classes="body"))
         elif state == "no-runtime":
@@ -255,45 +355,60 @@ class ChatView(Vertical):
 
     def render_status(self, s: dict):
         self.spin = (self.spin + 1) % len(SPIN)
+        spin, blink = SPIN[self.spin], " ▌" if self.spin % 2 else "  "
         line = Text()
         field = self.query_one("#input", Input)
         field.remove_class("ahead")
         state = s["state"]
+
+        def label(name: str, colour: str, rest: str = "", live: bool = False):
+            if live:
+                line.append(spin + " ", style=colour)
+            line.append(f"[ {name} ]", style=Style(color=colour, bold=True))
+            if rest:
+                line.append(" " + rest, style=colour if live else MUTED)
+            if live:
+                line.append(blink, style=HOT)
+
         if state == "loading":
-            line.append(f"{SPIN[self.spin]} WAKING UP · starting llama.cpp and loading the model", style=AMBER)
+            label("BOOTING", AMBER, "starting llama.cpp and loading the model", live=True)
         elif state == "error":
-            line.append(ERRORS.get(s.get("error_code", ""), "The model could not be loaded."), style=RUST)
+            label("FAULT", RUST, ERRORS.get(s.get("error_code", ""), "The model could not be loaded."))
         elif state == "no-runtime":
-            line.append("llama.cpp is not installed · F3 Hardware", style=MUTED)
+            label("OFFLINE", FAINT, "llama.cpp is not installed · F3 Hardware")
         elif state != "ready":
-            line.append("No model loaded · F2 Models", style=MUTED)
+            label("OFFLINE", FAINT, "no model loaded · F2 Models")
         elif self.generating or s.get("generating"):
-            line.append(f"{SPIN[self.spin]} ANSWERING · Esc to stop", style=AMBER)
+            label("ANSWERING", AMBER, "Esc to stop", live=True)
         elif not s.get("has_text"):
-            line.append("◇ WATCHING · start typing, MAFDET reads as you write", style=MUTED)
+            label("LISTENING", DIM, "start typing: MAFDET reads as you write")
         else:
             read, total = s.get("read", 0), s.get("message_tokens", 0)
-            thought = f" · {s['thinking_ahead']:,} reasoning tokens ahead" if s.get("thinking_ahead") else ""
+            thought = f" · {s['thinking_ahead']:,} tok reasoned ahead" if s.get("thinking_ahead") else ""
             if s.get("ahead_writing"):
                 field.add_class("ahead")
-                what = (f"GATHERING AHEAD · {s['thinking_ahead']:,} tokens of material" if s.get("gatherer")
-                        else f"THINKING AHEAD · {s['thinking_ahead']:,} reasoning tokens" if s.get("think") and not s.get("ahead")
-                        else f"ANSWERING AHEAD · {s.get('ahead', 0):,} answer tokens")
-                line.append(f"{SPIN[self.spin]} {what}", style=AMBER)
+                if s.get("gatherer"):
+                    label("GATHERING AHEAD", AMBER, f"{s['thinking_ahead']:,} tok of material", live=True)
+                elif s.get("think") and not s.get("ahead"):
+                    label("THINKING AHEAD", AMBER, f"{s['thinking_ahead']:,} tok", live=True)
+                else:
+                    label("ANSWERING AHEAD", AMBER, f"{s.get('ahead', 0):,} tok", live=True)
             elif s.get("busy"):
-                line.append(f"◇ READING · {read:,} of {total:,} tokens{thought}", style=MUTED)
+                label("READING", DIM, f"{read:,}/{total:,} tok{thought}")
             elif s.get("answer_ready"):
-                line.append("◆ ANSWER READY ON ENTER · written ahead in full", style=AMBER)
+                label("ANSWER LOCKED", HOT, "written ahead in full · Enter")
             elif s.get("think") and s.get("thinking_ahead"):
-                line.append(f"◆ PAUSED · {s['thinking_ahead']:,} reasoning tokens ahead, more after Enter", style=PAPER)
+                label("HOLD", TEXT, f"{s['thinking_ahead']:,} tok reasoned ahead, more after Enter")
             else:
-                line.append(f"◆ READY ON ENTER · {read:,} of {total:,} tokens read{thought}", style=PAPER)
+                label("READY", TEXT, f"{read:,}/{total:,} tok read{thought}")
+            if s.get("branches"):
+                line.append("  ⑂ guessing the ending", style=DIM)
             line.append("  ")
             line.append_text(bar(read / total if total else 0, 12, AMBER if not s.get("pending") else MUTED))
         if state == "ready":
             pad = max(2, self.size.width - len(line) - 24)
             line.append(" " * pad)
-            line.append(f"context {s.get('context', 0):,} / {s.get('ctx', 0):,}", style=FAINT)
+            line.append(f"ctx {s.get('context', 0):,}/{s.get('ctx', 0):,}", style=FAINT)
         self.query_one("#status", Static).update(line)
 
     def on_status(self, s: dict):
@@ -356,19 +471,27 @@ class ChatView(Vertical):
         if reasoning:
             think.display = True
             bot.query_one(".reasoning", Static).update(reasoning)
-            think.title = ("Reasoning · {:,} tokens, {:,} before Enter".format(done["think_tokens"], done["think_ahead"])
-                           if done and done.get("think_tokens") else "Reasoning" if done or answer else "Thinking …")
-        await bot.query_one(Markdown).update(mathtext.render(answer) + ("" if done is not None else " ▍"))
+            think.title = ("THOUGHT STREAM · {:,} tok, {:,} before Enter".format(done["think_tokens"], done["think_ahead"])
+                           if done and done.get("think_tokens") else "THOUGHT STREAM" if done or answer
+                           else "THOUGHT STREAM · thinking …")
+        await bot.query_one(Markdown).update(mathtext.render(answer) + ("" if done is not None else " ▌"))
         if done is not None:
             self.generating = False
-            meta = [f"◆ first word {done['answer_ms']:,.0f} ms" if done.get("think_tokens") else
-                    f"◆ first token {done.get('ttft_ms', 0):,.0f} ms"]
+            meta = [f"first word {done['answer_ms']:,.0f} ms" if done.get("think_tokens") else
+                    f"first token {done.get('ttft_ms', 0):,.0f} ms"]
             if done.get("message_tokens"):
-                meta.append(f"{done['read']:,} of {done['message_tokens']:,} tokens read while you typed")
+                meta.append(f"read {done['read']:,}/{done['message_tokens']:,} tok while you typed")
             if done.get("think_tokens"):
-                meta.append(f"{done['think_ahead']:,} of {done['think_tokens']:,} reasoning tokens before Enter")
-            meta.append(f"{done['tokens']:,} tokens · {done['tps']} tok/s")
-            bot.query_one(".meta", Static).update(Text(" / ".join(meta), style=FAINT))
+                meta.append(f"reasoned {done['think_ahead']:,}/{done['think_tokens']:,} tok before Enter")
+            if (done.get("branch") or {}).get("adopted"):
+                meta.append("⑂ ending guessed")
+            meta.append(f"{done['tokens']:,} tok · {done['tps']} tok/s")
+            line = Text("└─ ", style=LINE)
+            for i, item in enumerate(meta):
+                if i:
+                    line.append(" │ ", style=LINE)
+                line.append(item, style=HOT if i == 0 else FAINT)
+            bot.query_one(".meta", Static).update(line)
         elif not answer and not reasoning:
             pass
         thread = self.query_one("#thread", VerticalScroll)
@@ -506,7 +629,6 @@ class ModelsView(Vertical):
         hw = self.service.hardware()
         g = hw.get("gpu")
         head = Text()
-        head.append("MODELS  ", style=Style(color=PAPER, bold=True))
         machine = f"{g['name'].replace('NVIDIA GeForce ', '')} {g['vram_mb'] / 1024:.0f} GB" if g else "CPU only"
         head.append(f"{machine} · {hw['ram_mb'] / 1024:.0f} GB RAM", style=MUTED)
         if cat.get("vram_others_mb", 0) > 1024:
@@ -680,8 +802,7 @@ class HardwareView(VerticalScroll):
         if rt["installed"]:
             t.add_row("", Text(("Installed by MAFDET in " if rt["managed"] else "Your own llama.cpp, found at ") + rt["path"],
                                style=FAINT))
-        title = Text("HARDWARE\n", style=Style(color=PAPER, bold=True))
-        title.append("What MAFDET found on this machine, and the runtime that runs the models.  R refresh\n", style=MUTED)
+        title = Text("What MAFDET found on this machine, and the runtime that runs the models.  R refresh\n", style=MUTED)
         self.query_one("#hw-text", Static).update(_stack(title, t))
         self.query_one("#rt-install", Button).label = "Reinstall" if rt["installed"] else "Install llama.cpp"
         self.update_progress()
@@ -715,8 +836,8 @@ def _stack(*renderables):
 class SettingsView(VerticalScroll):
     DEFAULT_CSS = """
     SettingsView { height: 1fr; padding: 1 2; }
-    SettingsView .section { color: #EEEAE2; text-style: bold; margin-top: 1; border-bottom: heavy #EEEAE2; }
-    SettingsView .row { height: auto; padding: 1 0 0 0; border-bottom: solid #2A2825; }
+    SettingsView .section { color: #F2CB8E; text-style: bold; margin-top: 1; border-bottom: heavy #F2CB8E; }
+    SettingsView .row { height: auto; padding: 1 0 0 0; border-bottom: solid #2E200C; }
     SettingsView .text { width: 1fr; height: auto; }
     SettingsView Select { width: 24; }
     SettingsView Switch { width: auto; }
@@ -724,9 +845,8 @@ class SettingsView(VerticalScroll):
 
     def compose(self) -> ComposeResult:
         st = self.app.service.settings
-        yield Static(Text.assemble(("SETTINGS\n", Style(color=PAPER, bold=True)),
-                                   ("Saved on this computer, kept from one start to the next. The window (mafdet gui) "
-                                    "also has a language switch: this terminal app is in English.", MUTED)))
+        yield Static(Text("Saved on this computer, kept from one start to the next. The window (mafdet gui) "
+                          "also has a language switch: this terminal app is in English.", style=MUTED))
         yield Static("REASONING", classes="section")
         yield self.row("Reason while I type", "The model starts thinking about your message before you send it. "
                        "Off: no reasoning, it answers right away.", Switch(value=st["think"], id="think"))
@@ -742,6 +862,9 @@ class SettingsView(VerticalScroll):
         yield self.row("Run on", "Auto uses the NVIDIA card when there is one.",
                        Select([("Auto", "auto"), ("GPU", "cuda"), ("CPU", "cpu")], value=st["device"], allow_blank=False,
                               id="device"))
+        yield Static("TERMINAL", classes="section")
+        yield self.row("Cinematic effects", "The boot sequence, text that decrypts into place, the interference on "
+                       "the logo. Off: everything appears at once.", Switch(value=st.get("effects", True), id="effects"))
         yield Static("EXPERIMENTAL", classes="section")
         yield self.row("Recycle drafts β", "Reuses the answers written for earlier versions of the message to write "
                        "faster (+4% to +20% measured).", Switch(value=st["recycle"], id="recycle"))
@@ -794,8 +917,8 @@ class Setup(ModalScreen):
     """Welcome, the machine, llama.cpp, a first model, ready."""
 
     DEFAULT_CSS = """
-    Setup { align: center middle; background: #0A0909 80%; }
-    #setup { width: 84; height: 30; border: round #3A3733; background: $background; padding: 1 3; }
+    Setup { align: center middle; background: #080503 80%; }
+    #setup { width: 84; height: 30; border: round #4A3312; background: $background; padding: 1 3; }
     #setup-steps { height: 1; }
     #setup-body { height: 1fr; margin-top: 1; }
     #setup-progress { margin: 1 0; }
@@ -954,24 +1077,29 @@ class Setup(ModalScreen):
 
 class Rail(Vertical):
     DEFAULT_CSS = """
-    Rail { width: 26; background: #0A0909; border-right: solid #2A2825; padding: 1 1; }
+    Rail { width: 26; background: #080503; border-right: solid #2E200C; padding: 1 1; }
     #rail-logo { height: auto; margin-bottom: 1; }
-    Rail Button { width: 100%; min-width: 0; border: none; height: 3; background: transparent; color: #A39D92;
-                  content-align: left middle; text-style: bold; }
-    Rail Button:hover { background: #191816; color: #EEEAE2; }
-    Rail Button.on { background: #191816; color: #EEEAE2; border-left: outer #D4892A; }
-    #rail-model { dock: bottom; height: auto; border: round #2A2825; padding: 0 1; color: #C9C4BA; }
+    #rail-model { dock: bottom; height: auto; border: solid #2E200C; padding: 0 1; color: #D9AE6E; }
     """
+    VIEWS = (("F1", "CHAT", "chat"), ("F2", "MODELS", "models"), ("F3", "HARDWARE", "hardware"),
+             ("F4", "SETTINGS", "settings"))
 
     def compose(self) -> ComposeResult:
         logo = art.mark("mask", 10)
         logo.append("\n")
         logo.append_text(Text("MAFDET", style=Style(color=PAPER, bold=True)))
+        logo.append_text(Text(f"  v{__version__}", style=FAINT))
         yield Static(logo, id="rail-logo")
-        for key, label, view in (("F1", "CHAT", "chat"), ("F2", "MODELS", "models"), ("F3", "HARDWARE", "hardware"),
-                                 ("F4", "SETTINGS", "settings")):
-            yield Button(f"{key}  {label}", id=f"nav-{view}")
+        for key, label, view in self.VIEWS:
+            yield Button(f"  {key} :: {label}", id=f"nav-{view}")
         yield Static("", id="rail-model")
+
+    def light(self, current: str):
+        """The current view's line lit, with the cursor of a terminal menu in front of it."""
+        for key, label, view in self.VIEWS:
+            button = self.query_one(f"#nav-{view}", Button)
+            button.set_class(view == current, "on")
+            button.label = f"{'▸' if view == current else ' '} {key} :: {label}"
 
     @on(Button.Pressed)
     def go(self, event: Button.Pressed):
@@ -979,19 +1107,53 @@ class Rail(Vertical):
             self.app.show(event.button.id[4:])
 
 
+class Banner(Horizontal):
+    """The line on top of every view: its name, decrypting into place when the view opens, and the clock."""
+
+    DEFAULT_CSS = """
+    Banner { height: 1; padding: 0 2; background: #080503; }
+    #banner-title { width: 1fr; }
+    #banner-clock { width: auto; }
+    """
+    NAMES = {"chat": "SESSION", "models": "MODELS", "hardware": "HARDWARE", "settings": "SETTINGS"}
+
+    def compose(self) -> ComposeResult:
+        yield Decrypt("", Style(color=HOT, bold=True), id="banner-title")
+        yield Static("", id="banner-clock")
+
+    def on_mount(self):
+        self.tick()
+        self.set_interval(1, self.tick)
+
+    def show(self, view: str):
+        self.query_one(Decrypt).play(f"░▒▓ MAFDET :: {self.NAMES[view]} ▓▒░")
+
+    def tick(self):
+        self.query_one("#banner-clock", Static).update(
+            Text.assemble(("SYS ", FAINT), (time.strftime("%H:%M:%S"), DIM)))
+
+
 class MafdetTUI(App):
     TITLE = "MAFDET"
     CSS = """
     Screen { background: $background; }
     #main { height: 1fr; }
-    #views { width: 1fr; }
-    Button { text-style: bold; }
-    Button.-primary, Button.-warning { color: #0E0D0C; }
-    Button.-primary:hover, Button.-warning:hover { color: #0E0D0C; }
-    DataTable > .datatable--cursor { background: #2A2825; color: #EEEAE2; text-style: bold; }
-    DataTable:focus > .datatable--cursor { background: #3A3733; }
-    DataTable > .datatable--header { background: #191816; color: #A39D92; }
-    DataTable > .datatable--hover { background: #191816; }
+    #right { width: 1fr; }
+    #views { height: 1fr; }
+    Button { text-style: bold; border: solid #4A3312; background: #0F0A05; color: #F2CB8E; }
+    Button:hover { border: solid #D4892A; color: #FFC46B; background: #1A1108; }
+    Button.-primary, Button.-warning { border: solid #D4892A; color: #FFC46B; background: #0F0A05; }
+    Button.-primary:hover, Button.-warning:hover { background: #D4892A; color: #050302; }
+    /* The rail's menu: after the rules for every button, which would otherwise win. */
+    Rail Button, Rail Button:hover, Rail Button:focus, Rail Button.on {
+        width: 100%; min-width: 0; height: 1; border: none; margin: 0 0 1 0; padding: 0 1;
+        background: transparent; color: #A8742F; content-align: left middle; text-align: left; text-style: bold; }
+    Rail Button:hover { background: #1A1108; color: #F2CB8E; }
+    Rail Button.on { background: #1A1108; color: #FFC46B; }
+    DataTable > .datatable--cursor { background: #2E200C; color: #F2CB8E; text-style: bold; }
+    DataTable:focus > .datatable--cursor { background: #4A3312; }
+    DataTable > .datatable--header { background: #1A1108; color: #A8742F; }
+    DataTable > .datatable--hover { background: #1A1108; }
     """
     BINDINGS = [
         Binding("f1", "show('chat')", "Chat"),
@@ -1014,11 +1176,13 @@ class MafdetTUI(App):
     def compose(self) -> ComposeResult:
         with Horizontal(id="main"):
             yield Rail()
-            with ContentSwitcher(initial="chat", id="views"):
-                yield ChatView(id="chat")
-                yield ModelsView(id="models")
-                yield HardwareView(id="hardware")
-                yield SettingsView(id="settings")
+            with Vertical(id="right"):
+                yield Banner()
+                with ContentSwitcher(initial="chat", id="views"):
+                    yield ChatView(id="chat")
+                    yield ModelsView(id="models")
+                    yield HardwareView(id="hardware")
+                    yield SettingsView(id="settings")
         yield Footer()
 
     def on_mount(self):
@@ -1028,7 +1192,12 @@ class MafdetTUI(App):
         self.show("chat")
         self.set_interval(0.2, self.poll)
         self.set_interval(0.5, self.poll_tasks)
-        self.push_screen(Splash(), callback=self.after_splash)
+        self.push_screen(Boot(), callback=self.after_splash)
+
+    @property
+    def effects(self) -> bool:
+        """Settings → Cinematic effects: off, every animation shows its last frame at once."""
+        return self.service.settings.get("effects", True)
 
     def after_splash(self, _=None):
         if not self.service.settings["first_run_done"]:
@@ -1041,8 +1210,8 @@ class MafdetTUI(App):
     def show(self, view: str):
         switcher = self.query_one("#views", ContentSwitcher)
         switcher.current = view
-        for b in self.query("Rail Button"):
-            b.set_class(b.id == f"nav-{view}", "on")
+        self.query_one(Rail).light(view)
+        self.query_one(Banner).show(view)
         widget = self.query_one(f"#{view}")
         widget.styles.opacity = 0
         widget.styles.animate("opacity", 1.0, duration=0.25)
@@ -1095,10 +1264,11 @@ class MafdetTUI(App):
         self.query_one(ChatView).on_status(s)
         pill = Text()
         colour = {"ready": GREEN, "loading": AMBER, "error": RUST}.get(s["state"], FAINT)
-        pill.append("◆ ", style=colour)
+        word = {"ready": "ONLINE", "loading": "LINKING", "error": "FAULT"}.get(s["state"], "OFFLINE")
+        pill.append(f"◉ {word}\n", style=Style(color=colour, bold=True))
         pill.append(s.get("model") if s["state"] == "ready" else
-                    f"Loading {model_name(self.service, s.get('model_id', ''))}" if s["state"] == "loading" else
-                    "Model not loaded" if s["state"] == "error" else "No model loaded")
+                    model_name(self.service, s.get("model_id", "")) if s["state"] == "loading" else
+                    "model not loaded" if s["state"] == "error" else "no model loaded")
         self.query_one("#rail-model", Static).update(pill)
 
     def _poll_tasks(self):

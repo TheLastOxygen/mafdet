@@ -94,7 +94,7 @@ The same app comes in two forms, on the same engine:
 | | Command | What it is |
 |---|---|---|
 | <img src="assets/icons/watch.svg" width="22" alt=""> | `mafdet gui` | **The window**: chat, models, hardware and settings, in English, Italian, French or German |
-| <img src="assets/icons/strike.svg" width="22" alt=""> | `mafdet tui` | **The terminal app**: the same views in the terminal, keyboard first (F1 to F4) |
+| <img src="assets/icons/strike.svg" width="22" alt=""> | `mafdet tui` | **The terminal app**: the same views in the terminal, keyboard first (F1 to F4), on an amber phosphor screen with a boot sequence (Settings, *Cinematic effects*, turns the animations off) |
 | <img src="assets/icons/race.svg" width="22" alt=""> | `mafdet models` | the model catalog for this machine (`--family`, `--download`) |
 | <img src="assets/icons/awaken.svg" width="22" alt=""> | `mafdet doctor` | checks the GPU, memory, llama.cpp and the models; `--install` installs llama.cpp (`--cuda 12`, `13` or `cpu` to pick the build) |
 

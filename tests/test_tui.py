@@ -84,3 +84,31 @@ def test_models_view_keys():
         return before, after, family, fits
     before, after, family, fits = asyncio.run(go())
     assert (before, after) == ("Q4_K_M", "Q5_K_M") and family == "qwen3" and fits == "fits"
+
+
+def test_scramble_keeps_spaces_and_punctuation():
+    import random
+    from mafdet.tui.fx import scramble
+    out = scramble("░▒▓ MAFDET :: MODELS ▓▒░", 0, random.Random(1))
+    assert len(out) == len("░▒▓ MAFDET :: MODELS ▓▒░")
+    assert out[:4] == "░▒▓ " and out[10:14] == " :: " and out.endswith(" ▓▒░")
+    assert scramble("MAFDET", 6, random.Random(1)) == "MAFDET"
+
+
+def test_without_effects_the_boot_is_skipped_and_text_is_shown_at_once():
+    config.save({"first_run_done": True, "effects": False})
+
+    async def go():
+        from mafdet.tui.app import Banner
+        from mafdet.tui.fx import Decrypt
+        app = MafdetTUI()
+        async with app.run_test(size=(140, 44)) as pilot:
+            await pilot.pause(0.5)
+            on_boot = type(app.screen).__name__
+            await pilot.press("f2")
+            await pilot.pause(0.05)
+            title = str(app.query_one(Banner).query_one(Decrypt).render())
+        app.service.close()
+        return on_boot, title
+    on_boot, title = asyncio.run(go())
+    assert on_boot != "Boot" and "MAFDET :: MODELS" in title

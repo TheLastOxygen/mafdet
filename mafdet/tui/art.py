@@ -13,7 +13,8 @@ import re
 from rich.style import Style
 from rich.text import Text
 
-from ..identity import AMBER, PAPER, SHAPES
+from ..identity import AMBER, SHAPES
+from .fx import TEXT as PAPER   # the amber phosphor's text colour: the mask is drawn in it
 
 # The wordmark in block characters, as in the visual identity's terminal mockup (and cli.py).
 WORDMARK = ["█▀▄▀█ ▄▀█ █▀▀ █▀▄ █▀▀ ▀█▀",

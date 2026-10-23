@@ -13,9 +13,10 @@ from textual.containers import Center, Horizontal, Middle, Vertical
 from textual.widgets import Checkbox, Static
 
 from .. import __version__
-from ..identity import AMBER, PAPER
+from ..identity import AMBER
 from . import art
-from .app import FAINT, LINE, MUTED, THEME
+from .fx import Rain
+from .app import FAINT, LINE, MUTED, PAPER, THEME
 
 CHOICES = [
     ("gui", "WINDOW", "The full app in its own window: chat, models, hardware and settings, in English, Italian, "
@@ -27,9 +28,9 @@ CHOICES = [
 
 class Choice(Static):
     DEFAULT_CSS = """
-    Choice { width: 46; height: 9; border: round #3A3733; padding: 1 2; margin: 0 1; background: #121211; }
-    Choice.on { border: round #D4892A; background: #191816; }
-    Choice:hover { border: round #A39D92; }
+    Choice { width: 46; height: 9; border: round #4A3312; padding: 1 2; margin: 0 1; background: #0F0A05; }
+    Choice.on { border: round #D4892A; background: #1A1108; }
+    Choice:hover { border: round #A8742F; }
     """
 
     def __init__(self, key: str, title: str, body: str, letter: str):
@@ -53,7 +54,9 @@ class Launcher(App):
     TITLE = "MAFDET"
     CSS = """
     Screen { align: center middle; background: $background; }
-    #box { width: auto; height: auto; }
+    Screen { layers: rain front; }
+    Rain { layer: rain; dock: top; }
+    #box { layer: front; width: 104; height: auto; background: #050302; padding: 1 2; }
     #mark, #word, #tag, #hint { width: auto; }
     #word { margin-top: 1; }
     #tag { margin: 1 0 1 0; }
@@ -77,7 +80,8 @@ class Launcher(App):
         self.result = None
 
     def compose(self) -> ComposeResult:
-        with Center(), Middle(), Vertical(id="box"):
+        yield Rain()
+        with Vertical(id="box"):
             yield Center(Static(art.mark("mask", 24, eyes=False), id="mark"))
             yield Center(Static(art.wordmark(), id="word"))
             yield Center(Static(Text.assemble(("YOU TYPE. IT ALREADY KNOWS.", Style(color=FAINT)),
