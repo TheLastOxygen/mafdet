@@ -1,0 +1,482 @@
+[
+ {
+  "config": "no ahead",
+  "k": 0,
+  "ok": true,
+  "answer_ms": 4632,
+  "think_tokens": 357,
+  "think_ahead": 0,
+  "cut": false,
+  "tail": "ella penna: $2$ €\n- Totale speso: $12 + 2 = 14$ €\n\nSottraiamo il totale speso dal denaro iniziale:\n$$\n25 - 14 = 11\n$$\n\n**Risposta:** Luca ha rimedi **11 euro**."
+ },
+ {
+  "config": "no ahead",
+  "k": 1,
+  "ok": true,
+  "answer_ms": 10924,
+  "think_tokens": 844,
+  "think_ahead": 0,
+  "cut": false,
+  "tail": " 2 \\times 5 = 10 $ cm.\n7. Infine, calcoliamo l'area: $ base \\times altezza = 10 \\times 5 = 50 $ cm².\n\nLa dimensione dell'area del rettangolo è $\\boxed{50}$ cm²."
+ },
+ {
+  "config": "no ahead",
+  "k": 2,
+  "ok": true,
+  "answer_ms": 5188,
+  "think_tokens": 402,
+  "think_ahead": 0,
+  "cut": false,
+  "tail": "età di questi 24 studenti ha anche un gatto:\n\n$$\n\\frac{1}{2} \\times 24 = 12 \\text{ studenti con sia un cane che un gatto}.\n$$\n\n**Risposta finale:** $\\boxed{12}$"
+ },
+ {
+  "config": "no ahead",
+  "k": 3,
+  "ok": true,
+  "answer_ms": 7188,
+  "think_tokens": 576,
+  "think_ahead": 0,
+  "cut": false,
+  "tail": "$$\n\n**Dopo lo sconto fissi di 10 €:**  \nSottraiamo 10 € dal prezzo già ridotto:  \n$$\n204 - 10 = 194 €\n$$\n\n**Risultato finale:**  \n$$\n\\boxed{194} \\text{ euro}\n$$"
+ },
+ {
+  "config": "no ahead",
+  "k": 4,
+  "ok": true,
+  "answer_ms": 7022,
+  "think_tokens": 549,
+  "think_ahead": 0,
+  "cut": false,
+  "tail": "gina rimanenti:**  \n$ 400 \\text{ pagine totali} - 216 \\text{ pagine lette} = 184 \\text{ pagine} $\n\n**Risposta finale:**  \nMarta le mancano $\\boxed{184}$ pagine."
+ },
+ {
+  "config": "no ahead",
+  "k": 5,
+  "ok": true,
+  "answer_ms": 14015,
+  "think_tokens": 1099,
+  "think_ahead": 0,
+  "cut": false,
+  "tail": " \\text{ litri}}{x \\text{ km}}\n$$\n\nRisolvendo per $ x $:\n\n$$\nx = \\frac{45 \\times 100}{6} = \\frac{4500}{6} = 750 \\text{ km}\n$$\n\n**Risposta finale:** $\\boxed{750}$"
+ },
+ {
+  "config": "no ahead",
+  "k": 6,
+  "ok": true,
+  "answer_ms": 4390,
+  "think_tokens": 321,
+  "think_ahead": 0,
+  "cut": false,
+  "tail": "  \n   $ 9 \\text{ bevute} + 5 \\text{ regalate} = 14 \\text{ bottiglie} $.\n\n3. **Bottiglie rimanenti**:  \n   $ 24 - 14 = 10 $.\n\n**Risposta finale**:  \n$\\boxed{10}$"
+ },
+ {
+  "config": "no ahead",
+  "k": 7,
+  "ok": true,
+  "answer_ms": 8763,
+  "think_tokens": 698,
+  "think_ahead": 0,
+  "cut": false,
+  "tail": "nato:  \n   $$\n   \\frac{120\\ \\text{litri}}{6\\ \\text{litri/minuto}} = 20\\ \\text{minuti}.\n   $$\n\n**Risposta finale:**  \nLa vasca si riempie in $\\boxed{20}$ minuti."
+ },
+ {
+  "config": "no ahead",
+  "k": 8,
+  "ok": true,
+  "answer_ms": 12890,
+  "think_tokens": 1019,
+  "think_ahead": 0,
+  "cut": false,
+  "tail": " 2(S + 10)\n   $$\n5. Risolvendo:\n   $$\n   3S + 10 = 2S + 20 \\implies S = 10\n   $$\n6. Quindi, $ A = 3 \\times 10 = 30 $.\n\n**Risposta finale:** Anna ha **30 anni**."
+ },
+ {
+  "config": "no ahead",
+  "k": 9,
+  "ok": true,
+  "answer_ms": 33225,
+  "think_tokens": 2570,
+  "think_ahead": 0,
+  "cut": false,
+  "tail": "e.\n- Costo totale: $ 3 \\times 3 + 1 \\times 1,20 = 9 + 1,20 = 10,20 $ euro.\n\n**Conclusione:**\nIl minimo costo per 10 penne è **10,20 euro**.\n\n$$\n\\boxed{10.20}\n$$"
+ },
+ {
+  "config": "no ahead",
+  "k": 10,
+  "ok": true,
+  "answer_ms": 11989,
+  "think_tokens": 927,
+  "think_ahead": 0,
+  "cut": false,
+  "tail": "text{ ore} - 3 \\text{ ore} = 1.5 \\text{ ore}.\n$$  \nConvertendo le ore in minuti:  \n$$\n1.5 \\times 60 = 90 \\text{ minuti}.\n$$  \n\n**Risposta finale:** $\\boxed{90}$"
+ },
+ {
+  "config": "no ahead",
+  "k": 11,
+  "ok": true,
+  "answer_ms": 7007,
+  "think_tokens": 546,
+  "think_ahead": 0,
+  "cut": false,
+  "tail": " Le palline non rosse sono quelle blu e verdi, quindi:\n\n$$\n\\text{Palline non rosse} = \\text{Blu} + \\text{Verde} = 7 + 2 = 9\n$$\n\n**Risposta finale:** $\\boxed{9}$"
+ },
+ {
+  "config": "no ahead",
+  "k": 12,
+  "ok": true,
+  "answer_ms": 17155,
+  "think_tokens": 1335,
+  "think_ahead": 0,
+  "cut": false,
+  "tail": "ete, quindi si sottrae questa lunghezza dal perimetro.  \n   $$\n   \\text{Lunghezza rete} = 48 - 2 = 46 \\, \\text{m}\n   $$\n\n**Risposta finale**:  \n$$\n\\boxed{46}\n$$"
+ },
+ {
+  "config": "no ahead",
+  "k": 13,
+  "ok": true,
+  "answer_ms": 7540,
+  "think_tokens": 577,
+  "think_ahead": 0,
+  "cut": false,
+  "tail": "are 390 - 120 = **270 €**. Risparmia 15 € a settimana, quindi:\n\n$$\n\\frac{270}{15} = 18 \\text{ settimane}\n$$\n\n**Risposta:** Paolo ha bisogno di **18 settimane**."
+ },
+ {
+  "config": "no ahead",
+  "k": 14,
+  "ok": true,
+  "answer_ms": 6352,
+  "think_tokens": 492,
+  "think_ahead": 0,
+  "cut": false,
+  "tail": " = 36 $ €  \n\n4. **Costo di 3 fumetti**:  \n   $ 3 \\times 6 = 18 $ €  \n\n5. **Totale speso**:  \n   $ 36 + 18 = 54 $ €  \n\n**Risposta finale:**  \n$\\boxed{54}$ euros."
+ },
+ {
+  "config": "no ahead",
+  "k": 15,
+  "ok": true,
+  "answer_ms": 12249,
+  "think_tokens": 974,
+  "think_ahead": 0,
+  "cut": false,
+  "tail": "{100} = 2.7\\ \\text{m}\n   $$\n5. **Salite totali**: $4$ volte  \n   $$\n   2.7\\ \\text{m} \\times 4 = 10.8\\ \\text{m}\n   $$\n\n**Risposta finale**: $\\boxed{10.8}$ metri."
+ },
+ {
+  "config": "no ahead",
+  "k": 16,
+  "ok": true,
+  "answer_ms": 35658,
+  "think_tokens": 2712,
+  "think_ahead": 0,
+  "cut": false,
+  "tail": " giorno:** sale 3 metri, raggiungendo 10 metri e uscendo dal pozzo.\n\n**Risposta finale:**  \nLa lumaca esce dal pozzo in **8 giorni**.\n\n**Risposta:** $\\boxed{8}$"
+ },
+ {
+  "config": "no ahead",
+  "k": 17,
+  "ok": true,
+  "answer_ms": 23347,
+  "think_tokens": 1791,
+  "think_ahead": 0,
+  "cut": false,
+  "tail": " 24\\ \\text{minuti}.\n$$\n\nQuindi, quando è realmente le 20:00, l'orologio mostra:\n$$\n20:00 + 24\\ \\text{minuti} = 20:24.\n$$\n\n**Risposta finale:**  \n$\\boxed{20:24}$"
+ },
+ {
+  "config": "no ahead",
+  "k": 18,
+  "ok": true,
+  "answer_ms": 6809,
+  "think_tokens": 524,
+  "think_ahead": 0,
+  "cut": false,
+  "tail": "2. **Spesa al cinema**:  \n   - Un quarto di 30 € = $ \\frac{30}{4} = 7.5 $ €.  \n   - Rimane: $ 30 - 7.5 = 22.5 $ €.\n\n**Risultato finale**:  \n$\\boxed{22.5}$ euro."
+ },
+ {
+  "config": "no ahead",
+  "k": 19,
+  "ok": true,
+  "answer_ms": 11758,
+  "think_tokens": 904,
+  "think_ahead": 0,
+  "cut": false,
+  "tail": "\n$$\n\n**Verifica:**\n- Auto: $ 30 - 10 = 20 $\n- Ruote totali: $ (20 \\times 4) + (10 \\times 2) = 80 + 20 = 100 $\n\n**Risposta finale:**  \nLe moto sono $\\boxed{10}$."
+ },
+ {
+  "config": "no ahead",
+  "k": 20,
+  "ok": true,
+  "answer_ms": 10416,
+  "think_tokens": 811,
+  "think_ahead": 0,
+  "cut": false,
+  "tail": "30 \\text{ biscotti}}\n$$\n\nRisolvendo per $ x $:\n$$\nx = \\frac{250 \\times 30}{12} = \\frac{7500}{12} = 625 \\text{ grammi}\n$$\n\n**Risposta finale:**\n$$\n\\boxed{625}\n$$"
+ },
+ {
+  "config": "no ahead",
+  "k": 21,
+  "ok": true,
+  "answer_ms": 8310,
+  "think_tokens": 655,
+  "think_ahead": 0,
+  "cut": false,
+  "tail": "$\n\n**Conversione in chilometri:**\n$$\n900 \\text{ metri} \\div 1000 = 0.9 \\text{ chilometri}\n$$\n\n**Risposta finale:**  \nGiulia ha nuotato $\\boxed{0.9}$ chilometri."
+ },
+ {
+  "config": "no ahead",
+  "k": 22,
+  "ok": true,
+  "answer_ms": 13680,
+  "think_tokens": 1082,
+  "think_ahead": 0,
+  "cut": false,
+  "tail": "ni  \n- Marco: $ 13 + 4 = 17 $ anni  \n- Luca: $ 13 - 2 = 11 $ anni  \n- Somma: $ 13 + 17 + 11 = 41 $ \n\nLa soluzione è corretta.\n\n**Risposta finale:** $\\boxed{13}$"
+ },
+ {
+  "config": "no ahead",
+  "k": 23,
+  "ok": true,
+  "answer_ms": 11221,
+  "think_tokens": 879,
+  "think_ahead": 0,
+  "cut": false,
+  "tail": "\n\\frac{2}{3} \\times 432 = 288\n$$\n\nI posti liberi si calcolano sottraendo i posti occupati dal totale:\n\n$$\n432 - 288 = 144\n$$\n\n**Risposta finale:** $\\boxed{144}$"
+ },
+ {
+  "config": "reason ahead",
+  "k": 0,
+  "ok": true,
+  "answer_ms": 1465,
+  "think_tokens": 442,
+  "think_ahead": 330,
+  "cut": false,
+  "tail": "a da 2 euro:  \n$ 12 + 2 = 14 $ euro in totale.  \n\nDopo aver speso 14 euro, gli restano:  \n$ 25 - 14 = 11 $ euro.  \n\n**Risposta:** Luca ha **11 euro** rimanenti."
+ },
+ {
+  "config": "reason ahead",
+  "k": 1,
+  "ok": true,
+  "answer_ms": 636,
+  "think_tokens": 447,
+  "think_ahead": 402,
+  "cut": false,
+  "tail": "   $$\n\n4. **Calcolo dell'area:**\n   $$\n   A = b \\times h = 10 \\times 5 = 50 \\text{ cm}^2\n   $$\n\n**Risposta finale:**  \nL'area del rettangolo è $\\boxed{50}$ cm²."
+ },
+ {
+  "config": "reason ahead",
+  "k": 2,
+  "ok": true,
+  "answer_ms": 1772,
+  "think_tokens": 550,
+  "think_ahead": 414,
+  "cut": false,
+  "tail": "ti 24, la **metà** ha anche un gatto:  \n$$ \\frac{1}{2} \\times 24 = 12 \\text{ studenti con sia un cane che un gatto}. $$\n\n**Risposta finale:**  \n$$\n\\boxed{12}\n$$"
+ },
+ {
+  "config": "reason ahead",
+  "k": 3,
+  "ok": true,
+  "answer_ms": 2820,
+  "think_tokens": 661,
+  "think_ahead": 442,
+  "cut": false,
+  "tail": "zo dopo il primo sconto: $ 240 - 36 = 204 \\, € $.  \n2. Poi viene scontata ulteriormente **10 €**:  \n   $ 204 - 10 = 194 \\, € $.  \n\n**Prezzo finale:** **194 €**."
+ },
+ {
+  "config": "reason ahead",
+  "k": 4,
+  "ok": true,
+  "answer_ms": 2207,
+  "think_tokens": 565,
+  "think_ahead": 395,
+  "cut": false,
+  "tail": "} = 216$ pagine.  \nIl libro ha $400$ pagine in totale, quindi le pagine che le mancano sono:  \n$$\n400 - 216 = 184\n$$  \n\n**Risposta:** Le mancano **184 pagine**."
+ },
+ {
+  "config": "reason ahead",
+  "k": 5,
+  "ok": true,
+  "answer_ms": 6861,
+  "think_tokens": 876,
+  "think_ahead": 352,
+  "cut": false,
+  "tail": "1 litro permette di percorrere $ \\frac{100}{6} \\approx 16,6667 $ km.  \n- Con 45 litri: $ 45 \\times 16,6667 = 750 $ km.  \n\n**Risposta finale:** $\\boxed{750}$ km."
+ },
+ {
+  "config": "reason ahead",
+  "k": 6,
+  "ok": true,
+  "answer_ms": 2083,
+  "think_tokens": 515,
+  "think_ahead": 356,
+  "cut": false,
+  "tail": "lie totali usate.\n\n3. **Bottiglie rimanenti**:  \n   Sottrai quelle usate dal totale:  \n   $ 24 - 14 = 10 $.\n\n**Risposta finale**:  \nTi restano **10 bottiglie**."
+ },
+ {
+  "config": "reason ahead",
+  "k": 7,
+  "ok": true,
+  "answer_ms": 1988,
+  "think_tokens": 641,
+  "think_ahead": 490,
+  "cut": false,
+  "tail": "il flusso doppio:**  \n   $ \\frac{120\\ \\text{litri}}{6\\ \\text{litri/minuto}} = 20\\ \\text{minuti} $.\n\n**Risposta finale:**  \nLa vasca si riempie in **20 minuti**."
+ },
+ {
+  "config": "reason ahead",
+  "k": 8,
+  "ok": true,
+  "answer_ms": 4053,
+  "think_tokens": 830,
+  "think_ahead": 522,
+  "cut": false,
+  "tail": "plies 3y + 10 = 2y + 20 \\implies y = 10.\n   $$\n\n4. Calcolando $ x $:  \n   $$\n   x = 3y = 3 \\times 10 = 30.\n   $$\n\n**Risposta finale:** Anna ha **30 anni** oggi."
+ },
+ {
+  "config": "reason ahead",
+  "k": 9,
+  "ok": true,
+  "answer_ms": 7799,
+  "think_tokens": 1074,
+  "think_ahead": 476,
+  "cut": false,
+  "tail": " **1 penna singola**: costo 1 × 1,20 € = **1,20 €**.\n\n**Totale**: 9 € + 1,20 € = **10,20 €**.\n\n**Risposta finale:**  \nSpendo al minimo **10,20 €** per 10 penne."
+ },
+ {
+  "config": "reason ahead",
+  "k": 10,
+  "ok": true,
+  "answer_ms": 2997,
+  "think_tokens": 605,
+  "think_ahead": 378,
+  "cut": false,
+  "tail": "ore \\times 60 = 270\\ minuti $.  \n\n4. **Differenza:**  \n   $ 270\\ minuti - 180\\ minuti = 90\\ minuti $.\n\n**Risposta finale:** L'auto impiega **90 minuti in più**."
+ },
+ {
+  "config": "reason ahead",
+  "k": 11,
+  "ok": true,
+  "answer_ms": 4197,
+  "think_tokens": 921,
+  "think_ahead": 609,
+  "cut": false,
+  "tail": "ne aggiunte**:  \n   - 4 palline blu vengono aggiunte, che sono non rosse.\n\n3. **Totale palline non rosse finale**:  \n   $5 + 4 = 9$.\n\n**Risposta**: $\\boxed{9}$."
+ },
+ {
+  "config": "reason ahead",
+  "k": 12,
+  "ok": true,
+  "answer_ms": 4792,
+  "think_tokens": 865,
+  "think_ahead": 498,
+  "cut": false,
+  "tail": "text{Lunghezza rete} = \\text{Perimetro} - \\text{largo del cancello} = 48 - 2 = 46 \\, \\text{metri}\n   $$\n\n**Risposta finale**:  \n$$\n\\boxed{46} \\, \\text{metri}\n$$"
+ },
+ {
+  "config": "reason ahead",
+  "k": 13,
+  "ok": true,
+  "answer_ms": 1555,
+  "think_tokens": 505,
+  "think_ahead": 387,
+  "cut": false,
+  "tail": "gere i 270 euro mancanti:\n\n$$\n\\frac{270}{15} = 18 \\text{ settimane}\n$$\n\n**Risposta:** Paolo ha bisogno di **18 settimane** per risparmiare l'importo necessario."
+ },
+ {
+  "config": "reason ahead",
+  "k": 14,
+  "ok": true,
+  "answer_ms": 3940,
+  "think_tokens": 691,
+  "think_ahead": 384,
+  "cut": false,
+  "tail": "ri**: $ 2 \\times 18 = 36 $ €  \n4. **Totale per 3 fumetti**: $ 3 \\times 6 = 18 $ €  \n5. **Spesa totale**: $ 36 + 18 = 54 $ €  \n\n**Risposta finale**: **54 euro**."
+ },
+ {
+  "config": "reason ahead",
+  "k": 15,
+  "ok": true,
+  "answer_ms": 2788,
+  "think_tokens": 671,
+  "think_ahead": 456,
+  "cut": false,
+  "tail": "a totale per 4 salite**:  \n   $$\n   4 \\text{ volte} \\times 2.7 \\text{ metri} = 10.8 \\text{ metri}\n   $$\n\n**Risposta finale**:  \n$$\n\\boxed{10.8} \\text{ metri}\n$$"
+ },
+ {
+  "config": "reason ahead",
+  "k": 16,
+  "ok": true,
+  "answer_ms": 4283,
+  "think_tokens": 692,
+  "think_ahead": 357,
+  "cut": false,
+  "tail": "metri → **7 m**.\n- **Giorno 8**: Sale 3 metri (raggiunge **10 m**, l'altezza del pozzo) → **Esce senza scivolare indietro**.\n\n### Risposta finale: **8 giorni**."
+ },
+ {
+  "config": "reason ahead",
+  "k": 17,
+  "ok": true,
+  "answer_ms": 4535,
+  "think_tokens": 757,
+  "think_ahead": 404,
+  "cut": false,
+  "tail": "{ minuti}.\n$$\n\nQuindi, alle 8 di sera, l'orologio segna:\n\n$$\n8:00 \\text{ PM} + 24 \\text{ minuti} = 8:24 \\text{ PM}.\n$$\n\n**Risposta:** L'orologio segna **8:24**."
+ },
+ {
+  "config": "reason ahead",
+  "k": 18,
+  "ok": true,
+  "answer_ms": 2411,
+  "think_tokens": 520,
+  "think_ahead": 333,
+  "cut": false,
+  "tail": ". **Spendi un quarto del resto al cinema**:  \n   $ \\frac{1}{4} \\text{ di } 30€ = 7.5€ $.  \n   Rimangono: $ 30 - 7.5 = 22.5€ $.\n\n**Risposta finale**: **22.50€**."
+ },
+ {
+  "config": "reason ahead",
+  "k": 19,
+  "ok": true,
+  "answer_ms": 1282,
+  "think_tokens": 466,
+  "think_ahead": 369,
+  "cut": false,
+  "tail": "la seconda:  \n$ 4(30 - y) + 2y = 100 $  \n$ 120 - 4y + 2y = 100 $  \n$ 120 - 2y = 100 $  \n$ -2y = -20 $  \n$ y = 10 $.\n\n**Risposta**:  \nIl numero di moto è **10**."
+ },
+ {
+  "config": "reason ahead",
+  "k": 20,
+  "ok": true,
+  "answer_ms": 3052,
+  "think_tokens": 519,
+  "think_ahead": 279,
+  "cut": false,
+  "tail": "rzione:**  \n$$\n\\frac{12}{250} = \\frac{30}{x} \\Rightarrow x = \\frac{30 \\times 250}{12} = 625\\ \\text{g}\n$$\n\n**Risposta finale:**  \n$\\boxed{625}$ grammi di farina."
+ },
+ {
+  "config": "reason ahead",
+  "k": 21,
+  "ok": true,
+  "answer_ms": 3489,
+  "think_tokens": 603,
+  "think_ahead": 330,
+  "cut": false,
+  "tail": ") nuotate: 36  \n- Distanza totale: $ 36 \\times 25 = 900 $ metri  \n- Conversione in chilometri: $ \\frac{900}{1000} = 0,9 $ km  \n\n**Risposta finale:** **0,9 km**."
+ },
+ {
+  "config": "reason ahead",
+  "k": 22,
+  "ok": true,
+  "answer_ms": 3889,
+  "think_tokens": 960,
+  "think_ahead": 673,
+  "cut": false,
+  "tail": "tà è:  \n$$\nx + (x + 4) + (x - 2) = 3x + 2\n$$  \nDato che la somma è 41:  \n$$\n3x + 2 = 41 \\implies 3x = 39 \\implies x = 13\n$$  \n\n**Risultato:** Io ho **13 anni**."
+ },
+ {
+  "config": "reason ahead",
+  "k": 23,
+  "ok": true,
+  "answer_ms": 1592,
+  "think_tokens": 507,
+  "think_ahead": 385,
+  "cut": false,
+  "tail": "ei posti liberi:**  \n   $ 432 \\text{ posti totali} - 288 \\text{ posti occupati} = 144 \\text{ posti liberi} $.\n\n**Risposta finale:**  \nSono liberi **144 posti**."
+ }
+]
