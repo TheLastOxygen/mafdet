@@ -29,6 +29,7 @@ DEFAULTS = {
     "device": "auto",                 # auto, cuda or cpu
     "recycle": False,
     "gatherer": "",                   # experimental: a small model gathering material (catalog id or path)
+    "branches": False,                # experimental: reason on a guessed ending of the message (--branches 1)
 }
 
 

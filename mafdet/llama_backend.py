@@ -154,7 +154,7 @@ class LlamaServer:
     """Starts llama-server, waits until it is ready and shuts it down on exit."""
 
     def __init__(self, gguf: str, device: str, ctx: int = 8192, n_slots: int = 1, port: int = 8089,
-                 extra_args: tuple[str, ...] = (), log_name: str = "server"):
+                 extra_args: tuple[str, ...] = (), log_name: str = "server", pool: int = 0):
         self.url = f"http://127.0.0.1:{port}"
         self.port = port
         self._conn: http.client.HTTPConnection | None = None
@@ -166,16 +166,19 @@ class LlamaServer:
                              "(e.g. Stop-Process -Name llama-server).")
         exe = find_llama_server()
         self.model_path = resolve_gguf(gguf)
-        args = [exe, "-m", self.model_path,
-                "-c", str(ctx * n_slots), "-np", str(n_slots),   # each slot gets its own cache of `ctx` tokens
-                "-fa", "on",
-                # No copies of prompts in system RAM: they could restore a cache
-                # and spoil the from-scratch measurements.
-                "--cache-ram", "0",
-                # Reusing shifted chunks (KV shifting) is not exact after an edit in
-                # the middle of the text: the following tokens depend on the changed ones.
-                "--cache-reuse", "0",
-                "--host", "127.0.0.1", "--port", str(port)]
+        args = [exe, "-m", self.model_path, "-np", str(n_slots)]
+        # Each slot gets its own cache of `ctx` tokens. With a `pool`, one cache of that size shared by
+        # all slots instead: decoding several slots at once is then much faster (Qwen3-4B on the RTX 2060,
+        # 4 slots: 139 tok/s in all with it, 103 without).
+        args += ["-c", str(pool), "-kvu"] if pool else ["-c", str(ctx * n_slots)]
+        args += ["-fa", "on",
+                 # No copies of prompts in system RAM: they could restore a cache
+                 # and spoil the from-scratch measurements.
+                 "--cache-ram", "0",
+                 # Reusing shifted chunks (KV shifting) is not exact after an edit in
+                 # the middle of the text: the following tokens depend on the changed ones.
+                 "--cache-reuse", "0",
+                 "--host", "127.0.0.1", "--port", str(port)]
         # auto: as many layers as fit in VRAM (llama.cpp --fit), the rest on the CPU, so models
         # larger than the GPU still run.
         args += ["-ngl", "auto"] if device == "cuda" else ["-ngl", "0", "-dev", "none"]
@@ -340,7 +343,7 @@ class LlamaPrefill:
         return out
 
 
-def setup_llama(args, device: str | None = None, n_slots: int = 1):
+def setup_llama(args, device: str | None = None, n_slots: int = 1, pool: int = 0):
     """Return (tokenizer, server, device, quantization). The tokenizer is the only thing taken from
     transformers: no PyTorch."""
     # Without PyTorch transformers says at import that models are unavailable: only its tokenizers are used here.
@@ -356,7 +359,7 @@ def setup_llama(args, device: str | None = None, n_slots: int = 1):
         extra += ("-md", resolve_gguf(args.draft)) + DRAFT_ARGS
     extra += tuple(args.llama_args.split())
     server = LlamaServer(args.gguf, device, ctx=args.ctx, n_slots=n_slots, port=getattr(args, "port", 8089),
-                         extra_args=extra, log_name=getattr(args, "log_name", "server"))
+                         extra_args=extra, log_name=getattr(args, "log_name", "server"), pool=pool)
     fname = os.path.basename(server.model_path)
     if not fname.startswith(tok_id.split("/")[-1]):
         print(f"Warning: tokenizer {tok_id} may not match {fname}", file=sys.stderr)

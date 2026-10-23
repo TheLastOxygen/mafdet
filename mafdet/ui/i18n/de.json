@@ -183,6 +183,8 @@
  "settings.gatherer": "Sammler",
  "settings.gatherer.hint": "Ein kleines Modell sammelt beim Tippen Material, das Hauptmodell liest es. Gemessen auf der RTX 2060: nicht schneller als das Vorausdenken. Für die Forschung.",
  "settings.gatherer.none": "Aus",
+ "settings.branches": "Das Ende erraten",
+ "settings.branches.hint": "Das Modell versucht auch zu erraten, wie du die Nachricht beendest, und denkt über die Vermutung nach. Gemessen mit Qwen3-4B: Es hat die genaue Nachricht etwa jedes dritte Mal erraten; die Wartezeit war im Schnitt 16 % kürzer, vor allem bei den langsamsten Antworten. Braucht mehr VRAM.",
  "settings.tokens": "{n} Tokens",
  "settings.unlimited": "Kein Limit",
  "settings.toast.saved": "Einstellungen gespeichert",

@@ -302,7 +302,7 @@
   // =====================================================================================
 
   const LANG_NAMES = { en: "English", it: "Italiano", fr: "Français", de: "Deutsch" };
-  const RELOAD = ["think", "ahead", "think_ahead", "max_tokens", "ctx", "device", "recycle", "gatherer"];
+  const RELOAD = ["think", "ahead", "think_ahead", "max_tokens", "ctx", "device", "recycle", "gatherer", "branches"];
 
   async function save(changes) {
     const before = M.state.settings || {};
@@ -352,6 +352,7 @@
       section("settings.section.experimental", [
         row("settings.recycle", "settings.recycle.hint", toggle("recycle", st.recycle), true),
         row("settings.gatherer", "settings.gatherer.hint", gatherer, true),
+        row("settings.branches", "settings.branches.hint", toggle("branches", st.branches), true),
       ]),
       `<section class="set-section enter"><div class="label">${t("settings.section.about")}</div><div class="about">` +
       `<div style="display:flex;align-items:center;gap:12px">${M.mark("mask", 28)}${M.wordmark(12)}<span class="label">${esc(t("settings.about.version", { v: M.version }))}</span></div>` +

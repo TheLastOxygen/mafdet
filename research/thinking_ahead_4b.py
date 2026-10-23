@@ -4,10 +4,13 @@ typed in real time on Qwen3-4B (thinking mode), with and without reasoning ahead
 The README's "Reasoning ahead, Qwen3-4B" table comes from this script (data/thinking_ahead_4b.json):
 
     python research/thinking_ahead_4b.py research/data/thinking_ahead_4b.json
+    python research/thinking_ahead_4b.py out.json --config "branches 1=--branches 1" --problems 0:12
 """
+import argparse
 import json
 import random
 import re
+import statistics
 import sys
 import time
 from pathlib import Path
@@ -47,7 +50,7 @@ CONFIGS = {"no ahead": ["--ahead", "0"], "reason ahead": []}
 
 
 def correct(answer: str, expect: list[str]) -> bool:
-    tail = answer[-250:]
+    tail = answer[-250:].replace("{,}", ",")       # LaTeX decimal comma: 10{,}8
     return any(re.search(rf"(?<![\d,.]){re.escape(e)}(?![\d])", tail) for e in expect)
 
 
@@ -69,13 +72,35 @@ def type_message(s, msg, rng):
     time.sleep(0.1)
 
 
+def summary(rows):
+    for name in dict.fromkeys(x["config"] for x in rows):
+        r = [x for x in rows if x["config"] == name]
+        line = (f"{name:12s} correct {sum(x['ok'] for x in r)}/{len(r)} | mean wait for the answer "
+                f"{sum(x['answer_ms'] for x in r) / len(r) / 1000:.2f} s, median "
+                f"{statistics.median(x['answer_ms'] for x in r) / 1000:.2f} s | reasoning "
+                f"{sum(x['think_tokens'] for x in r) / len(r):.0f} tok, {sum(x['think_ahead'] for x in r) / len(r):.0f} ahead")
+        adopted = [x["branch"]["adopted"] for x in r if x.get("branch")]
+        if adopted:
+            line += f" | branch adopted: {adopted.count('exact')} exact, {adopted.count('near')} near, of {len(adopted)}"
+        print(line)
+
+
 if __name__ == "__main__":
-    rows = []
-    for name, extra in CONFIGS.items():
-        s = Session(build_parser().parse_args(["strike", "--max-tokens", "3000"] + extra))
+    ap = argparse.ArgumentParser()
+    ap.add_argument("out", help="JSON file for the rows (with --append, the rows already there are kept)")
+    ap.add_argument("--config", action="append", default=[],
+                    help="name=options of mafdet strike, e.g. 'branches 1=--branches 1' (default: the two of the README)")
+    ap.add_argument("--problems", default=":", help="a slice of the problems, e.g. 0:12 (default: all)")
+    ap.add_argument("--append", action="store_true")
+    a = ap.parse_args()
+    configs = dict(c.split("=", 1) for c in a.config) if a.config else {k: " ".join(v) for k, v in CONFIGS.items()}
+    lo, hi = (int(x) if x else None for x in a.problems.split(":"))
+    rows = json.load(open(a.out, encoding="utf-8")) if a.append and Path(a.out).exists() else []
+    for name, extra in configs.items():
+        s = Session(build_parser().parse_args(["strike", "--max-tokens", "3000"] + extra.split()))
         wait(lambda: s.state != "loading")
         assert s.state == "ready", s.error
-        for k, (msg, expect) in enumerate(PROBLEMS):
+        for k, (msg, expect) in list(enumerate(PROBLEMS))[lo:hi]:
             s.new_chat()
             type_message(s, msg, random.Random(k))
             answer, d = "", None
@@ -86,14 +111,13 @@ if __name__ == "__main__":
                     d = ev
             ok = correct(answer, expect)
             rows.append({"config": name, "k": k, "ok": ok, "answer_ms": d["answer_ms"], "think_tokens": d["think_tokens"],
-                         "think_ahead": d["think_ahead"], "cut": d["cut"], "tail": answer[-160:]})
+                         "think_ahead": d["think_ahead"], "cut": d["cut"], "tail": answer[-160:],
+                         **({"branch": d["branch"]} if "branch" in d else {})})
+            b = d.get("branch")
             print(f"{name:12s} #{k:2d} {'OK ' if ok else 'BAD'} answer after {d['answer_ms']:5d} ms | reasoning "
-                  f"{d['think_tokens']:4d} ({d['think_ahead']:4d} ahead){' CUT' if d['cut'] else ''}", flush=True)
-        s.server.close()
-
-    for name in CONFIGS:
-        r = [x for x in rows if x["config"] == name]
-        print(f"{name:12s} correct {sum(x['ok'] for x in r)}/{len(r)} | mean wait for the answer "
-              f"{sum(x['answer_ms'] for x in r) / len(r) / 1000:.2f} s | reasoning {sum(x['think_tokens'] for x in r) / len(r):.0f} tok, "
-              f"{sum(x['think_ahead'] for x in r) / len(r):.0f} ahead")
-    json.dump(rows, open(sys.argv[1], "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+                  f"{d['think_tokens']:4d} ({d['think_ahead']:4d} ahead){' CUT' if d['cut'] else ''}"
+                  + (f" | branch {b['adopted'] or '-'} {b['agreement']:.2f} of {b['guesses']} guesses" if b else ""),
+                  flush=True)
+            json.dump(rows, open(a.out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        s.close()
+    summary(rows)

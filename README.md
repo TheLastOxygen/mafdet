@@ -141,6 +141,7 @@ Reasoning ahead is **not exact**: the model reasons on intermediate versions of 
 | `--no-think` | no reasoning: answer right away, and write ahead only the exact answer |
 | `--think-ahead N` | longest reasoning kept across edits (default 1024 tokens) |
 | `--ahead N` | answer tokens written ahead when the text does not change (default 512) |
+| `--branches N` | experimental: the model also guesses how you will finish the message and, on a slot of its own, reasons on the guess; if it guessed the exact message, that reasoning (and the answer, if it got that far) is ready on Enter. 1 is the measured setting, see below |
 | `--recycle` | reuse the answers written for earlier versions of the message as n-gram drafts for speculative decoding (+4% decode speed measured with natural typing, +20% on code) |
 | `--draft repo:file` | a small model of the same family drafts tokens for speculative decoding (no gain measured on the RTX 2060, see below) |
 
@@ -171,7 +172,7 @@ The typing is not replayed in real time. Each prefill really runs on the model, 
 
 All on an RTX 2060 (6 GB), llama.cpp, Q4_K_M models, real-time typing (5 to 8 characters per second, a few natural pauses, Enter right after the last character, no rereading).
 
-**Reasoning ahead, Qwen3-4B** (fits in VRAM, 83 tok/s): 24 word problems with a known numeric answer, typed in Italian.
+**Reasoning ahead, Qwen3-4B** (fits in VRAM, 83 tok/s): 24 word problems with a known numeric answer, typed in Italian (script and data: `research/thinking_ahead_4b.py`).
 
 | | Without reasoning ahead | `mafdet strike` |
 |---|---|---|
@@ -213,6 +214,18 @@ Even so, on the 14B (6 word problems typed in real time, 6/6 correct both ways) 
 | The same ideal material, presented as the model's own reasoning | 49 s |
 
 Even perfect material only matches reasoning ahead: the 14B reads it, then redoes and double-checks the calculations, except on the easiest problems (17-24 s instead of 37-63 s). How the material is presented matters more than its quality (62 s → 49 s). Open questions for anyone who wants to take this further: combining both (the large model reasons ahead *and* reads the material as its own), teaching the large model to trust partial results, or a gatherer where the large model cannot reason ahead at all (CPU only).
+
+**Guessing the ending (`--branches`, experimental).** The reasoning left after Enter is mostly about the end of the message, which arrives last: in a word problem, the question. Qwen3-4B often guesses it before you type it: in one run, with the text at *"…e una penna da 2"*, one of its guesses was already the exact rest of the message, *"euro. Quanti euro gli restano?"*. So with `--branches 1` the model also guesses how you will finish the message (only when few words are left, and only when two guesses in a row agree), and on a llama-server slot of its own reasons on the guessed message as if you had sent it, while its main reasoning waits. If you then send exactly that message, its reasoning and answer were written for that very prompt and are taken as they are. Same 24 problems, two runs each (48 messages; script and data in `research/`):
+
+| | Reasoning ahead | `--branches 1` |
+|---|---|---|
+| Correct answers | 48/48 | 48/48 |
+| Mean wait for the first word of the answer | 4.17 s | **3.51 s** |
+| Median wait | 2.98 s | 2.85 s |
+| Slowest tenth | 7.9 s | **5.3 s** |
+| Messages guessed exactly | | 14 of 48 |
+
+The reasoning-ahead column was measured again for this comparison, the same day and on the same code: 4.17 s against the 3.2 s of the table above, two runs of the same 24 problems differ that much. A modest gain, mostly on the slowest answers, and on 24 problems not yet a significant one (faster on 16 of 24, sign test p = 0.15). What did not work: adopting a guess that was only close (*"ha rimasto"* for *"gli restano"*), with a line asking the model to check its reasoning against the real message, gave 2 wrong answers out of 4: the guess had another number (32 for 41), or a word that changed the problem (*"current age"*). Two branches at once are slower than none (median 4.50 s against 2.94 s on half the problems): on the RTX 2060 two sequences write 1.7 times as many tokens as one, four 2.2 times, so each branch slows the others down.
 
 **Tried, and why they are not on by default:**
 

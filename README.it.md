@@ -141,6 +141,7 @@ Il ragionamento in anticipo **non è esatto**: il modello ragiona su versioni in
 | `--no-think` | niente ragionamento: risponde subito, e in anticipo scrive solo la risposta esatta |
 | `--think-ahead N` | ragionamento più lungo conservato tra una modifica e l'altra (predefinito 1024 token) |
 | `--ahead N` | token di risposta scritti in anticipo quando il testo non cambia (predefinito 512) |
+| `--branches N` | sperimentale: il modello prova anche a indovinare come finirai il messaggio e, su uno slot tutto suo, ragiona sulla previsione; se ha indovinato il messaggio esatto, quel ragionamento (e la risposta, se ci è arrivato) è pronto all'Invio. 1 è il valore misurato, vedi sotto |
 | `--recycle` | riusa le risposte scritte per le versioni precedenti del messaggio come bozze n-gram per la decodifica speculativa (+4% di velocità misurato con una digitazione naturale, +20% sul codice) |
 | `--draft repo:file` | un modello piccolo della stessa famiglia propone token per la decodifica speculativa (nessun guadagno misurato sulla RTX 2060, vedi sotto) |
 
@@ -171,7 +172,7 @@ La digitazione non viene riprodotta in tempo reale. Ogni prefill viene eseguito 
 
 Tutto su una RTX 2060 (6 GB), llama.cpp, modelli Q4_K_M, digitazione in tempo reale (da 5 a 8 caratteri al secondo, qualche pausa naturale, invio subito dopo l'ultimo carattere, senza rileggere).
 
-**Ragionamento in anticipo, Qwen3-4B** (sta nella VRAM, 83 tok/s): 24 problemi con una risposta numerica nota, scritti in italiano.
+**Ragionamento in anticipo, Qwen3-4B** (sta nella VRAM, 83 tok/s): 24 problemi con una risposta numerica nota, scritti in italiano (script e dati: `research/thinking_ahead_4b.py`).
 
 | | Senza ragionamento in anticipo | `mafdet strike` |
 |---|---|---|
@@ -213,6 +214,18 @@ Anche così, sul 14B (6 problemi digitati in tempo reale, 6/6 corretti in entram
 | Lo stesso materiale ideale, presentato come ragionamento del modello | 49 s |
 
 Anche il materiale perfetto pareggia soltanto il ragionamento in anticipo: il 14B lo legge, poi rifà e ricontrolla i calcoli, tranne sui problemi più facili (17-24 s invece di 37-63 s). Conta più come il materiale viene presentato che la sua qualità (da 62 s a 49 s). Domande aperte per chi vuole portare avanti questa ricerca: combinare le due cose (il modello grande ragiona in anticipo *e* legge il materiale come suo), insegnare al modello grande a fidarsi dei risultati parziali, oppure un raccoglitore dove il modello grande non riesce affatto a ragionare in anticipo (solo CPU).
+
+**Indovinare il finale (`--branches`, sperimentale).** Il ragionamento che resta dopo l'Invio riguarda soprattutto la fine del messaggio, che arriva per ultima: in un problema, la domanda. Qwen3-4B spesso la indovina prima che tu la scriva: in un run, con il testo a *"…e una penna da 2"*, una delle sue previsioni era già il resto esatto del messaggio, *"euro. Quanti euro gli restano?"*. Così con `--branches 1` il modello prova anche a indovinare come finirai il messaggio (solo quando mancano poche parole, e solo quando due previsioni di fila coincidono), e su uno slot di llama-server tutto suo ragiona sul messaggio previsto come se l'avessi già inviato, mentre il ragionamento principale aspetta. Se poi invii esattamente quel messaggio, il suo ragionamento e la sua risposta sono stati scritti proprio per quel prompt e vengono presi così come sono. Stessi 24 problemi, due run ciascuno (48 messaggi; script e dati in `research/`):
+
+| | Ragionamento in anticipo | `--branches 1` |
+|---|---|---|
+| Risposte giuste | 48/48 | 48/48 |
+| Attesa media per la prima parola della risposta | 4,17 s | **3,51 s** |
+| Attesa mediana | 2,98 s | 2,85 s |
+| Il decimo più lento | 7,9 s | **5,3 s** |
+| Messaggi indovinati esatti | | 14 su 48 |
+
+La colonna del ragionamento in anticipo è stata rimisurata per questo confronto, lo stesso giorno e sullo stesso codice: 4,17 s contro i 3,2 s della tabella sopra, due run degli stessi 24 problemi differiscono di tanto. Un guadagno modesto, soprattutto sulle risposte più lente, e su 24 problemi non ancora significativo (più veloce in 16 su 24, test dei segni p = 0,15). Cosa non ha funzionato: adottare una previsione solo vicina (*"ha rimasto"* per *"gli restano"*), con una frase che chiede al modello di ricontrollare il ragionamento sul messaggio vero, ha dato 2 risposte sbagliate su 4: la previsione aveva un altro numero (32 per 41), o una parola che cambiava il problema (*"età attuale"*). Due rami insieme sono più lenti di nessuno (mediana 4,50 s contro 2,94 s su metà dei problemi): sulla RTX 2060 due sequenze scrivono 1,7 volte i token di una, quattro 2,2 volte, quindi ogni ramo rallenta gli altri.
 
 **Provate, e perché non sono attive di default:**
 

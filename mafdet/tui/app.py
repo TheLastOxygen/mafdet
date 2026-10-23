@@ -751,6 +751,9 @@ class SettingsView(VerticalScroll):
                        Select([("Off", "")] + [(f"{m['name']} · {m['quant']}", m["id"]) for m in small],
                               value=st["gatherer"] if st["gatherer"] in [m["id"] for m in small] else "",
                               allow_blank=False, id="gatherer"))
+        yield self.row("Guess the ending β", "The model also guesses how you will finish the message and reasons on "
+                       "the guess. Measured: the exact message guessed 1 time in 3, wait 16% shorter on average. More VRAM.",
+                       Switch(value=st["branches"], id="branches"))
         yield Static(Text.assemble(("\nMAFDET ", Style(color=PAPER, bold=True)), (f"v{__version__} · Apache-2.0 · ", MUTED),
                                    ("github.com/TheLastOxygen/mafdet", AMBER)))
 

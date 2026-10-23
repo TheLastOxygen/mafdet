@@ -183,6 +183,8 @@
  "settings.gatherer": "Gatherer",
  "settings.gatherer.hint": "A small model gathers material while you type and the main model reads it. Measured on the RTX 2060: no faster than reasoning ahead. For research.",
  "settings.gatherer.none": "Off",
+ "settings.branches": "Guess the ending",
+ "settings.branches.hint": "The model also guesses how you will finish the message and reasons on the guess. Measured on Qwen3-4B: it guessed the exact message about 1 time in 3; the wait was 16% shorter on average, mostly on the slowest answers. Takes more VRAM.",
  "settings.tokens": "{n} tokens",
  "settings.unlimited": "No limit",
  "settings.toast.saved": "Settings saved",

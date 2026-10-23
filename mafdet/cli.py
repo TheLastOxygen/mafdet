@@ -299,6 +299,12 @@ def _strike_args(p):
     p.add_argument("--gatherer-device", default="cuda", choices=["cuda", "cpu"],
                    help="where the gatherer runs: cuda takes about 1 GB of VRAM from the main model, cpu none "
                         "(default: %(default)s)")
+    p.add_argument("--branches", type=int, default=0,
+                   help="experimental: the model also guesses how you will finish the message and reasons on up "
+                        "to N guesses beside the main reasoning; if one guessed the exact message, its reasoning "
+                        "and answer are ready on Enter. Measured on Qwen3-4B: 1 shortens the wait by 16%% on average, 2 is "
+                        "slower than none "
+                        "(default: %(default)s, off)")
     p.add_argument("--recycle", action="store_true",
                    help="reuse the answers written for earlier versions of the message as drafts for "
                         "speculative decoding (n-gram); measured: +4%% decode speed with natural typing, "

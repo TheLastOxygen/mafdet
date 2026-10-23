@@ -24,7 +24,7 @@ from ..llama_backend import find_llama_server
 from .tasks import TaskManager
 
 # Settings that need the model loaded again when they change.
-RELOAD_KEYS = {"think", "ahead", "think_ahead", "max_tokens", "ctx", "device", "recycle", "gatherer"}
+RELOAD_KEYS = {"think", "ahead", "think_ahead", "max_tokens", "ctx", "device", "recycle", "gatherer", "branches"}
 
 ERROR_CODES = [                                   # (text in the message, code the interfaces translate)
     ("Cannot find llama-server", "llama_missing"),
@@ -121,6 +121,8 @@ class ChatService:
             gpath = catalog.local_path(g) if g else st["gatherer"]
             if gpath:
                 argv += ["--gatherer", gpath]
+        elif st["branches"] and v.model["reason_ahead"] and st["think"]:   # the gatherer and branches: one at a time
+            argv += ["--branches", "1"]                                     # measured: 1 helps a little, 2 is slower than none
         args = build_parser().parse_args(argv)
         args.port = free_port()
         args.tokenizer_kwargs = v.model.get("tokenizer_kwargs", {})

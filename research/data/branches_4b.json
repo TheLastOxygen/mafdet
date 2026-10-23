@@ -1,0 +1,2978 @@
+[
+ {
+  "config": "reason ahead",
+  "k": 0,
+  "ok": true,
+  "answer_ms": 1910,
+  "think_tokens": 733,
+  "think_ahead": 607,
+  "cut": false,
+  "tail": "to della penna: 2 euro  \n- Totale speso: $12 + 2 = 14$ euro  \n\nQuindi, gli euro rimanenti sono:  \n$$25 - 14 = 11$$\n\n**Risposta:** Luca ha **11 euro** rimanenti."
+ },
+ {
+  "config": "reason ahead",
+  "k": 1,
+  "ok": true,
+  "answer_ms": 3879,
+  "think_tokens": 947,
+  "think_ahead": 685,
+  "cut": false,
+  "tail": ":  \n$$\nb = 2h = 10 \\, \\text{cm}\n$$\n\nArea del rettangolo:  \n$$\nA = b \\times h = 10 \\times 5 = 50 \\, \\text{cm}^2\n$$\n\n**Risposta:** La sua area è $\\boxed{50}$ cm²."
+ },
+ {
+  "config": "reason ahead",
+  "k": 2,
+  "ok": true,
+  "answer_ms": 1831,
+  "think_tokens": 979,
+  "think_ahead": 884,
+  "cut": false,
+  "tail": "udenti, i tre quarti (24 studenti) hanno un cane. La metà di questi (12 studenti) ha anche un gatto. \n\n**Risposta:** 12 studenti hanno sia un cane sia un gatto."
+ },
+ {
+  "config": "reason ahead",
+  "k": 3,
+  "ok": true,
+  "answer_ms": 4010,
+  "think_tokens": 914,
+  "think_ahead": 642,
+  "cut": false,
+  "tail": "one: $ 240 - 36 = 204 $ €  \n\n2. **Seconda riduzione (10 €):**  \n   - Prezzo finale: $ 204 - 10 = 194 $ €  \n\n**Risposta:** Alla fine, la bici costa **194 euro**."
+ },
+ {
+  "config": "reason ahead",
+  "k": 4,
+  "ok": true,
+  "answer_ms": 2454,
+  "think_tokens": 846,
+  "think_ahead": 674,
+  "cut": false,
+  "tail": "ni} = 216 \\text{ pagine}\n$$\n\nLe pagine rimanenti sono:\n\n$$\n400 \\text{ pagine} - 216 \\text{ pagine} = 184 \\text{ pagine}\n$$\n\n**Risposta:** Le mancano 184 pagine."
+ },
+ {
+  "config": "reason ahead",
+  "k": 5,
+  "ok": true,
+  "answer_ms": 2116,
+  "think_tokens": 807,
+  "think_ahead": 681,
+  "cut": false,
+  "tail": "i 100 km può percorrere:\n\n$$\n\\frac{100 \\, \\text{km}}{6 \\, \\text{litri}} \\times 45 \\, \\text{litri} = 750 \\, \\text{km}\n$$\n\n**Risposta:** $\\boxed{750}$ chilometri."
+ },
+ {
+  "config": "reason ahead",
+  "k": 6,
+  "ok": true,
+  "answer_ms": 2044,
+  "think_tokens": 807,
+  "think_ahead": 675,
+  "cut": false,
+  "tail": "Dopo aver bevuto 9 e regalare 5, hai usato 9 + 5 = **14 bottiglie**.\n\nQuindi, le bottiglie che ti restano sono:  \n**24 - 14 = 10**.\n\n**Risposta:** 10 bottiglie."
+ },
+ {
+  "config": "reason ahead",
+  "k": 7,
+  "ok": true,
+  "answer_ms": 2296,
+  "think_tokens": 888,
+  "think_ahead": 747,
+  "cut": false,
+  "tail": "inetti, la portata totale è $ 3 + 3 = 6 $ litri/minuto.  \n- Tempo necessario per riempire 120 litri: $ \\frac{120}{6} = 20 $ minuti.  \n\n**Risultato:** 20 minuti."
+ },
+ {
+  "config": "reason ahead",
+  "k": 8,
+  "ok": true,
+  "answer_ms": 10024,
+  "think_tokens": 1399,
+  "think_ahead": 739,
+  "cut": false,
+  "tail": " seconda:  \n   $ 3y + 10 = 2y + 20 $.  \n4. Risolvendo:  \n   $ y = 10 $.  \n5. Quindi, $ x = 3 \\times 10 = 30 $.  \n\n**Risposta finale:** Anna ha **30 anni** oggi."
+ },
+ {
+  "config": "reason ahead",
+  "k": 9,
+  "ok": true,
+  "answer_ms": 6585,
+  "think_tokens": 1190,
+  "think_ahead": 764,
+  "cut": false,
+  "tail": "20€ = 3€ + 8.40€ = **11.40€**\n\n- **0 confezioni** + **10 penne singole**:  \n  Costo = 10×1.20€ = **12.00€**\n\n**Risposta finale:** Il costo minimo è **10.20 €**."
+ },
+ {
+  "config": "reason ahead",
+  "k": 10,
+  "ok": true,
+  "answer_ms": 4809,
+  "think_tokens": 1066,
+  "think_ahead": 757,
+  "cut": false,
+  "tail": "m}{80\\ km/h} = 4.5\\ ore = 270\\ minuti $.\n\n4. **Differenza:**  \n   $ 270\\ minuti - 180\\ minuti = 90\\ minuti $.\n\n**Risultato finale:** $\\boxed{90}$ minuti in più."
+ },
+ {
+  "config": "reason ahead",
+  "k": 11,
+  "ok": true,
+  "answer_ms": 1565,
+  "think_tokens": 823,
+  "think_ahead": 742,
+  "cut": false,
+  "tail": "sse è calcolato come segue:\n\n- Palline blu: 3 + 4 = **7**\n- Palline verdi: 2\n\n**Totale palline non rosse**: 7 (blu) + 2 (verde) = **9**\n\n**Risposta finale:** 9."
+ },
+ {
+  "config": "reason ahead",
+  "k": 12,
+  "ok": true,
+  "answer_ms": 3285,
+  "think_tokens": 1030,
+  "think_ahead": 816,
+  "cut": false,
+  "tail": "del giardino**:  \n   $4 \\times 12 = 48$ metri.\n\n2. **Sottrai la larghezza del cancello**:  \n   $48 - 2 = 46$ metri.\n\n**Risposta**: Servono **46 metri** di rete."
+ },
+ {
+  "config": "reason ahead",
+  "k": 13,
+  "ok": true,
+  "answer_ms": 2629,
+  "think_tokens": 887,
+  "think_ahead": 722,
+  "cut": false,
+  "tail": " Risparmia 15 euro a settimana. \n\nCalcoliamo il numero di settimane necessarie:  \n$$\n\\frac{270}{15} = 18\n$$\n\n**Risposta:** Paolo ha bisogno di **18 settimane**."
+ },
+ {
+  "config": "reason ahead",
+  "k": 14,
+  "ok": true,
+  "answer_ms": 2715,
+  "think_tokens": 760,
+  "think_ahead": 579,
+  "cut": false,
+  "tail": " $ 2 \\times 18 = 36 $ €  \n4. **Costo di 3 fumetti**: $ 3 \\times 6 = 18 $ €  \n5. **Totale speso**: $ 36 + 18 = 54 $ €  \n\n**Risposta finale**: spendi **54 euro**."
+ },
+ {
+  "config": "reason ahead",
+  "k": 15,
+  "ok": true,
+  "answer_ms": 3186,
+  "think_tokens": 962,
+  "think_ahead": 760,
+  "cut": false,
+  "tail": " $$  \n4. **Distanza totale per 4 salite**:  \n   $$\n   2.7 \\text{ m} \\times 4 = 10.8 \\text{ metri}\n   $$\n\n**Risposta finale:**  \n$$\n\\boxed{10.8} \\text{ metri}\n$$"
+ },
+ {
+  "config": "reason ahead",
+  "k": 16,
+  "ok": true,
+  "answer_ms": 17840,
+  "think_tokens": 1950,
+  "think_ahead": 755,
+  "cut": false,
+  "tail": "7 × 1).  \n- Il **8º giorno**, sale i 3 metri e raggiunge i **10 metri**, uscendo dal pozzo senza scivolare indietro.  \n\n**Risposta finale:** $\\boxed{8}$ giorni."
+ },
+ {
+  "config": "reason ahead",
+  "k": 17,
+  "ok": true,
+  "answer_ms": 7949,
+  "think_tokens": 1354,
+  "think_ahead": 835,
+  "cut": false,
+  "tail": "ore reali (mezzanotte + 8 ore = 20:00), l'orologio mostra:\n$$\n20:00 + 24 \\text{ minuti} = 20:24.\n$$\n\n**Risposta:** L'orologio segna **20:24** (8:24 della sera)."
+ },
+ {
+  "config": "reason ahead",
+  "k": 18,
+  "ok": true,
+  "answer_ms": 2727,
+  "think_tokens": 823,
+  "think_ahead": 651,
+  "cut": false,
+  "tail": "un quarto di ciò che resta (30 euro) al cinema:  \n   $ \\frac{30}{4} = 7.5 $ euro.  \n   Rimangono: $ 30 - 7.5 = 22.5 $ euro.  \n\n**Risposta finale:** **22,50 €**."
+ },
+ {
+  "config": "reason ahead",
+  "k": 19,
+  "ok": true,
+  "answer_ms": 3075,
+  "think_tokens": 783,
+  "think_ahead": 582,
+  "cut": false,
+  "tail": "conda equazione:  \n  $$\n  4(30 - y) + 2y = 100 \\implies 120 - 4y + 2y = 100 \\implies -2y = -20 \\implies y = 10\n  $$\n\n**Risposta finale:**  \nLe moto sono **10**."
+ },
+ {
+  "config": "reason ahead",
+  "k": 20,
+  "ok": true,
+  "answer_ms": 3795,
+  "think_tokens": 789,
+  "think_ahead": 534,
+  "cut": false,
+  "tail": "0 biscotti:\n   $$\n   20.833\\ldots\\ \\text{g/biscotto} \\times 30\\ \\text{biscotti} = 625\\ \\text{g}\n   $$\n\n**Risultato:**\n$$\n\\boxed{625}\\ \\text{grammi di farina}\n$$"
+ },
+ {
+  "config": "reason ahead",
+  "k": 21,
+  "ok": true,
+  "answer_ms": 4824,
+  "think_tokens": 826,
+  "think_ahead": 499,
+  "cut": false,
+  "tail": "vasche: $ 36 \\times 25 = 900 $ metri.  \n- Convertiamo i metri in chilometri: $ 900 \\, \\text{m} = 0,9 \\, \\text{km} $.  \n\n**Risposta finale:** $\\boxed{0{,}9}$ km."
+ },
+ {
+  "config": "reason ahead",
+  "k": 22,
+  "ok": true,
+  "answer_ms": 4753,
+  "think_tokens": 1299,
+  "think_ahead": 988,
+  "cut": false,
+  "tail": "\nLa somma delle età è 41, quindi:\n$$\nx + (x + 4) + (x - 2) = 41\n$$\n\nSemplificando:\n$$\n3x + 2 = 41\n$$\n$$\n3x = 39\n$$\n$$\nx = 13\n$$\n\n**Risultato:** Hai **13 anni**."
+ },
+ {
+  "config": "reason ahead",
+  "k": 23,
+  "ok": true,
+  "answer_ms": 2878,
+  "think_tokens": 882,
+  "think_ahead": 684,
+  "cut": false,
+  "tail": " $ \\frac{2}{3} \\times 432 = 288 \\text{ posti} $\n\n3. **Posti liberi**:  \n   $ 432 - 288 = 144 \\text{ posti} $\n\n**Risposta finale:**  \n$\\boxed{144}$ posti liberi."
+ },
+ {
+  "config": "branches 1 near",
+  "k": 0,
+  "ok": true,
+  "answer_ms": 1,
+  "think_tokens": 468,
+  "think_ahead": 468,
+  "cut": false,
+  "tail": "enna da 2 euro:  \n$ 12 + 2 = 14 $ euro totali spesi.  \n\nDai 25 euro iniziali:  \n$ 25 - 14 = 11 $ euro rimanenti.  \n\n**Risposta:** Luca ha **11 euro** rimanenti.",
+  "branch": {
+   "guesses": 4,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Luca ha 25 euro, compra 3 quaderni da 4 euro e una penna da 2 euro. Quanti euro gli restano?"
+  }
+ },
+ {
+  "config": "branches 1 near",
+  "k": 1,
+  "ok": true,
+  "answer_ms": 2708,
+  "think_tokens": 663,
+  "think_ahead": 496,
+  "cut": false,
+  "tail": "$$\n   \\text{Area} = \\text{base} \\times \\text{altezza} = 10 \\, \\text{cm} \\times 5 \\, \\text{cm} = 50 \\, \\text{cm}^2\n   $$\n\n**Risposta finale:**  \n$$\n\\boxed{50}\n$$",
+  "branch": {
+   "guesses": 10,
+   "adopted": "",
+   "agreement": 0.5,
+   "guess": "Un rettangolo ha il perimetro di 30 cm e la base lunga il doppio dell'altezza. Qual è la sua area?"
+  }
+ },
+ {
+  "config": "branches 1 near",
+  "k": 2,
+  "ok": true,
+  "answer_ms": 1807,
+  "think_tokens": 759,
+  "think_ahead": 656,
+  "cut": false,
+  "tail": "24 studenti hanno un cane. Di questi, la metà ha anche un gatto:  \n$$ \\frac{1}{2} \\times 24 = 12 $$  \n\n**Risposta:** 12 studenti hanno sia un cane sia un gatto.",
+  "branch": {
+   "guesses": 9,
+   "adopted": "near",
+   "agreement": 0.62,
+   "guess": "In una classe ci sono 32 studenti; i tre quarti hanno un cane e di questi la metà ha anche un gatto. Quanti studenti in totale hanno un gatto?"
+  }
+ },
+ {
+  "config": "branches 1 near",
+  "k": 3,
+  "ok": true,
+  "answer_ms": 4751,
+  "think_tokens": 863,
+  "think_ahead": 564,
+  "cut": false,
+  "tail": "\n\n2. **Sconto di 10 euro**:  \n   - Sottrai 10 euro dal prezzo già scontato:  \n     $$\n     204 - 10 = 194 \\text{ euro}\n     $$\n\n**Prezzo finale:** **194 euro**.",
+  "branch": {
+   "guesses": 10,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 near",
+  "k": 4,
+  "ok": true,
+  "answer_ms": 2856,
+  "think_tokens": 758,
+  "think_ahead": 611,
+  "cut": false,
+  "tail": "6 \\text{ pagine}\n$$\n\nIl libro ha 400 pagine in totale. Le pagine rimanenti sono:\n\n$$\n400 - 216 = 184 \\text{ pagine}\n$$\n\n**Risposta:** Le mancano **184 pagine**.",
+  "branch": {
+   "guesses": 8,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 near",
+  "k": 5,
+  "ok": true,
+  "answer_ms": 12,
+  "think_tokens": 664,
+  "think_ahead": 664,
+  "cut": false,
+  "tail": "hiamo per 100 km:  \n     $$\n     7,5 \\times 100\\ \\text{km} = 750\\ \\text{km}\n     $$\n\n**Risposta finale**: L'auto può percorrere **750 chilometri** con un pieno.",
+  "branch": {
+   "guesses": 7,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Un'auto consuma 6 litri ogni 100 km e il serbatoio contiene 45 litri. Quanti km può percorrere con un pieno?"
+  }
+ },
+ {
+  "config": "branches 1 near",
+  "k": 6,
+  "ok": true,
+  "answer_ms": 1816,
+  "think_tokens": 625,
+  "think_ahead": 511,
+  "cut": false,
+  "tail": "regalate**:  \n   Hai regalato $ 5 $ bottiglie.\n\n4. **Bottiglie rimanenti**:  \n   $ 24 - 9 - 5 = 10 $.\n\n**Risposta finale:**  \nTi restano $\\boxed{10}$ bottiglie.",
+  "branch": {
+   "guesses": 11,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 near",
+  "k": 7,
+  "ok": true,
+  "answer_ms": 1246,
+  "think_tokens": 854,
+  "think_ahead": 808,
+  "cut": false,
+  "tail": " 120 litri**:  \n   $$\n   \\frac{120\\ \\text{litri}}{6\\ \\text{litri/minuto}} = 20\\ \\text{minuti}.\n   $$\n\n**Risposta finale**: La vasca si riempie in **20 minuti**.",
+  "branch": {
+   "guesses": 9,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Un rubinetto riempie una vasca da 120 litri in 40 minuti. Se ne apro un secondo identico, in quanti minuti si riempie la vasca?"
+  }
+ },
+ {
+  "config": "branches 1 near",
+  "k": 8,
+  "ok": false,
+  "answer_ms": 14263,
+  "think_tokens": 1677,
+  "think_ahead": 773,
+  "cut": false,
+  "tail": "*.  \nIl figlio ha $ S = A/3 = 10/3 \\approx 3,33 $ anni.  \n\n**Nota:** Anche se l'età di Anna sembra bassa per una madre, matematicamente la soluzione è corretta.",
+  "branch": {
+   "guesses": 6,
+   "adopted": "near",
+   "agreement": 0.83,
+   "guess": "Anna ha il triplo dell'età di suo figlio e tra 10 anni avrà il doppio della sua età attuale. Quanti anni ha Anna?"
+  }
+ },
+ {
+  "config": "branches 1 near",
+  "k": 9,
+  "ok": true,
+  "answer_ms": 13652,
+  "think_tokens": 1552,
+  "think_ahead": 696,
+  "cut": false,
+  "tail": "enne) e 4 penne individuali: 2 × 3 + 4 × 1,20 = 6 + 4,80 = **10,80 euro** (più costoso).\n\n**Risultato finale:**  \nIl minimo costo per 10 penne è **10,20 euro**.",
+  "branch": {
+   "guesses": 12,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 near",
+  "k": 10,
+  "ok": true,
+  "answer_ms": 5098,
+  "think_tokens": 921,
+  "think_ahead": 616,
+  "cut": false,
+  "tail": "$\n\n4. **Differenza**:  \n   $ 270\\ \\text{minuti} - 180\\ \\text{minuti} = 90\\ \\text{minuti} $\n\n**Risposta:** L'auto impiega **90 minuti in più** rispetto al treno.",
+  "branch": {
+   "guesses": 14,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 near",
+  "k": 11,
+  "ok": true,
+  "answer_ms": 448,
+  "think_tokens": 614,
+  "think_ahead": 612,
+  "cut": false,
+  "tail": "e palline diventa:\n\n- Rosse: 5  \n- Blu: 3 + 4 = 7  \n- Verdi: 2  \n\nLe palline non rosse sono quelle blu e verdi:  \n**7 (blu) + 2 (verdi) = 9**.\n\n**Risposta:** 9.",
+  "branch": {
+   "guesses": 10,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "In un sacchetto ci sono 5 palline rosse, 3 blu e 2 verdi. Ne aggiungo 4 blu. Quante palline non sono rosse?"
+  }
+ },
+ {
+  "config": "branches 1 near",
+  "k": 12,
+  "ok": true,
+  "answer_ms": 2176,
+  "think_tokens": 677,
+  "think_ahead": 541,
+  "cut": false,
+  "tail": "hiede rete, quindi si sottrae la sua dimensione dal perimetro.  \n   $ 48 - 2 = 46 \\, \\text{metri} $.\n\n**Risposta finale:**  \n$\\boxed{46}$ metri di rete servono.",
+  "branch": {
+   "guesses": 7,
+   "adopted": "",
+   "agreement": 0.59,
+   "guess": "Un giardino quadrato ha il lato di 12 metri e voglio recintarlo lasciando un cancello largo 2 metri. Quanti metri di recinto sarò costretto a installare?"
+  }
+ },
+ {
+  "config": "branches 1 near",
+  "k": 13,
+  "ok": true,
+  "answer_ms": 2854,
+  "think_tokens": 742,
+  "think_ahead": 552,
+  "cut": false,
+  "tail": "**270 €**.\n\n**Numero di settimane necessarie:**  \n270 €� 15 €/settimana = **18 settimane**.\n\n**Risposta finale:**  \nPaolo deve risparmiare per **18 settimane**.",
+  "branch": {
+   "guesses": 9,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 near",
+  "k": 14,
+  "ok": true,
+  "answer_ms": 2437,
+  "think_tokens": 642,
+  "think_ahead": 480,
+  "cut": false,
+  "tail": "a un terzo del libro, quindi 18 / 3 = 6 euro. \n\nTotale:  \n2 libri × 18 € = 36 €  \n3 fumetti × 6 € = 18 €  \n36 € + 18 € = **54 €**  \n\nQuindi, spendi **54 euro**.",
+  "branch": {
+   "guesses": 10,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 near",
+  "k": 15,
+  "ok": true,
+  "answer_ms": 2761,
+  "think_tokens": 732,
+  "think_ahead": 569,
+  "cut": false,
+  "tail": " metri**:  \n   $$\n   1080 \\text{ cm} = 10{,}8 \\text{ m}.\n   $$\n\n**Risposta finale**:  \nSalire la scala 4 volte equivale a percorrere **10{,}8 metri** in totale.",
+  "branch": {
+   "guesses": 12,
+   "adopted": "",
+   "agreement": 0.5,
+   "guess": "Una scala ha 15 gradini e ogni gradino è alto 18 cm. Salgo la scala 4 volte: di quanti metri sono salito in tutto?"
+  }
+ },
+ {
+  "config": "branches 1 near",
+  "k": 16,
+  "ok": true,
+  "answer_ms": 4132,
+  "think_tokens": 850,
+  "think_ahead": 603,
+  "cut": false,
+  "tail": "l **8º giorno**, sale 3 metri e raggiunge i **10 metri**, escludendo la scivolata notturna, poiché ha già lasciato il pozzo.\n\n**Risposta finale:** **8 giorni.**",
+  "branch": {
+   "guesses": 13,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 near",
+  "k": 17,
+  "ok": true,
+  "answer_ms": 2775,
+  "think_tokens": 821,
+  "think_ahead": 662,
+  "cut": false,
+  "tail": "imes 8 = 24$ minuti. \n\n**Risposta:** Alle 8 di sera, l'orologio segna **24 minuti in più**, quindi **20:24** (8:24 pm). \n\n**Risultato finale:** $\\boxed{20:24}$.",
+  "branch": {
+   "guesses": 10,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Un orologio va avanti di 3 minuti ogni ora e lo metto all'ora giusta a mezzogiorno. Che ora segna alle 8 di sera dello stesso giorno?"
+  }
+ },
+ {
+  "config": "branches 1 near",
+  "k": 18,
+  "ok": true,
+  "answer_ms": 7781,
+  "think_tokens": 1042,
+  "think_ahead": 549,
+  "cut": false,
+  "tail": "pesa al cinema**:  \n   Un quarto di 30 € = $ \\frac{1}{4} \\times 30 = 7,5 $ €.  \n   Rimangono: $30 - 7,5 = 22,5 $ €.\n\n**Risposta finale**:  \n$\\boxed{22,5}$ euro.",
+  "branch": {
+   "guesses": 7,
+   "adopted": "",
+   "agreement": 0.57,
+   "guess": "Ho 50 euro, ne spendo il 40% al ristorante e poi un quarto di quello che resta al cinema. Quanti euro restano?"
+  }
+ },
+ {
+  "config": "branches 1 near",
+  "k": 19,
+  "ok": true,
+  "answer_ms": 6318,
+  "think_tokens": 887,
+  "think_ahead": 495,
+  "cut": false,
+  "tail": "moto è **10**.  \nVerifica:  \n- Auto: $ 30 - 10 = 20 $.  \n- Ruote totali: $ (20 \\times 4) + (10 \\times 2) = 80 + 20 = 100 $.  \n\n**Risposta finale**: $\\boxed{10}$",
+  "branch": {
+   "guesses": 9,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 near",
+  "k": 20,
+  "ok": true,
+  "answer_ms": 2274,
+  "think_tokens": 567,
+  "think_ahead": 446,
+  "cut": false,
+  "tail": "= \\frac{250 \\times 30}{12} = \\frac{7500}{12} = 625 \\text{ grammi}\n$$\n\n**Risposta finale:**  \nPer preparare 30 biscotti, si necessitano **625 grammi** di farina.",
+  "branch": {
+   "guesses": 6,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Un pasticcere usa 250 grammi di farina per 12 biscotti. Quanti grammi di farina servono per 30 biscotti?"
+  }
+ },
+ {
+  "config": "branches 1 near",
+  "k": 21,
+  "ok": true,
+  "answer_ms": 4677,
+  "think_tokens": 757,
+  "think_ahead": 428,
+  "cut": false,
+  "tail": ", \\text{m} \\times 36 = 900 \\, \\text{m} $  \n- Conversione in chilometri: $ 900 \\, \\text{m} = 0,9 \\, \\text{km} $\n\n**Risposta finale:** $\\boxed{0{,}9}$ chilometri.",
+  "branch": {
+   "guesses": 6,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 near",
+  "k": 22,
+  "ok": false,
+  "answer_ms": 3231,
+  "think_tokens": 1141,
+  "think_ahead": 964,
+  "cut": false,
+  "tail": "plifichiamo l'equazione:\n$$\n3x + 2 = 32\n$$\n\nSottraiamo 2 da entrambi i lati:\n$$\n3x = 30\n$$\n\nDividiamo per 3:\n$$\nx = 10\n$$\n\n**Risposta finale**: Hai **10 anni**.",
+  "branch": {
+   "guesses": 12,
+   "adopted": "near",
+   "agreement": 0.77,
+   "guess": "Io e i miei due fratelli: Marco ha 4 anni più di me, Luca 2 anni meno di me, e la somma delle nostre età è 32 anni. Quanti anni ho?"
+  }
+ },
+ {
+  "config": "branches 1 near",
+  "k": 23,
+  "ok": true,
+  "answer_ms": 2711,
+  "think_tokens": 680,
+  "think_ahead": 526,
+  "cut": false,
+  "tail": "ti liberi:**  \n   $ 432 \\text{ posti totali} - 288 \\text{ posti occupati} = 144 \\text{ posti liberi} $.\n\n**Risposta finale:**  \n$\\boxed{144}$ posti sono liberi.",
+  "branch": {
+   "guesses": 6,
+   "adopted": "near",
+   "agreement": 0.77,
+   "guess": "Un cinema ha 18 file da 24 posti e stasera sono occupati i due terzi dei posti. Quanti posti sono stati occupati?"
+  }
+ },
+ {
+  "config": "branches 1",
+  "k": 0,
+  "ok": true,
+  "answer_ms": 1559,
+  "think_tokens": 501,
+  "think_ahead": 391,
+  "cut": false,
+  "tail": "nna:  \n   $ 2 $ euro.\n\n3. Totale speso:  \n   $ 12 + 2 = 14 $ euro.\n\n4. Euro rimanenti:  \n   $ 25 - 14 = 11 $ euro.\n\n**Risposta:** Luca ha **11 euro** rimanenti.",
+  "branch": {
+   "guesses": 4,
+   "adopted": "",
+   "agreement": 0.67,
+   "guess": "Luca ha 25 euro, compra 3 quaderni da 4 euro e una penna da 2 euro. Quanti euro rimangono con Luca?"
+  }
+ },
+ {
+  "config": "branches 1",
+  "k": 1,
+  "ok": true,
+  "answer_ms": 3957,
+  "think_tokens": 737,
+  "think_ahead": 468,
+  "cut": false,
+  "tail": "\n\n6. **Formula dell'area**:  \n   $$\n   A = b \\times h = 10 \\, \\text{cm} \\times 5 \\, \\text{cm} = 50 \\, \\text{cm}^2\n   $$\n\n**Risposta finale:**  \n$$\n\\boxed{50}\n$$",
+  "branch": {
+   "guesses": 9,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Un rettangolo ha il perimetro di 30 cm e la base lunga il doppio dell'altezza. Qual è la sua area in cm²?"
+  }
+ },
+ {
+  "config": "branches 1",
+  "k": 2,
+  "ok": true,
+  "answer_ms": 2347,
+  "think_tokens": 764,
+  "think_ahead": 628,
+  "cut": false,
+  "tail": "3/4 × 32 = 24) hanno un cane. La metà di questi 24 studenti (1/2 × 24 = 12) ha anche un gatto.  \n\n**Risultato:** **12 studenti** hanno sia un cane sia un gatto.",
+  "branch": {
+   "guesses": 12,
+   "adopted": "",
+   "agreement": 0.89,
+   "guess": "In una classe ci sono 32 studenti; i tre quarti hanno un cane e di questi la metà ha anche un gatto. Quanti studenti hanno sia un cane che un gatto?"
+  }
+ },
+ {
+  "config": "branches 1",
+  "k": 3,
+  "ok": true,
+  "answer_ms": 3909,
+  "think_tokens": 817,
+  "think_ahead": 567,
+  "cut": false,
+  "tail": "- 36 € = 204 €**  \n\nPoi si applica un sconto fisso di **10 €**:  \n- Prezzo finale = **204 € - 10 € = 194 €**  \n\n**Risposta:** La bici costa **194 €** alla fine.",
+  "branch": {
+   "guesses": 10,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Una bici costa 240 euro; durante i saldi viene scontata del 15% e poi di altri 10 euro. Quanto costa alla fine?"
+  }
+ },
+ {
+  "config": "branches 1",
+  "k": 4,
+  "ok": true,
+  "answer_ms": 3048,
+  "think_tokens": 816,
+  "think_ahead": 614,
+  "cut": false,
+  "tail": " 216 \\text{ pagine} $.  \n\nIl libro ha 400 pagine in totale. Quindi, le pagine che mancano sono:  \n$ 400 - 216 = 184 $.\n\n**Risposta:** Le mancano **184 pagine**.",
+  "branch": {
+   "guesses": 9,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1",
+  "k": 5,
+  "ok": true,
+  "answer_ms": 4056,
+  "think_tokens": 681,
+  "think_ahead": 416,
+  "cut": false,
+  "tail": "ca per 100 per ottenere la distanza totale**:  \n   $ 7.5 \\times 100\\ \\text{km} = 750\\ \\text{km} $.\n\n**Risposta:** L'auto può percorrere **750 km** con un pieno.",
+  "branch": {
+   "guesses": 6,
+   "adopted": "",
+   "agreement": 0.75,
+   "guess": "Un'auto consuma 6 litri ogni 100 km e il serbatoio contiene 45 litri. Quanti km può percorrere con questa auto?"
+  }
+ },
+ {
+  "config": "branches 1",
+  "k": 6,
+  "ok": true,
+  "answer_ms": 2903,
+  "think_tokens": 721,
+  "think_ahead": 539,
+  "cut": false,
+  "tail": "Sottrai quelle bevute e regalate**:  \n   Hai bevuto 9 bottiglie e hai regalate 5:  \n   $ 24 - 9 - 5 = 10 $.\n\n**Risposta finale**:  \nTi restano **10 bottiglie**.",
+  "branch": {
+   "guesses": 9,
+   "adopted": "",
+   "agreement": 0.86,
+   "guess": "Ho comprato 4 pacchi da 6 bottiglie d'acqua, ne ho bevute 9 e ne ho regalate 5. Quante bottiglie restano?"
+  }
+ },
+ {
+  "config": "branches 1",
+  "k": 7,
+  "ok": true,
+  "answer_ms": 4121,
+  "think_tokens": 1082,
+  "think_ahead": 834,
+  "cut": false,
+  "tail": "litri/min, il tempo necessario è:\n\n$$\n\\frac{120 \\text{ litri}}{6 \\text{ litri/min}} = 20 \\text{ minuti}.\n$$\n\n**Risposta:** La vasca si riempie in **20 minuti**.",
+  "branch": {
+   "guesses": 9,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Un rubinetto riempie una vasca da 120 litri in 40 minuti. Se ne apro un secondo identico, in quanti minuti si riempie la vasca?"
+  }
+ },
+ {
+  "config": "branches 1",
+  "k": 8,
+  "ok": true,
+  "answer_ms": 5662,
+  "think_tokens": 869,
+  "think_ahead": 493,
+  "cut": false,
+  "tail": "nna (30), figlio (10).  \n- Tra 10 anni: Anna (40), figlio (20).  \n- $ 40 = 2 \\times 20 $, che conferma la condizione.  \n\n**Risposta finale:** $\\boxed{30}$ anni.",
+  "branch": {
+   "guesses": 7,
+   "adopted": "",
+   "agreement": 0.89,
+   "guess": "Anna ha il triplo dell'età di suo figlio e tra 10 anni avrà il doppio della sua età. Quanti anni ha Anna?"
+  }
+ },
+ {
+  "config": "branches 1",
+  "k": 9,
+  "ok": true,
+  "answer_ms": 10171,
+  "think_tokens": 1411,
+  "think_ahead": 735,
+  "cut": false,
+  "tail": "uro.\n- **Penne rimanenti:** 10 - 9 = 1 penna × 1,20 euro = 1,20 euro.\n- **Totale:** 9 + 1,20 = **10,20 euro**.\n\n**Risposta finale:**  \n**10,20 euro** (10,20 €).",
+  "branch": {
+   "guesses": 11,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Un negozio vende penne a 1,20 euro l'una oppure 3 euro per una confezione da 3. Quanto spendo al minimo per 10 penne?"
+  }
+ },
+ {
+  "config": "branches 1",
+  "k": 10,
+  "ok": true,
+  "answer_ms": 2545,
+  "think_tokens": 691,
+  "think_ahead": 538,
+  "cut": false,
+  "tail": "0}{80} = 4.5 $ ore, che corrisponde a $4.5 \\times 60 = 270$ minuti. La differenza è $270 - 180 = 90$ minuti.\n\n**Risposta:** L'auto impiega **90 minuti in più**.",
+  "branch": {
+   "guesses": 12,
+   "adopted": "",
+   "agreement": 0.67,
+   "guess": "Un treno percorre 360 km in 3 ore e un'auto fa lo stesso tragitto a 80 km/h. Quanti minuti in più impiega l'auto rispetto al treno?"
+  }
+ },
+ {
+  "config": "branches 1",
+  "k": 11,
+  "ok": true,
+  "answer_ms": 3540,
+  "think_tokens": 833,
+  "think_ahead": 610,
+  "cut": false,
+  "tail": "3 (iniziali) + 4 (aggiunte) = **7**\n- **Palline verdi**: 2 (non cambiano)\n- **Palline non rosse**: 7 (blu) + 2 (verde) = **9**\n\n**Risposta finale:** $\\boxed{9}$",
+  "branch": {
+   "guesses": 12,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "In un sacchetto ci sono 5 palline rosse, 3 blu e 2 verdi. Ne aggiungo 4 blu. Quante palline non sono rosse?"
+  }
+ },
+ {
+  "config": "branches 1",
+  "k": 12,
+  "ok": true,
+  "answer_ms": 3655,
+  "think_tokens": 797,
+  "think_ahead": 537,
+  "cut": false,
+  "tail": "za cancello} = 48 - 2 = 46\\,\\text{metri}.\n   $$\n\n**Risposta finale**:  \nServono **46 metri** di rete per recintare il giardino lasciando un cancello di 2 metri.",
+  "branch": {
+   "guesses": 7,
+   "adopted": "",
+   "agreement": 0.75,
+   "guess": "Un giardino quadrato ha il lato di 12 metri e voglio recintarlo lasciando un cancello largo 2 metri. Quanti metri di rete devono essere acquistati?"
+  }
+ },
+ {
+  "config": "branches 1",
+  "k": 13,
+  "ok": true,
+  "answer_ms": 1682,
+  "think_tokens": 746,
+  "think_ahead": 643,
+  "cut": false,
+  "tail": "ttimane necessarie:**  \n270 €� 15 €/settimana = **18 settimane**.\n\n**Risposta finale:**  \nPaolo ha bisogno di **18 settimane** per risparmiare l'intero importo.",
+  "branch": {
+   "guesses": 14,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1",
+  "k": 14,
+  "ok": true,
+  "answer_ms": 3822,
+  "think_tokens": 764,
+  "think_ahead": 537,
+  "cut": false,
+  "tail": "18 = 36 $ €  \n\n4. **Costo di 3 fumetti**:  \n   $ 3 \\times 6 = 18 $ €  \n\n5. **Totale speso**:  \n   $ 36 + 18 = 54 $ €  \n\n**Risposta finale**: Spendi **54 euro**.",
+  "branch": {
+   "guesses": 11,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1",
+  "k": 15,
+  "ok": true,
+  "answer_ms": 3591,
+  "think_tokens": 871,
+  "think_ahead": 650,
+  "cut": false,
+  "tail": " $$  \n4. **Distanza totale per 4 salite**:  \n   $$\n   2.7 \\text{ m} \\times 4 = 10.8 \\text{ metri}\n   $$\n\n**Risposta finale**:  \n$$\n\\boxed{10.8 \\text{ metri}}\n$$",
+  "branch": {
+   "guesses": 9,
+   "adopted": "",
+   "agreement": 0.5,
+   "guess": "Una scala ha 15 gradini e ogni gradino è alto 18 cm. Salgo la scala 4 volte: di quanti metri sono salito in tutto?"
+  }
+ },
+ {
+  "config": "branches 1",
+  "k": 16,
+  "ok": true,
+  "answer_ms": 4878,
+  "think_tokens": 968,
+  "think_ahead": 656,
+  "cut": false,
+  "tail": "ha salito 7 metri (7 × 1).\n- Il 8º giorno, sale 3 metri: 7 + 3 = **10 metri**, esce dal pozzo senza scivolare a notte fina.\n\n**Risposta finale:**� **8 giorni**.",
+  "branch": {
+   "guesses": 14,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Di giorno una lumaca sale di 3 metri e di notte scivola giù di 2 metri. In quanti giorni esce da un pozzo profondo 10 metri?"
+  }
+ },
+ {
+  "config": "branches 1",
+  "k": 17,
+  "ok": true,
+  "answer_ms": 4439,
+  "think_tokens": 923,
+  "think_ahead": 619,
+  "cut": false,
+  "tail": "to periodo, l'orologio guadagna $3 \\times 8 = 24$ minuti. Quindi, quando è realmente le 20:00, l'orologio segna **20:24**.\n\n**Risposta finale:** $\\boxed{20:24}$",
+  "branch": {
+   "guesses": 12,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1",
+  "k": 18,
+  "ok": true,
+  "answer_ms": 4401,
+  "think_tokens": 783,
+  "think_ahead": 499,
+  "cut": false,
+  "tail": "Ho 50 euro. Spendo il 40% (20 euro) al ristorante, rimanendo con 30 euro. Poi spendo un quarto di 30 euro (7,5 euro) al cinema. Quindi mi rimangono 22,5 euro.",
+  "branch": {
+   "guesses": 6,
+   "adopted": "",
+   "agreement": 0.75,
+   "guess": "Ho 50 euro, ne spendo il 40% al ristorante e poi un quarto di quello che resta al cinema. Quanti euro mi restano?"
+  }
+ },
+ {
+  "config": "branches 1",
+  "k": 19,
+  "ok": true,
+  "answer_ms": 6098,
+  "think_tokens": 894,
+  "think_ahead": 485,
+  "cut": false,
+  "tail": "Rightarrow 120 - 4M + 2M = 100 \\Rightarrow 120 - 2M = 100\n   $$\n5. Risolvendo:  \n   $$\n   -2M = -20 \\Rightarrow M = 10\n   $$\n\n**Risposta:** Le moto sono **10**.",
+  "branch": {
+   "guesses": 6,
+   "adopted": "",
+   "agreement": 0.67,
+   "guess": "In un parcheggio ci sono auto e moto: 30 veicoli in tutto e 100 ruote. Quante sono le auto e le moto?"
+  }
+ },
+ {
+  "config": "branches 1",
+  "k": 20,
+  "ok": true,
+  "answer_ms": 3835,
+  "think_tokens": 621,
+  "think_ahead": 378,
+  "cut": false,
+  "tail": "$$\n\n2. Moltiplica per 30 biscotti:\n   $$\n   20.833\\ \\text{g/biscotto} \\times 30 = 625\\ \\text{g}\n   $$\n\n**Risultato:**\n$$\n\\boxed{625}\\ \\text{grammi di farina}\n$$",
+  "branch": {
+   "guesses": 4,
+   "adopted": "",
+   "agreement": 0.62,
+   "guess": "Un pasticcere usa 250 grammi di farina per 12 biscotti. Quanti grammi di farina si usano per 15 biscotti?"
+  }
+ },
+ {
+  "config": "branches 1",
+  "k": 21,
+  "ok": true,
+  "answer_ms": 5482,
+  "think_tokens": 797,
+  "think_ahead": 385,
+  "cut": false,
+  "tail": " 36  \n- Distanza totale in metri: $ 36 \\times 25 = 900 $ metri  \n- Conversione in chilometri: $ \\frac{900}{1000} = 0,9 $ km  \n\n**Risposta:** **0,9 chilometri**.",
+  "branch": {
+   "guesses": 5,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1",
+  "k": 22,
+  "ok": true,
+  "answer_ms": 2211,
+  "think_tokens": 819,
+  "think_ahead": 688,
+  "cut": false,
+  "tail": " 41:  \n  $$\n  x + (x + 4) + (x - 2) = 41\n  $$  \n- Semplificando:  \n  $$\n  3x + 2 = 41 \\implies 3x = 39 \\implies x = 13\n  $$  \n\n**Risposta finale:** **13 anni.**",
+  "branch": {
+   "guesses": 12,
+   "adopted": "",
+   "agreement": 0.77,
+   "guess": "Io e i miei due fratelli: Marco ha 4 anni più di me, Luca 2 anni meno di me, e la somma delle nostre età è 40 anni. Quanti anni ho?"
+  }
+ },
+ {
+  "config": "branches 1",
+  "k": 23,
+  "ok": true,
+  "answer_ms": 1780,
+  "think_tokens": 654,
+  "think_ahead": 531,
+  "cut": false,
+  "tail": "\n\nI due terzi dei posti sono occupati:  \n$\\frac{2}{3} \\times 432 = 288$.  \n\nQuindi, i posti liberi sono:  \n$432 - 288 = 144$.  \n\n**Risposta:** 144 posti liberi.",
+  "branch": {
+   "guesses": 6,
+   "adopted": "",
+   "agreement": 0.86,
+   "guess": "Un cinema ha 18 file da 24 posti e stasera sono occupati i due terzi dei posti. Quanti posti sono occupati?"
+  }
+ },
+ {
+  "config": "branches 1 confirm",
+  "k": 0,
+  "ok": true,
+  "answer_ms": 1626,
+  "think_tokens": 628,
+  "think_ahead": 521,
+  "cut": false,
+  "tail": " 14 \\text{ euro} $.  \n\n- **Euro rimanenti**:  \n  $ 25 \\text{ euro} - 14 \\text{ euro} = 11 \\text{ euro} $.  \n\n**Risposta finale**: Luca ha **11 euro** rimanenti.",
+  "branch": {
+   "guesses": 7,
+   "adopted": "",
+   "agreement": 0.5,
+   "guess": "Luca ha 25 euro, compra 3 quaderni da 4 euro e una penna da 2 euro. Quanti euro ha rimasto?"
+  }
+ },
+ {
+  "config": "branches 1 confirm",
+  "k": 1,
+  "ok": true,
+  "answer_ms": 3501,
+  "think_tokens": 822,
+  "think_ahead": 600,
+  "cut": false,
+  "tail": "  $$\n\n4. **Calcolo dell'area:**\n   $$\n   A = b \\cdot h = 10 \\, \\text{cm} \\cdot 5 \\, \\text{cm} = 50 \\, \\text{cm}^2\n   $$\n\n**Risposta finale:**  \n$$\n\\boxed{50}\n$$",
+  "branch": {
+   "guesses": 19,
+   "adopted": "",
+   "agreement": 0.5,
+   "guess": "Un rettangolo ha il perimetro di 30 cm e la base lunga il doppio dell'altezza. Qual è la sua area?"
+  }
+ },
+ {
+  "config": "branches 1 confirm",
+  "k": 2,
+  "ok": true,
+  "answer_ms": 1841,
+  "think_tokens": 824,
+  "think_ahead": 714,
+  "cut": false,
+  "tail": "In una classe di 32 studenti, i **tre quarti** (24 studenti) hanno un cane. La metà di questi (12 studenti) ha anche un gatto. \n\n**Risposta:**  \n\\boxed{12}",
+  "branch": {
+   "guesses": 11,
+   "adopted": "",
+   "agreement": 0.82,
+   "guess": "In una classe ci sono 32 studenti; i tre quarti hanno un cane e di questi la metà ha anche un gatto. Quanti studenti hanno un cane e un gatto?"
+  }
+ },
+ {
+  "config": "branches 1 confirm",
+  "k": 3,
+  "ok": true,
+  "answer_ms": 3,
+  "think_tokens": 650,
+  "think_ahead": 650,
+  "cut": false,
+  "tail": "venta:  \n**240 - 36 = 194 euro**.  \n\nPoi si applica un ulteriore sconto di 10 euro:  \n**194 - 10 = 184 euro**.  \n\n**Quindi, alla fine, la bici costa 184 euro.**",
+  "branch": {
+   "guesses": 16,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Una bici costa 240 euro; durante i saldi viene scontata del 15% e poi di altri 10 euro. Quanto costa alla fine?"
+  }
+ },
+ {
+  "config": "branches 1 confirm",
+  "k": 4,
+  "ok": true,
+  "answer_ms": 2676,
+  "think_tokens": 814,
+  "think_ahead": 642,
+  "cut": false,
+  "tail": " 12 giorni = 216 pagine**.  \n\nIl libro ha 400 pagine in totale. Le pagine che le mancano sono:  \n**400 - 216 = 184 pagine**.  \n\n**Risposta finale:** 184 pagine.",
+  "branch": {
+   "guesses": 15,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 confirm",
+  "k": 5,
+  "ok": true,
+  "answer_ms": 4510,
+  "think_tokens": 887,
+  "think_ahead": 598,
+  "cut": false,
+  "tail": " = \\left( \\frac{45}{6} \\right) \\times 100 = 7.5 \\times 100 = 750 \\text{ km}\n$$\n\n**Risposta:** L'auto può percorrere **750 chilometri** con un pieno di 45 litri.",
+  "branch": {
+   "guesses": 15,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Un'auto consuma 6 litri ogni 100 km e il serbatoio contiene 45 litri. Quanti km può percorrere con un pieno?"
+  }
+ },
+ {
+  "config": "branches 1 confirm",
+  "k": 6,
+  "ok": true,
+  "answer_ms": 2805,
+  "think_tokens": 793,
+  "think_ahead": 616,
+  "cut": false,
+  "tail": "quelle bevute e regalate**:  \n   Hai bevuto 9 bottiglie e hai regalato 5, quindi:  \n   $ 24 - 9 - 5 = 10 $.\n\n**Risposta finale:**  \nTi restano **10 bottiglie**.",
+  "branch": {
+   "guesses": 15,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 confirm",
+  "k": 7,
+  "ok": true,
+  "answer_ms": 3076,
+  "think_tokens": 1029,
+  "think_ahead": 858,
+  "cut": false,
+  "tail": "o per riempire 120 litri:**  \n  $ \\frac{120\\ \\text{litri}}{6\\ \\text{litri/minuto}} = 20\\ \\text{minuti} $.\n\n**Risposta:**  \nLa vasca si riempie in **20 minuti**.",
+  "branch": {
+   "guesses": 13,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Un rubinetto riempie una vasca da 120 litri in 40 minuti. Se ne apro un secondo identico, in quanti minuti si riempie la vasca?"
+  }
+ },
+ {
+  "config": "branches 1 confirm",
+  "k": 8,
+  "ok": true,
+  "answer_ms": 6047,
+  "think_tokens": 936,
+  "think_ahead": 530,
+  "cut": false,
+  "tail": " 2S = 20 - 10 \\implies S = 10\n   $$\n\n6. **Calcolo dell'età di Anna:**  \n   $$\n   A = 3S = 3 \\times 10 = 30\n   $$\n\n**Risposta finale:** Anna ha **30 anni** oggi.",
+  "branch": {
+   "guesses": 11,
+   "adopted": "",
+   "agreement": 0.89,
+   "guess": "Anna ha il triplo dell'età di suo figlio e tra 10 anni avrà il doppio della sua età. Quanti anni ha Anna?"
+  }
+ },
+ {
+  "config": "branches 1 confirm",
+  "k": 9,
+  "ok": true,
+  "answer_ms": 19306,
+  "think_tokens": 1969,
+  "think_ahead": 721,
+  "cut": false,
+  "tail": "*3 confezioni** = 9 penne × 3 euro = 9 euro.\n- **1 penna singola** = 1,20 euro.\n- **Totale:** 9 + 1,20 = **10,20 euro**.\n\n**Risposta finale:**  \n**10,20 euro**.",
+  "branch": {
+   "guesses": 14,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Un negozio vende penne a 1,20 euro l'una oppure 3 euro per una confezione da 3. Quanto spendo al minimo per 10 penne?"
+  }
+ },
+ {
+  "config": "branches 1 confirm",
+  "k": 10,
+  "ok": true,
+  "answer_ms": 3114,
+  "think_tokens": 867,
+  "think_ahead": 683,
+  "cut": false,
+  "tail": "\\ ore = 270\\ minuti $.\n\n3. **Differenza di tempo:**  \n   $ 270\\ minuti - 180\\ minuti = 90\\ minuti $.\n\n**Risultato finale:** L'auto impiega **90 minuti in più**.",
+  "branch": {
+   "guesses": 16,
+   "adopted": "",
+   "agreement": 0.57,
+   "guess": "Un treno percorre 360 km in 3 ore e un'auto fa lo stesso tragitto a 80 km/h. Quanti minuti in più impiega l'auto rispetto al treno?"
+  }
+ },
+ {
+  "config": "branches 1 confirm",
+  "k": 11,
+  "ok": true,
+  "answer_ms": 2360,
+  "think_tokens": 862,
+  "think_ahead": 730,
+  "cut": false,
+  "tail": "ato come segue:\n\n- Palline non rosse iniziali: 3 blu + 2 verdi = **5**\n- Palline blu aggiunte: **4**\n- Totale palline non rosse: 5 + 4 = **9**\n\n**Risposta:** 9.",
+  "branch": {
+   "guesses": 16,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "In un sacchetto ci sono 5 palline rosse, 3 blu e 2 verdi. Ne aggiungo 4 blu. Quante palline non sono rosse?"
+  }
+ },
+ {
+  "config": "branches 1 confirm",
+  "k": 12,
+  "ok": true,
+  "answer_ms": 3179,
+  "think_tokens": 885,
+  "think_ahead": 665,
+  "cut": false,
+  "tail": "hiede rete, quindi si sottrae la sua dimensione dal perimetro.  \n   $ 48 - 2 = 46 \\, \\text{metri} $.\n\n**Risposta finale**:  \n$\\boxed{46}$ metri di rete servono.",
+  "branch": {
+   "guesses": 17,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 confirm",
+  "k": 13,
+  "ok": true,
+  "answer_ms": 2102,
+  "think_tokens": 841,
+  "think_ahead": 703,
+  "cut": false,
+  "tail": "270 $ euro  \n- Tempo necessario: $ \\frac{270}{15} = 18 $ settimane  \n\n**Risposta:**  \nPaolo ha bisogno di **18 settimane** per risparmiare l'importo necessario.",
+  "branch": {
+   "guesses": 19,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 confirm",
+  "k": 14,
+  "ok": true,
+  "answer_ms": 2024,
+  "think_tokens": 734,
+  "think_ahead": 602,
+  "cut": false,
+  "tail": "imes 18 = 36 $ €  \n4. **Costo di 3 fumetti**: $ 3 \\times 6 = 18 $ €  \n5. **Totale**: $ 36 + 18 = 54 $ €  \n\n**Risposta finale**: Spendi un totale di **54 euro**.",
+  "branch": {
+   "guesses": 14,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 confirm",
+  "k": 15,
+  "ok": true,
+  "answer_ms": 1148,
+  "think_tokens": 737,
+  "think_ahead": 683,
+  "cut": false,
+  "tail": "\n4. **Altezza totale per 4 salite**:  \n   $$\n   2,7 \\text{ metri} \\times 4 = 10,8 \\text{ metri}\n   $$\n\n**Risposta finale**:  \n$$\n\\boxed{10{,}8} \\text{ metri}\n$$",
+  "branch": {
+   "guesses": 18,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Una scala ha 15 gradini e ogni gradino è alto 18 cm. Salgo la scala 4 volte: di quanti metri sono salito in totale?"
+  }
+ },
+ {
+  "config": "branches 1 confirm",
+  "k": 16,
+  "ok": true,
+  "answer_ms": 15838,
+  "think_tokens": 1898,
+  "think_ahead": 732,
+  "cut": false,
+  "tail": "lumaca ha accumulato 7 metri (7 × 1 metro).  \n- Il **8º giorno**, salta 3 metri e raggiunge i **10 metri**, uscendo dal pozzo.  \n\n**Risposta finale:** 8 giorni.",
+  "branch": {
+   "guesses": 19,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 confirm",
+  "k": 17,
+  "ok": true,
+  "answer_ms": 21393,
+  "think_tokens": 2340,
+  "think_ahead": 857,
+  "cut": false,
+  "tail": "i, quando è mezzanotte e mezzanotte, l'orologio mostra:\n\n$$\n8 \\text{ ore} + 24 \\text{ minuti} = 8:24\n$$\n\n**Risposta:** L'orologio segna **8:24** alle 8 di sera.",
+  "branch": {
+   "guesses": 21,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Un orologio va avanti di 3 minuti ogni ora e lo metto all'ora giusta a mezzogiorno. Che ora segna alle 8 di sera dello stesso giorno?"
+  }
+ },
+ {
+  "config": "branches 1 confirm",
+  "k": 18,
+  "ok": true,
+  "answer_ms": 2765,
+  "think_tokens": 863,
+  "think_ahead": 666,
+  "cut": false,
+  "tail": " quarto del resto al cinema**:  \n   $ \\frac{1}{4} \\times 30 = 7.5 $ euro.  \n   Rimangono: $ 30 - 7.5 = 22.5 $ euro.\n\n**Risposta finale:**  \n$\\boxed{22.5}$ euro.",
+  "branch": {
+   "guesses": 19,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 confirm",
+  "k": 19,
+  "ok": true,
+  "answer_ms": 2917,
+  "think_tokens": 773,
+  "think_ahead": 557,
+  "cut": false,
+  "tail": "Sostituendo nella seconda: $ 4(30 - y) + 2y = 100 \\Rightarrow 120 - 4y + 2y = 100 \\Rightarrow -2y = -20 \\Rightarrow y = 10 $\n\n**Risposta:** Le moto sono **10**.",
+  "branch": {
+   "guesses": 18,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 confirm",
+  "k": 20,
+  "ok": true,
+  "answer_ms": 3693,
+  "think_tokens": 782,
+  "think_ahead": 506,
+  "cut": false,
+  "tail": "la proporzione:  \n$x = \\frac{250 \\times 30}{12} = \\frac{7500}{12} = 625$ grammi.\n\n**Risposta finale:**  \n$\\boxed{625}$ grammi di farina servono per 30 biscotti.",
+  "branch": {
+   "guesses": 12,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 confirm",
+  "k": 21,
+  "ok": true,
+  "answer_ms": 1602,
+  "think_tokens": 599,
+  "think_ahead": 481,
+  "cut": false,
+  "tail": "e: 36  \n- Distanza totale: $ 36 \\times 25 = 900 $ metri  \n- Conversione in chilometri: $ \\frac{900}{1000} = 0,9 $ km  \n\n**Risposta finale:** **0,9 chilometri**.",
+  "branch": {
+   "guesses": 11,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 confirm",
+  "k": 22,
+  "ok": true,
+  "answer_ms": 1076,
+  "think_tokens": 1088,
+  "think_ahead": 1057,
+  "cut": false,
+  "tail": "nni.\n- Luca ha $ x - 2 $ anni.\n- Somma delle età: $ x + (x + 4) + (x - 2) = 3x + 2 = 41 $.\n- Risolvendo: $ 3x = 39 \\Rightarrow x = 13 $.\n\n**Risposta:** 13 anni.",
+  "branch": {
+   "guesses": 21,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Io e i miei due fratelli: Marco ha 4 anni più di me, Luca 2 anni meno di me, e la somma delle nostre età è 41. Quanti anni ho?"
+  }
+ },
+ {
+  "config": "branches 1 confirm",
+  "k": 23,
+  "ok": true,
+  "answer_ms": 2043,
+  "think_tokens": 732,
+  "think_ahead": 591,
+  "cut": false,
+  "tail": "posti:  \n$$\n\\frac{2}{3} \\times 432 = 288 \\text{ posti occupati}.\n$$  \nI posti liberi sono:  \n$$\n432 - 288 = 144.\n$$  \n\n**Risposta:** $\\boxed{144}$ posti liberi.",
+  "branch": {
+   "guesses": 6,
+   "adopted": "",
+   "agreement": 0.73,
+   "guess": "Un cinema ha 18 file da 24 posti e stasera sono occupati i due terzi dei posti. Quanti posti sono stati occupati?"
+  }
+ },
+ {
+  "config": "branches 2 confirm",
+  "k": 0,
+  "ok": true,
+  "answer_ms": 2020,
+  "think_tokens": 543,
+  "think_ahead": 468,
+  "cut": false,
+  "tail": "compra una penna da 2 euro.  \n\nTotale speso:  \n$ 12 + 2 = 14 $ euro.  \n\nEuro rimanenti:  \n$ 25 - 14 = 11 $ euro.  \n\n**Risposta:** Luca ha **11 euro** rimanenti.",
+  "branch": {
+   "guesses": 14,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 2 confirm",
+  "k": 1,
+  "ok": true,
+  "answer_ms": 5410,
+  "think_tokens": 676,
+  "think_ahead": 458,
+  "cut": false,
+  "tail": "m}\n$$\n\nL'area del rettangolo è:\n\n$$\n\\text{Area} = \\text{base} \\times \\text{altezza} = 10 \\times 5 = 50 \\, \\text{cm}^2\n$$\n\n**Risposta finale:** $\\boxed{50}$ cm².",
+  "branch": {
+   "guesses": 17,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Un rettangolo ha il perimetro di 30 cm e la base lunga il doppio dell'altezza. Qual è la sua area in cm²?"
+  }
+ },
+ {
+  "config": "branches 2 confirm",
+  "k": 2,
+  "ok": true,
+  "answer_ms": 2644,
+  "think_tokens": 658,
+  "think_ahead": 566,
+  "cut": false,
+  "tail": "denti hanno un cane.  \n\nDi questi 24, la metà ha anche un gatto:  \n$$ \\frac{1}{2} \\times 24 = 12 $$  \n\n**Risposta:** 12 studenti hanno sia un cane sia un gatto.",
+  "branch": {
+   "guesses": 18,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "In una classe ci sono 32 studenti; i tre quarti hanno un cane e di questi la metà ha anche un gatto. Quanti studenti hanno sia un cane sia un gatto?"
+  }
+ },
+ {
+  "config": "branches 2 confirm",
+  "k": 3,
+  "ok": true,
+  "answer_ms": 4793,
+  "think_tokens": 662,
+  "think_ahead": 464,
+  "cut": false,
+  "tail": "\n   Prezzo dopo sconto: $ 240 - 36 = 204 \\, \\text{€} $.\n\n2. Sconto aggiuntivo di 10 €:  \n   $ 204 - 10 = 194 \\, \\text{€} $.\n\n**Risultato finale:** **194 euro**.",
+  "branch": {
+   "guesses": 13,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 2 confirm",
+  "k": 4,
+  "ok": true,
+  "answer_ms": 2036,
+  "think_tokens": 565,
+  "think_ahead": 490,
+  "cut": false,
+  "tail": "times 12 = 216$ pagine. Il libro ha 400 pagine in totale, quindi le pagine che le mancano sono:\n\n$$\n400 - 216 = 184\n$$\n\n**Risposta:** Le mancano **184 pagine**.",
+  "branch": {
+   "guesses": 13,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 2 confirm",
+  "k": 5,
+  "ok": true,
+  "answer_ms": 5816,
+  "think_tokens": 637,
+  "think_ahead": 390,
+  "cut": false,
+  "tail": "ri}}{100 \\text{ km}} = \\frac{45 \\text{ litri}}{x \\text{ km}} \\Rightarrow x = \\frac{45 \\times 100}{6} = 750 \\text{ km}\n$$\n\n**Risposta finale:** $\\boxed{750}$ km.",
+  "branch": {
+   "guesses": 13,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Un'auto consuma 6 litri ogni 100 km e il serbatoio contiene 45 litri. Quanti km può percorrere con un pieno?"
+  }
+ },
+ {
+  "config": "branches 2 confirm",
+  "k": 6,
+  "ok": true,
+  "answer_ms": 2403,
+  "think_tokens": 527,
+  "think_ahead": 427,
+  "cut": false,
+  "tail": "\n\n**Calcolo:**  \n- Totali bottiglie: 4 pacchi × 6 = **24**  \n- Bottiglie consumate: 9 (bevute) + 5 (regalate) = **14**  \n- Bottiglie rimanenti: 24 - 14 = **10**",
+  "branch": {
+   "guesses": 14,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 2 confirm",
+  "k": 7,
+  "ok": true,
+  "answer_ms": 2767,
+  "think_tokens": 725,
+  "think_ahead": 629,
+  "cut": false,
+  "tail": "**.\n\nPer calcolare il tempo necessario per riempire la vasca:  \n**120 litri / 6 litri/minuto = 20 minuti**.\n\n**Risposta:** La vasca si riempie in **20 minuti**.",
+  "branch": {
+   "guesses": 12,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Un rubinetto riempie una vasca da 120 litri in 40 minuti. Se ne apro un secondo identico, in quanti minuti si riempie la vasca?"
+  }
+ },
+ {
+  "config": "branches 2 confirm",
+  "k": 8,
+  "ok": true,
+  "answer_ms": 11579,
+  "think_tokens": 980,
+  "think_ahead": 504,
+  "cut": false,
+  "tail": "a seconda equazione:  \n$ 3S + 10 = 2(S + 10) $  \n$ 3S + 10 = 2S + 20 $  \n$ S = 10 $.  \n\nQuindi, $ A = 3 \\times 10 = 30 $.  \n\n**Risultato:** Anna ha **30 anni**.",
+  "branch": {
+   "guesses": 18,
+   "adopted": "",
+   "agreement": 0.86,
+   "guess": "Anna ha il triplo dell'età di suo figlio e tra 10 anni avrà il doppio della sua età. Quanti anni ha Anna?"
+  }
+ },
+ {
+  "config": "branches 2 confirm",
+  "k": 9,
+  "ok": true,
+  "answer_ms": 33091,
+  "think_tokens": 1914,
+  "think_ahead": 612,
+  "cut": false,
+  "tail": " singola.\n- Costo totale:  \n  $ 3 \\text{€} \\times 3 + 1,20 \\text{€} = 9 \\text{€} + 1,20 \\text{€} = 10,20 \\text{€} $.\n\n**Risposta finale**:  \n$$\n\\boxed{10,20}\n$$",
+  "branch": {
+   "guesses": 12,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 2 confirm",
+  "k": 10,
+  "ok": true,
+  "answer_ms": 4208,
+  "think_tokens": 670,
+  "think_ahead": 507,
+  "cut": false,
+  "tail": ".5\\ \\text{h}\n$$\n\nConvertendo in minuti:\n\n$$\n1.5\\ \\text{h} \\times 60 = 90\\ \\text{minuti}\n$$\n\n**Risposta:** L'auto impiega **90 minuti in più** rispetto al treno.",
+  "branch": {
+   "guesses": 15,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 2 confirm",
+  "k": 11,
+  "ok": true,
+  "answer_ms": 8780,
+  "think_tokens": 900,
+  "think_ahead": 539,
+  "cut": false,
+  "tail": "on rosse è:\n\n- Palline blu: 3 originali + 4 aggiunte = **7**\n- Palline verdi: 2 (non rosse)\n\n**Totale non rosse:** 7 (blu) + 2 (verde) = **9**\n\n**Risposta:** 9.",
+  "branch": {
+   "guesses": 19,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "In un sacchetto ci sono 5 palline rosse, 3 blu e 2 verdi. Ne aggiungo 4 blu. Quante palline non sono rosse?"
+  }
+ },
+ {
+  "config": "reason ahead #2",
+  "k": 0,
+  "ok": true,
+  "answer_ms": 1498,
+  "think_tokens": 644,
+  "think_ahead": 545,
+  "cut": false,
+  "tail": "- **Totale speso**: 12 euro + 2 euro = **14 euro**  \n\n**Euro rimanenti**: 25 euro - 14 euro = **11 euro**  \n\n**Risposta finale**: Luca ha **11 euro** rimanenti."
+ },
+ {
+  "config": "reason ahead #2",
+  "k": 1,
+  "ok": true,
+  "answer_ms": 2540,
+  "think_tokens": 829,
+  "think_ahead": 664,
+  "cut": false,
+  "tail": " prodotto della base e dell'altezza:  \n   $$\n   \\text{Area} = 10 \\text{ cm} \\times 5 \\text{ cm} = 50 \\text{ cm}^2\n   $$\n\n**Risposta finale:**  \n$$\n\\boxed{50}\n$$"
+ },
+ {
+  "config": "reason ahead #2",
+  "k": 2,
+  "ok": true,
+  "answer_ms": 2088,
+  "think_tokens": 990,
+  "think_ahead": 852,
+  "cut": false,
+  "tail": " I tre quarti (24 studenti) hanno un cane. Di questi, la metà (12 studenti) ha anche un gatto. \n\n**Risposta:**  \n**12 studenti** hanno sia un cane sia un gatto."
+ },
+ {
+  "config": "reason ahead #2",
+  "k": 3,
+  "ok": true,
+  "answer_ms": 3215,
+  "think_tokens": 960,
+  "think_ahead": 738,
+  "cut": false,
+  "tail": ": $ 240 - 36 = 204 \\, € $.  \n\n2. **Sconto aggiuntivo di 10 €**:  \n   Prezzo finale: $ 204 - 10 = 194 \\, € $.  \n\n**Risposta:** La bici costa **194 €** alla fine."
+ },
+ {
+  "config": "reason ahead #2",
+  "k": 4,
+  "ok": true,
+  "answer_ms": 2292,
+  "think_tokens": 853,
+  "think_ahead": 705,
+  "cut": false,
+  "tail": "xt{ pagine}.\n$$\nIl libro ha 400 pagine in totale, quindi le pagine che mancano sono:\n$$\n400 - 216 = 184 \\text{ pagine}.\n$$\n\n**Risposta:** Le mancano 184 pagine."
+ },
+ {
+  "config": "reason ahead #2",
+  "k": 5,
+  "ok": true,
+  "answer_ms": 3510,
+  "think_tokens": 858,
+  "think_ahead": 600,
+  "cut": false,
+  "tail": "r 100 km:  \n   $$\n   7.5 \\times 100\\ \\text{km} = 750\\ \\text{km}\n   $$\n\n**Risposta finale**:  \nL'auto può percorrere **750 chilometri** con un pieno di 45 litri."
+ },
+ {
+  "config": "reason ahead #2",
+  "k": 6,
+  "ok": true,
+  "answer_ms": 2151,
+  "think_tokens": 844,
+  "think_ahead": 703,
+  "cut": false,
+  "tail": "alate 5, quindi le bottiglie consumate o regalate sono:\n\n**9 + 5 = 14 bottiglie.**\n\nLe bottiglie rimanenti sono:\n\n**24 - 14 = 10.**\n\n**Risposta: 10 bottiglie.**"
+ },
+ {
+  "config": "reason ahead #2",
+  "k": 7,
+  "ok": true,
+  "answer_ms": 2695,
+  "think_tokens": 1029,
+  "think_ahead": 850,
+  "cut": false,
+  "tail": "cessario per riempire la vasca:\n\n$$\n\\frac{120\\ \\text{litri}}{6\\ \\text{litri/minuto}} = 20\\ \\text{minuti}\n$$\n\n**Risposta:** La vasca si riempie in **20 minuti**."
+ },
+ {
+  "config": "reason ahead #2",
+  "k": 8,
+  "ok": true,
+  "answer_ms": 3431,
+  "think_tokens": 959,
+  "think_ahead": 739,
+  "cut": false,
+  "tail": "S - 2S = 20 - 10 \\\\\n   S = 10\n   $$\n\n6. **Calcolo dell'età di Anna:**  \n   $$\n   A = 3S = 3 \\times 10 = 30\n   $$\n\n**Risposta finale:** Anna ha **30 anni** oggi."
+ },
+ {
+  "config": "reason ahead #2",
+  "k": 9,
+  "ok": true,
+  "answer_ms": 22250,
+  "think_tokens": 2399,
+  "think_ahead": 861,
+  "cut": false,
+  "tail": ", costo: 3 × 3 = 9 euro.\n- **1 penna singola:** 1 × 1,20 = 1,20 euro.\n- **Totale:** 9 + 1,20 = **10,20 euro**.\n\n**Risposta finale:**  \n**10,20 euro** (10,20 €)."
+ },
+ {
+  "config": "reason ahead #2",
+  "k": 10,
+  "ok": true,
+  "answer_ms": 3487,
+  "think_tokens": 984,
+  "think_ahead": 746,
+  "cut": false,
+  "tail": "   270 \\text{ minuti (auto)} - 180 \\text{ minuti (treno)} = 90 \\text{ minuti}\n   $$\n\n**Risposta finale**: L'auto impiega **90 minuti in più** rispetto al treno."
+ },
+ {
+  "config": "reason ahead #2",
+  "k": 11,
+  "ok": true,
+  "answer_ms": 1957,
+  "think_tokens": 930,
+  "think_ahead": 813,
+  "cut": false,
+  "tail": " totale delle palline diventa:\n\n- Rosse: 5  \n- Blu: 3 + 4 = **7**  \n- Verdi: 2  \n\n**Palline non rosse**: 7 (blu) + 2 (verde) = **9**.  \n\n**Risposta finale:** 9."
+ },
+ {
+  "config": "reason ahead #2",
+  "k": 12,
+  "ok": true,
+  "answer_ms": 2229,
+  "think_tokens": 943,
+  "think_ahead": 785,
+  "cut": false,
+  "tail": "e questa lunghezza dal perimetro:  \n   $$\n   48\\ \\text{metri} - 2\\ \\text{metri} = 46\\ \\text{metri}.\n   $$\n\n**Risposta finale**:  \n$$\n\\boxed{46}\\ \\text{metri}\n$$"
+ },
+ {
+  "config": "reason ahead #2",
+  "k": 13,
+  "ok": true,
+  "answer_ms": 2507,
+  "think_tokens": 946,
+  "think_ahead": 768,
+  "cut": false,
+  "tail": "ara 15 euro, quindi le settimane necessarie sono:  \n**270 / 15 = 18**.  \n\n**Risposta:** Paolo ha bisogno di **18 settimane** per risparmiare l'importo mancante."
+ },
+ {
+  "config": "reason ahead #2",
+  "k": 14,
+  "ok": true,
+  "answer_ms": 3899,
+  "think_tokens": 899,
+  "think_ahead": 612,
+  "cut": false,
+  "tail": " 2 \\times 18 = 36 $ €  \n4. **Totale per 3 fumetti**: $ 3 \\times 6 = 18 $ €  \n5. **Spesa totale**: $ 36 + 18 = 54 $ €  \n\n**Risposta finale**: Spendi **54 euro**."
+ },
+ {
+  "config": "reason ahead #2",
+  "k": 15,
+  "ok": true,
+  "answer_ms": 2340,
+  "think_tokens": 876,
+  "think_ahead": 714,
+  "cut": false,
+  "tail": "\\text{m} $.\n\n2. **Distanza totale per 4 salite**:  \n   $ 2.7\\ \\text{m} \\times 4 = 10.8\\ \\text{m} $.\n\n**Risposta finale**:  \nHai salito in totale **10.8 metri**."
+ },
+ {
+  "config": "reason ahead #2",
+  "k": 16,
+  "ok": true,
+  "answer_ms": 2115,
+  "think_tokens": 900,
+  "think_ahead": 757,
+  "cut": false,
+  "tail": "uadagna 1 metro. \n\nDopo 7 giorni, la lumaca è salita 7 metri. Il 8º giorno, sale 3 metri e raggiunge i 10 metri, uscendo dal pozzo. \n\n**Risposta:** In 8 giorni."
+ },
+ {
+  "config": "reason ahead #2",
+  "k": 17,
+  "ok": true,
+  "answer_ms": 12898,
+  "think_tokens": 1743,
+  "think_ahead": 853,
+  "cut": false,
+  "tail": "ore, l'orologio guadagna $8 \\times 3 = 24$ minuti.  \n- Quindi, alle 8 di sera, l'orologio segna $8:00 + 24$ minuti = **8:24**.  \n\n**Risultato finale:** **8:24**"
+ },
+ {
+  "config": "reason ahead #2",
+  "k": 18,
+  "ok": true,
+  "answer_ms": 3248,
+  "think_tokens": 924,
+  "think_ahead": 690,
+  "cut": false,
+  "tail": "arto di quello che resta al cinema**:  \n  $ \\frac{1}{4} \\times 30 = 7.5 $ euro.  \n  Rimangono: $ 30 - 7.5 = 22.5 $ euro.  \n\n**Risposta finale**: **22,50 euro**."
+ },
+ {
+  "config": "reason ahead #2",
+  "k": 19,
+  "ok": true,
+  "answer_ms": 3646,
+  "think_tokens": 904,
+  "think_ahead": 636,
+  "cut": false,
+  "tail": ":  \n  $ 4(30 - M) + 2M = 100 $  \n  $ 120 - 4M + 2M = 100 $  \n  $ 120 - 2M = 100 $  \n  $ -2M = -20 $  \n  $ M = 10 $.\n\n**Risposta finale**:  \nLe moto sono **10**."
+ },
+ {
+  "config": "reason ahead #2",
+  "k": 20,
+  "ok": true,
+  "answer_ms": 2793,
+  "think_tokens": 692,
+  "think_ahead": 482,
+  "cut": false,
+  "tail": "per 30 biscotti:\n   $$\n   20.8333\\ \\text{g/biscotto} \\times 30\\ \\text{biscotti} = 625\\ \\text{g}\n   $$\n\n**Risultato:**\n$$\n\\boxed{625}\\ \\text{grammi di farina}\n$$"
+ },
+ {
+  "config": "reason ahead #2",
+  "k": 21,
+  "ok": true,
+  "answer_ms": 1939,
+  "think_tokens": 661,
+  "think_ahead": 518,
+  "cut": false,
+  "tail": "times 36 = 900 \\, \\text{m} $  \n- Conversione in chilometri: $ 900 \\, \\text{m} \\div 1000 = 0,9 \\, \\text{km} $  \n\n**Risposta finale:** $\\boxed{0{,}9}$ chilometri."
+ },
+ {
+  "config": "reason ahead #2",
+  "k": 22,
+  "ok": true,
+  "answer_ms": 5190,
+  "think_tokens": 1391,
+  "think_ahead": 1039,
+  "cut": false,
+  "tail": "ifica:**  \n- Mia età: 13 anni  \n- Marco: $ 13 + 4 = 17 $ anni  \n- Luca: $ 13 - 2 = 11 $ anni  \n- Somma: $ 13 + 17 + 11 = 41 $.�  \n\n**Risposta finale:** 13 anni."
+ },
+ {
+  "config": "reason ahead #2",
+  "k": 23,
+  "ok": true,
+  "answer_ms": 3131,
+  "think_tokens": 925,
+  "think_ahead": 697,
+  "cut": false,
+  "tail": "ccupati:**  \n   $ \\frac{2}{3} \\times 432 = 288 \\text{ posti} $\n\n3. **Posti liberi:**  \n   $ 432 - 288 = 144 \\text{ posti} $\n\n**Risultato finale:** $\\boxed{144}$"
+ },
+ {
+  "config": "branches 1 confirm #2",
+  "k": 0,
+  "ok": true,
+  "answer_ms": 1586,
+  "think_tokens": 629,
+  "think_ahead": 517,
+  "cut": false,
+  "tail": ": 2 euro.\n- Totale speso: $12 + 2 = 14$ euro.\n\nSottraiamo quanto speso dal denaro iniziale:  \n$25 - 14 = 11$ euro.\n\n**Risposta:** Luca ha **11 euro** rimanenti.",
+  "branch": {
+   "guesses": 5,
+   "adopted": "",
+   "agreement": 0.67,
+   "guess": "Luca ha 25 euro, compra 3 quaderni da 4 euro e una penna da 2 euro. Quanti euro ha rimasto?"
+  }
+ },
+ {
+  "config": "branches 1 confirm #2",
+  "k": 1,
+  "ok": true,
+  "answer_ms": 6188,
+  "think_tokens": 1028,
+  "think_ahead": 610,
+  "cut": false,
+  "tail": " $$\n\n5. **Formula dell'area:**  \n   $$\n   A = b \\times h = 10\\, \\text{cm} \\times 5\\, \\text{cm} = 50\\, \\text{cm}^2\n   $$\n\n**Risposta finale:**  \n$$\n\\boxed{50}\n$$",
+  "branch": {
+   "guesses": 20,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Un rettangolo ha il perimetro di 30 cm e la base lunga il doppio dell'altezza. Qual è la sua area in cm²?"
+  }
+ },
+ {
+  "config": "branches 1 confirm #2",
+  "k": 2,
+  "ok": true,
+  "answer_ms": 2733,
+  "think_tokens": 902,
+  "think_ahead": 719,
+  "cut": false,
+  "tail": "\nDi questi 24 studenti, la metà ha anche un gatto:\n\n$$\n\\frac{1}{2} \\times 24 = 12 \\text{ studenti}\n$$\n\n**Risposta:** 12 studenti hanno sia un cane sia un gatto.",
+  "branch": {
+   "guesses": 14,
+   "adopted": "",
+   "agreement": 0.67,
+   "guess": "In una classe ci sono 32 studenti; i tre quarti hanno un cane e di questi la metà ha anche un gatto. Quanti studenti hanno un gatto?"
+  }
+ },
+ {
+  "config": "branches 1 confirm #2",
+  "k": 3,
+  "ok": true,
+  "answer_ms": 3107,
+  "think_tokens": 879,
+  "think_ahead": 674,
+  "cut": false,
+  "tail": "- 36 = 204 $ euro.\n\n- Successivamente, si sottrae **10 euro** in più:  \n  $ 204 - 10 = 194 $ euro.\n\n**Risposta finale:**  \nLa bici costa **194 euro** alla fine.",
+  "branch": {
+   "guesses": 14,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 confirm #2",
+  "k": 4,
+  "ok": true,
+  "answer_ms": 5755,
+  "think_tokens": 931,
+  "think_ahead": 518,
+  "cut": false,
+  "tail": "Marta legge 18 pagine al giorno di un libro di 400 pagine. Dopo 12 giorni, le pagine che mancano sono 400 - (12 x 18) = 184 pagine.",
+  "branch": {
+   "guesses": 15,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 confirm #2",
+  "k": 5,
+  "ok": true,
+  "answer_ms": 5199,
+  "think_tokens": 1025,
+  "think_ahead": 646,
+  "cut": false,
+  "tail": "enti di 100 km}\n  $$\n\n- Moltiplicando per 100 km per segmento:\n  \n  $$\n  7.5 \\times 100 \\text{ km} = 750 \\text{ km}\n  $$\n\n**Risposta finale:** $\\boxed{750}$ km.",
+  "branch": {
+   "guesses": 17,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 confirm #2",
+  "k": 6,
+  "ok": true,
+  "answer_ms": 2350,
+  "think_tokens": 785,
+  "think_ahead": 618,
+  "cut": false,
+  "tail": " 9 \\text{ bevute} + 5 \\text{ regalate} = 14 \\text{ bottiglie} $.\n\n3. **Bottiglie rimanenti**:  \n   $ 24 - 14 = 10 $.\n\n**Risposta:** Ti restano **10 bottiglie**.",
+  "branch": {
+   "guesses": 14,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 confirm #2",
+  "k": 7,
+  "ok": true,
+  "answer_ms": 1232,
+  "think_tokens": 848,
+  "think_ahead": 793,
+  "cut": false,
+  "tail": "\n- Tempo necessario per riempire 120 litri:  \n  $$\n  \\frac{120\\ \\text{litri}}{6\\ \\text{litri/minuto}} = 20\\ \\text{minuti}\n  $$\n\n**Risultato finale:** 20 minuti.",
+  "branch": {
+   "guesses": 12,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Un rubinetto riempie una vasca da 120 litri in 40 minuti. Se ne apro un secondo identico, in quanti minuti si riempie la vasca?"
+  }
+ },
+ {
+  "config": "branches 1 confirm #2",
+  "k": 8,
+  "ok": true,
+  "answer_ms": 3305,
+  "think_tokens": 826,
+  "think_ahead": 611,
+  "cut": false,
+  "tail": "0 = 2(x + 10)\n  $$  \n  Risolvendo:  \n  $$\n  3x + 10 = 2x + 20 \\implies x = 10\n  $$  \n  Quindi, l'età di Anna è $ 3x = 30 $.  \n\n**Risposta finale:** $\\boxed{30}$",
+  "branch": {
+   "guesses": 12,
+   "adopted": "",
+   "agreement": 0.89,
+   "guess": "Anna ha il triplo dell'età di suo figlio e tra 10 anni avrà il doppio della sua età. Quanti anni ha Anna?"
+  }
+ },
+ {
+  "config": "branches 1 confirm #2",
+  "k": 9,
+  "ok": true,
+  "answer_ms": 7417,
+  "think_tokens": 1313,
+  "think_ahead": 818,
+  "cut": false,
+  "tail": "*9 €**  \n- **1 penna singola:** 1 × 1,20 € = **1,20 €**  \n- **Totale:** 9 € + 1,20 € = **10,20 €**\n\n**Risposta finale:**  \n**10,20 €** (10 euro e 20 centesimi).",
+  "branch": {
+   "guesses": 14,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Un negozio vende penne a 1,20 euro l'una oppure 3 euro per una confezione da 3. Quanto spendo al minimo per 10 penne?"
+  }
+ },
+ {
+  "config": "branches 1 confirm #2",
+  "k": 10,
+  "ok": true,
+  "answer_ms": 2703,
+  "think_tokens": 874,
+  "think_ahead": 687,
+  "cut": false,
+  "tail": "ell'auto e del treno è:\n$$\n270\\ \\text{minuti} - 180\\ \\text{minuti} = 90\\ \\text{minuti}.\n$$\n\n**Risposta:** L'auto impiega **90 minuti in più** rispetto al treno.",
+  "branch": {
+   "guesses": 16,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 confirm #2",
+  "k": 11,
+  "ok": true,
+  "answer_ms": 3623,
+  "think_tokens": 885,
+  "think_ahead": 648,
+  "cut": false,
+  "tail": "lmente: 2  \n- Aggiungo 4 palline blu: 3 + 4 = **7 palline blu**  \n- Palline non rosse = palline blu + palline verdi = **7 + 2 = 9**.  \n\n**Risultato finale:** 9.",
+  "branch": {
+   "guesses": 22,
+   "adopted": "",
+   "agreement": 0.5,
+   "guess": "In un sacchetto ci sono 5 palline rosse, 3 blu e 2 verdi. Ne aggiungo 4 blu. Quante palline non sono verdi?"
+  }
+ },
+ {
+  "config": "branches 1 confirm #2",
+  "k": 12,
+  "ok": true,
+  "answer_ms": 2710,
+  "think_tokens": 941,
+  "think_ahead": 749,
+  "cut": false,
+  "tail": " metri di larghezza, quindi non è necessario recintarlo.  \n   Rete necessaria = $48 - 2 = 46$ metri.\n\n**Risposta finale**:  \n$\\boxed{46}$ metri di rete servono.",
+  "branch": {
+   "guesses": 20,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 confirm #2",
+  "k": 13,
+  "ok": true,
+  "answer_ms": 2131,
+  "think_tokens": 819,
+  "think_ahead": 668,
+  "cut": false,
+  "tail": "ane necessarie:**  \n270 €� 15 €/settimana = **18 settimane**.\n\n**Risposta finale:**  \nPaolo ha bisogno di **18 settimane** per risparmiare l'importo necessario.",
+  "branch": {
+   "guesses": 19,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 confirm #2",
+  "k": 14,
+  "ok": true,
+  "answer_ms": 2551,
+  "think_tokens": 796,
+  "think_ahead": 613,
+  "cut": false,
+  "tail": "o di 2 libri**: $ 2 \\times 18 = 36 $ €  \n4. **Costo di 3 fumetti**: $ 3 \\times 6 = 18 $ €  \n5. **Totale speso**: $ 36 + 18 = 54 $ €  \n\n**Risposta finale**: 54 €",
+  "branch": {
+   "guesses": 18,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 confirm #2",
+  "k": 15,
+  "ok": true,
+  "answer_ms": 1567,
+  "think_tokens": 841,
+  "think_ahead": 759,
+  "cut": false,
+  "tail": "\\ \\text{cm} = 2.7\\ \\text{m}$.\n\n3. **Altezza totale per 4 salite**:  \n   $2.7\\ \\text{m} \\times 4 = 10.8\\ \\text{m}$.\n\n**Risposta finale**:  \n$\\boxed{10.8}$ metri.",
+  "branch": {
+   "guesses": 19,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Una scala ha 15 gradini e ogni gradino è alto 18 cm. Salgo la scala 4 volte: di quanti metri sono salito in totale?"
+  }
+ },
+ {
+  "config": "branches 1 confirm #2",
+  "k": 16,
+  "ok": true,
+  "answer_ms": 2855,
+  "think_tokens": 961,
+  "think_ahead": 763,
+  "cut": false,
+  "tail": ").  \n- Il **8º giorno**, sale ulteriori 3 metri, raggiungendo i **10 metri** e uscendo dal pozzo senza scivolare indietro.  \n\n**Risposta finale:** **8 giorni.**",
+  "branch": {
+   "guesses": 16,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 confirm #2",
+  "k": 17,
+  "ok": false,
+  "answer_ms": 0,
+  "think_tokens": 3746,
+  "think_ahead": 746,
+  "cut": true,
+  "tail": "",
+  "branch": {
+   "guesses": 22,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Un orologio va avanti di 3 minuti ogni ora e lo metto all'ora giusta a mezzogiorno. Che ora segna alle 8 di sera dello stesso giorno?"
+  }
+ },
+ {
+  "config": "branches 1 confirm #2",
+  "k": 18,
+  "ok": true,
+  "answer_ms": 6971,
+  "think_tokens": 1165,
+  "think_ahead": 658,
+  "cut": false,
+  "tail": "resta (30 euro).  \n   - 25% di 30 = $ \\frac{25}{100} \\times 30 = 7.5 $ euro.  \n   - Rimangono: $ 30 - 7.5 = 22.5 $ euro.  \n\n**Risposta finale**: **22,50 euro**.",
+  "branch": {
+   "guesses": 18,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 confirm #2",
+  "k": 19,
+  "ok": true,
+  "answer_ms": 3461,
+  "think_tokens": 780,
+  "think_ahead": 569,
+  "cut": false,
+  "tail": ":  \n  $ 4(30 - M) + 2M = 100 $.  \n  $ 120 - 4M + 2M = 100 $.  \n  $ 120 - 2M = 100 $.  \n  $ -2M = -20 \\Rightarrow M = 10 $.\n\n**Risposta**:  \nLe moto sono **10**.",
+  "branch": {
+   "guesses": 12,
+   "adopted": "",
+   "agreement": 0.5,
+   "guess": "In un parcheggio ci sono auto e moto: 30 veicoli in tutto e 100 ruote. Quante sono le auto?"
+  }
+ },
+ {
+  "config": "branches 1 confirm #2",
+  "k": 20,
+  "ok": true,
+  "answer_ms": 2683,
+  "think_tokens": 646,
+  "think_ahead": 484,
+  "cut": false,
+  "tail": "hiamo per 30 biscotti:\n   $$\n   20.833\\ \\text{g} \\times 30 = 625\\ \\text{g}\n   $$\n\n**Risposta finale:**  \n$\\boxed{625}$ grammi di farina servono per 30 biscotti.",
+  "branch": {
+   "guesses": 10,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Un pasticcere usa 250 grammi di farina per 12 biscotti. Quanti grammi di farina servono per 30 biscotti?"
+  }
+ },
+ {
+  "config": "branches 1 confirm #2",
+  "k": 21,
+  "ok": true,
+  "answer_ms": 4077,
+  "think_tokens": 792,
+  "think_ahead": 496,
+  "cut": false,
+  "tail": ") nuotate: 36  \n- Distanza totale: $ 36 \\times 25 = 900 $ metri  \n- Conversione in chilometri: $ \\frac{900}{1000} = 0,9 $ km  \n\n**Risposta finale:** **0,9 km**.",
+  "branch": {
+   "guesses": 9,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 confirm #2",
+  "k": 22,
+  "ok": true,
+  "answer_ms": 1407,
+  "think_tokens": 1065,
+  "think_ahead": 1011,
+  "cut": false,
+  "tail": " età è:  \n  $$\n  x + (x + 4) + (x - 2) = 41\n  $$  \n  Risolvendo:  \n  $$\n  3x + 2 = 41 \\implies 3x = 39 \\implies x = 13\n  $$  \n\n**Risposta finale:** **13 anni.**",
+  "branch": {
+   "guesses": 19,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Io e i miei due fratelli: Marco ha 4 anni più di me, Luca 2 anni meno di me, e la somma delle nostre età è 41. Quanti anni ho?"
+  }
+ },
+ {
+  "config": "branches 1 confirm #2",
+  "k": 23,
+  "ok": true,
+  "answer_ms": 1703,
+  "think_tokens": 680,
+  "think_ahead": 565,
+  "cut": false,
+  "tail": "\\frac{2}{3} \\times 432 = 288\n$$\n\nI posti liberi si calcolano sottraendo quelli occupati dal totale:\n\n$$\n432 - 288 = 144\n$$\n\n**Risposta:** Sono liberi 144 posti.",
+  "branch": {
+   "guesses": 9,
+   "adopted": "",
+   "agreement": 0.8,
+   "guess": "Un cinema ha 18 file da 24 posti e stasera sono occupati i due terzi dei posti. Quanti posti sono occupati?"
+  }
+ },
+ {
+  "config": "branches 1 final",
+  "k": 0,
+  "ok": true,
+  "answer_ms": 1688,
+  "think_tokens": 631,
+  "think_ahead": 508,
+  "cut": false,
+  "tail": " euro:  \n$ 12 + 2 = 14 $ euro in totale.  \n\nDalla somma iniziale di 25 euro, gli restano:  \n$ 25 - 14 = 11 $ euro.  \n\n**Risposta:** Luca ha rimasto **11 euro**.",
+  "branch": {
+   "guesses": 6,
+   "adopted": "",
+   "agreement": 0.5,
+   "guess": "Luca ha 25 euro, compra 3 quaderni da 4 euro e una penna da 2 euro. Quanti euro ha rimasto?"
+  }
+ },
+ {
+  "config": "branches 1 final",
+  "k": 1,
+  "ok": true,
+  "answer_ms": 2973,
+  "think_tokens": 792,
+  "think_ahead": 610,
+  "cut": false,
+  "tail": "a:**\n   $$\n   A = b \\times h = 10 \\, \\text{cm} \\times 5 \\, \\text{cm} = 50 \\, \\text{cm}^2\n   $$\n\n**Risposta finale:**  \nL'area del rettangolo è $\\boxed{50}$ cm².",
+  "branch": {
+   "guesses": 21,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Un rettangolo ha il perimetro di 30 cm e la base lunga il doppio dell'altezza. Qual è la sua area in cm²?"
+  }
+ },
+ {
+  "config": "branches 1 final",
+  "k": 2,
+  "ok": true,
+  "answer_ms": 1876,
+  "think_tokens": 810,
+  "think_ahead": 704,
+  "cut": false,
+  "tail": "anche un gatto:  \n$$ \\frac{1}{2} \\times 24 = 12 \\text{ studenti con sia un cane che un gatto} $$  \n\n**Risposta:** 12 studenti hanno entrambi un cane e un gatto.",
+  "branch": {
+   "guesses": 18,
+   "adopted": "",
+   "agreement": 0.71,
+   "guess": "In una classe ci sono 32 studenti; i tre quarti hanno un cane e di questi la metà ha anche un gatto. Quanti studenti hanno un cane ma non un gatto?"
+  }
+ },
+ {
+  "config": "branches 1 final",
+  "k": 3,
+  "ok": true,
+  "answer_ms": 2489,
+  "think_tokens": 661,
+  "think_ahead": 510,
+  "cut": false,
+  "tail": " = 204 \\text{ euro}\n   $$\n\n2. **Sconto di 10 euro su 204 euro:**\n   $$\n   204 - 10 = 194 \\text{ euro}\n   $$\n\n**Prezzo finale:**  \n$$\n\\boxed{194} \\text{ euro}\n$$",
+  "branch": {
+   "guesses": 11,
+   "adopted": "",
+   "agreement": 0.5,
+   "guess": "Una bici costa 240 euro; durante i saldi viene scontata del 15% e poi di altri 10 euro. Quanto costa in finale?"
+  }
+ },
+ {
+  "config": "branches 1 final",
+  "k": 4,
+  "ok": true,
+  "answer_ms": 1792,
+  "think_tokens": 768,
+  "think_ahead": 642,
+  "cut": false,
+  "tail": "tale del libro:\n\n**Pagine lette = 18 pagine/giorno × 12 giorni = 216 pagine**  \n**Pagine rimanenti = 400 - 216 = 184**\n\n**Risposta:** Le mancano **184 pagine**.",
+  "branch": {
+   "guesses": 13,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 final",
+  "k": 5,
+  "ok": true,
+  "answer_ms": 3885,
+  "think_tokens": 740,
+  "think_ahead": 464,
+  "cut": false,
+  "tail": "- Consumo: 6 litri per 100 km → 100 km / 6 litri = 16,6667 km/litro.  \n- Con 45 litri: 16,6667 km/litro × 45 litri = **750 km**.  \n\n**Risposta finale:** 750 km.",
+  "branch": {
+   "guesses": 8,
+   "adopted": "",
+   "agreement": 0.86,
+   "guess": "Un'auto consuma 6 litri ogni 100 km e il serbatoio contiene 45 litri. Quanti km può percorrere con il pieno?"
+  }
+ },
+ {
+  "config": "branches 1 final",
+  "k": 6,
+  "ok": true,
+  "answer_ms": 2107,
+  "think_tokens": 753,
+  "think_ahead": 613,
+  "cut": false,
+  "tail": "xt{ bevute} + 5 \\text{ regalate} = 14 \\text{ bottiglie} $\n\n3. **Bottiglie rimanenti**:  \n   $ 24 - 14 = \\boxed{10} $\n\n**Risposta:** Ti restano **10 bottiglie**.",
+  "branch": {
+   "guesses": 19,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 final",
+  "k": 7,
+  "ok": true,
+  "answer_ms": 2430,
+  "think_tokens": 849,
+  "think_ahead": 711,
+  "cut": false,
+  "tail": " $ 3 + 3 = 6\\ \\text{litri/minuto} $.\n- Tempo per riempire 120 litri: $ \\frac{120}{6} = 20\\ \\text{minuti} $.\n\n**Risposta:** La vasca si riempie in **20 minuti**.",
+  "branch": {
+   "guesses": 13,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Un rubinetto riempie una vasca da 120 litri in 40 minuti. Se ne apro un secondo identico, in quanti minuti si riempie la vasca?"
+  }
+ },
+ {
+  "config": "branches 1 final",
+  "k": 8,
+  "ok": true,
+  "answer_ms": 5336,
+  "think_tokens": 878,
+  "think_ahead": 529,
+  "cut": false,
+  "tail": "nda equazione:  \n$ 3S + 10 = 2(S + 10) $  \n$ 3S + 10 = 2S + 20 $  \n$ S = 10 $.  \n\nDunque, $ A = 3 \\times 10 = 30 $.  \n\n**Risposta finale:** Anna ha **30 anni**.",
+  "branch": {
+   "guesses": 12,
+   "adopted": "",
+   "agreement": 0.89,
+   "guess": "Anna ha il triplo dell'età di suo figlio e tra 10 anni avrà il doppio della sua età. Quanti anni ha Anna?"
+  }
+ },
+ {
+  "config": "branches 1 final",
+  "k": 9,
+  "ok": true,
+  "answer_ms": 18796,
+  "think_tokens": 1968,
+  "think_ahead": 764,
+  "cut": false,
+  "tail": " 3 × 3 € = **9 €**\n- 1 penna singola: 1 × 1,20 € = **1,20 €**\n- Totale: **9 € + 1,20 € = 10,20 €**\n\n**Risposta finale:**  \n**10,20 €** (10 euro e 20 centesimi).",
+  "branch": {
+   "guesses": 15,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Un negozio vende penne a 1,20 euro l'una oppure 3 euro per una confezione da 3. Quanto spendo al minimo per 10 penne?"
+  }
+ },
+ {
+  "config": "branches 1 final",
+  "k": 10,
+  "ok": true,
+  "answer_ms": 5638,
+  "think_tokens": 1058,
+  "think_ahead": 708,
+  "cut": false,
+  "tail": "} = 4.5 \\times 60 = 270 \\text{ minuti} $.\n\n3. **Differenza di tempo:**  \n   $ 270 - 180 = 90 \\text{ minuti} $.\n\n**Risposta finale:** $\\boxed{90}$ minuti in più.",
+  "branch": {
+   "guesses": 17,
+   "adopted": "",
+   "agreement": 0.57,
+   "guess": "Un treno percorre 360 km in 3 ore e un'auto fa lo stesso tragitto a 80 km/h. Quanti minuti in più impiega l'auto rispetto al treno?"
+  }
+ },
+ {
+  "config": "branches 1 final",
+  "k": 11,
+  "ok": true,
+  "answer_ms": 3019,
+  "think_tokens": 677,
+  "think_ahead": 488,
+  "cut": false,
+  "tail": "  \n- **Palline blu totali**: 3 + 4 = 7  \n- **Palline verdi**: 2  \n\n**Palline non rosse** = Palline blu + Palline verdi = 7 + 2 = **9**.\n\n**Risposta finale**: 9.",
+  "branch": {
+   "guesses": 20,
+   "adopted": "",
+   "agreement": 0.44,
+   "guess": "In un sacchetto ci sono 5 palline rosse, 3 blu e 2 verdi. Ne aggiungo 4 blu. Quante palline ci sono in tutto?"
+  }
+ },
+ {
+  "config": "branches 1 final",
+  "k": 12,
+  "ok": true,
+  "answer_ms": 2978,
+  "think_tokens": 916,
+  "think_ahead": 730,
+  "cut": false,
+  "tail": "l cancello non richiede rete, quindi:  \n   $$\n   \\text{Rete necessaria} = 48 - 2 = 46\\ \\text{metri}\n   $$\n\n**Risposta finale**:  \n$$\n\\boxed{46}\\ \\text{metri}\n$$",
+  "branch": {
+   "guesses": 17,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 final",
+  "k": 13,
+  "ok": true,
+  "answer_ms": 2466,
+  "think_tokens": 800,
+  "think_ahead": 663,
+  "cut": false,
+  "tail": " euro in più. Risparmiando 15 euro a settimana, le settimane necessarie sono:  \n$$\n\\frac{270}{15} = 18\n$$  \n\n**Risposta:** Paolo ha bisogno di **18 settimane**.",
+  "branch": {
+   "guesses": 18,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 final",
+  "k": 14,
+  "ok": true,
+  "answer_ms": 2177,
+  "think_tokens": 618,
+  "think_ahead": 496,
+  "cut": false,
+  "tail": " totale**:  \n   - 2 libri: $ 2 \\times 18 = 36 $ €  \n   - 3 fumetti: $ 3 \\times 6 = 18 $ €  \n   - Totale: $ 36 + 18 = 54 $ €  \n\n**Risposta**: Spendi **54 euro**.",
+  "branch": {
+   "guesses": 11,
+   "adopted": "",
+   "agreement": 0.33,
+   "guess": "Un libro costa 18 euro e un fumetto costa un terzo del libro. Compro 2 libri e 3 fumetti: quanto pago en total?"
+  }
+ },
+ {
+  "config": "branches 1 final",
+  "k": 15,
+  "ok": true,
+  "answer_ms": 2060,
+  "think_tokens": 824,
+  "think_ahead": 720,
+  "cut": false,
+  "tail": " $$  \n4. **Distanza totale per 4 salite**:  \n   $$\n   2.7 \\text{ m} \\times 4 = 10.8 \\text{ metri}\n   $$\n\n**Risposta finale**:  \n$$\n\\boxed{10.8} \\text{ metri}\n$$",
+  "branch": {
+   "guesses": 17,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Una scala ha 15 gradini e ogni gradino è alto 18 cm. Salgo la scala 4 volte: di quanti metri sono salito in totale?"
+  }
+ },
+ {
+  "config": "branches 1 final",
+  "k": 16,
+  "ok": true,
+  "answer_ms": 2179,
+  "think_tokens": 837,
+  "think_ahead": 706,
+  "cut": false,
+  "tail": "e uscirà dal pozzo (10 metri - 8 metri = 2 metri rimanenti; il 9º giorno, salendo 3 metri, supererà i 10 metri). \n\n**Risposta:** In **9 giorni** esce dal pozzo.",
+  "branch": {
+   "guesses": 15,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 final",
+  "k": 17,
+  "ok": true,
+  "answer_ms": 4513,
+  "think_tokens": 1043,
+  "think_ahead": 786,
+  "cut": false,
+  "tail": "8 = 24 $ minuti.  \n- **Ora segnata:** La somma del tempo reale (8:00) e dell'errore (24 minuti) dà **8:24**.  \n\n**Risultato finale:** L'orologio segna **8:24**.",
+  "branch": {
+   "guesses": 19,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Un orologio va avanti di 3 minuti ogni ora e lo metto all'ora giusta a mezzogiorno. Che ora segna alle 8 di sera dello stesso giorno?"
+  }
+ },
+ {
+  "config": "branches 1 final",
+  "k": 18,
+  "ok": true,
+  "answer_ms": 4024,
+  "think_tokens": 795,
+  "think_ahead": 540,
+  "cut": false,
+  "tail": ") = 50 € - 20 € = 30 €**\n\nPoi spendi un quarto di quel resto al cinema:  \n**30 € - (1/4 di 30 €) = 30 € - 7,5 € = 22,5 €**\n\n**Risposta finale:** **22,50 euro**.",
+  "branch": {
+   "guesses": 13,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 final",
+  "k": 19,
+  "ok": true,
+  "answer_ms": 3565,
+  "think_tokens": 705,
+  "think_ahead": 480,
+  "cut": false,
+  "tail": "y) + 2y = 100 $  \n  $ 120 - 4y + 2y = 100 $  \n  $ 120 - 2y = 100 $  \n  $ -2y = -20 $  \n  $ y = 10 $.\n\n**Risposta finale**:  \nCi sono **10 moto** nel parcheggio.",
+  "branch": {
+   "guesses": 18,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 final",
+  "k": 20,
+  "ok": true,
+  "answer_ms": 3742,
+  "think_tokens": 663,
+  "think_ahead": 453,
+  "cut": false,
+  "tail": "solvendo per $ x $:\n\n$$\nx = \\frac{250 \\times 30}{12} = \\frac{7500}{12} = 625 \\text{ g}\n$$\n\n**Risposta:** Servono $\\boxed{625}$ grammi di farina per 30 biscotti.",
+  "branch": {
+   "guesses": 11,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Un pasticcere usa 250 grammi di farina per 12 biscotti. Quanti grammi di farina servono per 30 biscotti?"
+  }
+ },
+ {
+  "config": "branches 1 final",
+  "k": 21,
+  "ok": true,
+  "answer_ms": 2958,
+  "think_tokens": 690,
+  "think_ahead": 496,
+  "cut": false,
+  "tail": "tanza totale in metri: $ 36 \\times 25 = 900 $ metri\n- Conversione in chilometri: $ \\frac{900}{1000} = 0,9 $ km\n\n**Risposta finale:** $\\boxed{0{,}9}$ chilometri.",
+  "branch": {
+   "guesses": 12,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 final",
+  "k": 22,
+  "ok": true,
+  "answer_ms": 4040,
+  "think_tokens": 1110,
+  "think_ahead": 884,
+  "cut": false,
+  "tail": " \\implies 3x = 39 \\implies x = 13\n  $$\n\n**Verifica:**  \n- Tu: 13 anni  \n- Marco: $13 + 4 = 17$ anni  \n- Luca: $13 - 2 = 11$ anni  \n- Somma: $13 + 17 + 11 = 41$.",
+  "branch": {
+   "guesses": 18,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Io e i miei due fratelli: Marco ha 4 anni più di me, Luca 2 anni meno di me, e la somma delle nostre età è 41. Quanti anni ho?"
+  }
+ },
+ {
+  "config": "branches 1 final",
+  "k": 23,
+  "ok": true,
+  "answer_ms": 2454,
+  "think_tokens": 693,
+  "think_ahead": 554,
+  "cut": false,
+  "tail": "$  \n\nSe i due terzi dei posti sono occupati:  \n$$\\frac{2}{3} \\times 432 = 288$$  \n\nI posti liberi sono:  \n$$432 - 288 = 144$$  \n\n**Risposta:** 144 posti liberi.",
+  "branch": {
+   "guesses": 8,
+   "adopted": "",
+   "agreement": 0.75,
+   "guess": "Un cinema ha 18 file da 24 posti e stasera sono occupati i due terzi dei posti. Quanti posti sono occupati?"
+  }
+ },
+ {
+  "config": "branches 1 final #2",
+  "k": 0,
+  "ok": true,
+  "answer_ms": 1239,
+  "think_tokens": 524,
+  "think_ahead": 439,
+  "cut": false,
+  "tail": "= 12$ euro\n- 1 penna a 2 euro: $2$ euro\n\nTotale speso: $12 + 2 = 14$ euro.\n\nSottraendo da 25 euro:  \n$25 - 14 = 11$.\n\n**Risposta:** Luca ha **11 euro** rimasti.",
+  "branch": {
+   "guesses": 9,
+   "adopted": "",
+   "agreement": 0.5,
+   "guess": "Luca ha 25 euro, compra 3 quaderni da 4 euro e una penna da 2 euro. Quanti euro ha rimasto?"
+  }
+ },
+ {
+  "config": "branches 1 final #2",
+  "k": 1,
+  "ok": true,
+  "answer_ms": 2583,
+  "think_tokens": 757,
+  "think_ahead": 599,
+  "cut": false,
+  "tail": "}\n   $$\n\n5. **Calcolo dell'area:**\n   $$\n   A = b \\cdot h = 10 \\cdot 5 = 50 \\text{ cm}^2\n   $$\n\n**Risposta finale:**  \nL'area del rettangolo è $\\boxed{50}$ cm².",
+  "branch": {
+   "guesses": 19,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Un rettangolo ha il perimetro di 30 cm e la base lunga il doppio dell'altezza. Qual è la sua area in cm²?"
+  }
+ },
+ {
+  "config": "branches 1 final #2",
+  "k": 2,
+  "ok": true,
+  "answer_ms": 4200,
+  "think_tokens": 1040,
+  "think_ahead": 783,
+  "cut": false,
+  "tail": "mes 32 = 24 $ studenti.  \n- Di questi 24, la **metà** ha anche un gatto:  \n  $ \\frac{24}{2} = 12 $.  \n\n**Risposta:** 12 studenti hanno sia un cane che un gatto.",
+  "branch": {
+   "guesses": 18,
+   "adopted": "",
+   "agreement": 0.8,
+   "guess": "In una classe ci sono 32 studenti; i tre quarti hanno un cane e di questi la metà ha anche un gatto. Quanti studenti hanno sia un cane che un gatto?"
+  }
+ },
+ {
+  "config": "branches 1 final #2",
+  "k": 3,
+  "ok": true,
+  "answer_ms": 3876,
+  "think_tokens": 890,
+  "think_ahead": 647,
+  "cut": false,
+  "tail": "ta ora **240 - 36 = 204 euro**.\n\nPoi si scontano altri **10 euro**, quindi:\n\n$$\n204 - 10 = 194\\ \\text{euro}\n$$\n\n**Risposta finale:** La bici costa **194 euro**.",
+  "branch": {
+   "guesses": 16,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Una bici costa 240 euro; durante i saldi viene scontata del 15% e poi di altri 10 euro. Quanto costa alla fine?"
+  }
+ },
+ {
+  "config": "branches 1 final #2",
+  "k": 4,
+  "ok": true,
+  "answer_ms": 2758,
+  "think_tokens": 804,
+  "think_ahead": 615,
+  "cut": false,
+  "tail": "{ pagine/giorno} \\times 12 \\text{ giorni} = 216 \\text{ pagine}$.  \nLe pagine rimanenti sono $400 - 216 = 184$.  \n\n**Risposta:** Le mancano $\\boxed{184}$ pagine.",
+  "branch": {
+   "guesses": 17,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 final #2",
+  "k": 5,
+  "ok": true,
+  "answer_ms": 2242,
+  "think_tokens": 780,
+  "think_ahead": 635,
+  "cut": false,
+  "tail": " consuma 6 litri ogni 100 km può percorrere:\n\n$$\n\\frac{45 \\text{ litri}}{6 \\text{ litri/100 km}} \\times 100 = 750 \\text{ km}\n$$\n\n**Risposta:** $\\boxed{750}$ km.",
+  "branch": {
+   "guesses": 15,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 final #2",
+  "k": 6,
+  "ok": true,
+  "answer_ms": 1673,
+  "think_tokens": 750,
+  "think_ahead": 648,
+  "cut": false,
+  "tail": " bottiglie**. \n\nNe hai bevute 9 e ne hai regalate 5, quindi ti restano:  \n24 - 9 (bevute) - 5 (regalate) = **10 bottiglie**.\n\n**Risposta finale:** 10 bottiglie.",
+  "branch": {
+   "guesses": 15,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 final #2",
+  "k": 7,
+  "ok": true,
+  "answer_ms": 1948,
+  "think_tokens": 880,
+  "think_ahead": 780,
+  "cut": false,
+  "tail": "ecessario per riempire 120 litri: $ \\frac{120\\ \\text{litri}}{6\\ \\text{litri/minuto}} = 20\\ \\text{minuti} $.\n\n**Risposta:** La vasca si riempie in **20 minuti**.",
+  "branch": {
+   "guesses": 13,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Un rubinetto riempie una vasca da 120 litri in 40 minuti. Se ne apro un secondo identico, in quanti minuti si riempie la vasca?"
+  }
+ },
+ {
+  "config": "branches 1 final #2",
+  "k": 8,
+  "ok": true,
+  "answer_ms": 5868,
+  "think_tokens": 957,
+  "think_ahead": 582,
+  "cut": false,
+  "tail": " 3S + 10 = 2(S + 10) \\implies 3S + 10 = 2S + 20 \\implies S = 10.\n   $$  \n4. Calcolando $ A = 3S = 3 \\times 10 = 30 $.  \n\n**Risposta:** Anna ha **30 anni** oggi.",
+  "branch": {
+   "guesses": 13,
+   "adopted": "",
+   "agreement": 0.89,
+   "guess": "Anna ha il triplo dell'età di suo figlio e tra 10 anni avrà il doppio della sua età. Quanti anni ha Anna?"
+  }
+ },
+ {
+  "config": "branches 1 final #2",
+  "k": 9,
+  "ok": true,
+  "answer_ms": 12114,
+  "think_tokens": 1471,
+  "think_ahead": 665,
+  "cut": false,
+  "tail": "*3 € per confezione**, quindi **3 × 3 = 9 €**.\n- **1 penna singola** a **1,20 €**.\n\n**Totale**: 9 € + 1,20 € = **10,20 €**.\n\n**Risposta finale:**  \n**10,20 €**.",
+  "branch": {
+   "guesses": 17,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Un negozio vende penne a 1,20 euro l'una oppure 3 euro per una confezione da 3. Quanto spendo al minimo per 10 penne?"
+  }
+ },
+ {
+  "config": "branches 1 final #2",
+  "k": 10,
+  "ok": true,
+  "answer_ms": 2945,
+  "think_tokens": 811,
+  "think_ahead": 611,
+  "cut": false,
+  "tail": "n minuti**:  \n   $ 1,5\\ \\text{ore} \\times 60\\ \\text{min/ora} = 90\\ \\text{minuti} $.\n\n**Risposta finale**: L'auto impiega **90 minuti in più** rispetto al treno.",
+  "branch": {
+   "guesses": 15,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 final #2",
+  "k": 11,
+  "ok": true,
+  "answer_ms": 1213,
+  "think_tokens": 799,
+  "think_ahead": 745,
+  "cut": false,
+  "tail": "osse) + 7 (blu) + 2 (verde) = **14 palline**.  \n\nLe palline non rosse sono quelle blu e verdi:  \n7 (blu) + 2 (verde) = **9 palline**.\n\n**Risposta:** $\\boxed{9}$",
+  "branch": {
+   "guesses": 21,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "In un sacchetto ci sono 5 palline rosse, 3 blu e 2 verdi. Ne aggiungo 4 blu. Quante palline non sono rosse?"
+  }
+ },
+ {
+  "config": "branches 1 final #2",
+  "k": 12,
+  "ok": true,
+  "answer_ms": 2663,
+  "think_tokens": 865,
+  "think_ahead": 701,
+  "cut": false,
+  "tail": ":  \n   Il cancello di 2 metri non richiede rete, quindi:  \n   $ 48\\,\\text{m} - 2\\,\\text{m} = 46\\,\\text{m} $.\n\n**Risposta finale**:  \nServe **46 metri** di rete.",
+  "branch": {
+   "guesses": 15,
+   "adopted": "",
+   "agreement": 0.4,
+   "guess": "Un giardino quadrato ha il lato di 12 metri e voglio recintarlo lasciando un cancello largo 2 metri. Quanti metri di recinto si devono acquistare?"
+  }
+ },
+ {
+  "config": "branches 1 final #2",
+  "k": 13,
+  "ok": true,
+  "answer_ms": 2272,
+  "think_tokens": 778,
+  "think_ahead": 621,
+  "cut": false,
+  "tail": "armiare un totale di 390 - 120 = **270 euro**. Risparmia 15 euro a settimana, quindi:  \n**270� 15 = 18**.  \n\n**Risposta:** Paolo ha bisogno di **18 settimane**.",
+  "branch": {
+   "guesses": 17,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 final #2",
+  "k": 14,
+  "ok": true,
+  "answer_ms": 2719,
+  "think_tokens": 786,
+  "think_ahead": 598,
+  "cut": false,
+  "tail": "er 2 libri**: $ 2 \\times 18 = 36 $ €  \n4. **Totale per 3 fumetti**: $ 3 \\times 6 = 18 $ €  \n5. **Spesa totale**: $ 36 + 18 = 54 $ €  \n\n**Risposta finale**: 54 €",
+  "branch": {
+   "guesses": 15,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 final #2",
+  "k": 15,
+  "ok": true,
+  "answer_ms": 1841,
+  "think_tokens": 884,
+  "think_ahead": 787,
+  "cut": false,
+  "tail": "totale per 4 salite**:  \n   $$\n   4 \\text{ volte} \\times 2.7 \\text{ metri} = 10.8 \\text{ metri}\n   $$  \n\n**Risposta finale**:  \n$$\n\\boxed{10.8 \\text{ metri}}\n$$",
+  "branch": {
+   "guesses": 18,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Una scala ha 15 gradini e ogni gradino è alto 18 cm. Salgo la scala 4 volte: di quanti metri sono salito in totale?"
+  }
+ },
+ {
+  "config": "branches 1 final #2",
+  "k": 16,
+  "ok": true,
+  "answer_ms": 3657,
+  "think_tokens": 998,
+  "think_ahead": 760,
+  "cut": false,
+  "tail": " Giorni necessari per raggiungere 7 metri: 7 giorni (7 metri netti).\n- Al 8° giorno, la lumaca sale 3 metri da 7 a 10 metri e esce.\n\n**Risposta:** **8 giorni**.",
+  "branch": {
+   "guesses": 18,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 final #2",
+  "k": 17,
+  "ok": true,
+  "answer_ms": 3173,
+  "think_tokens": 981,
+  "think_ahead": 768,
+  "cut": false,
+  "tail": " \n\nQuindi, quando è le 20:00 (8 di sera), l'orologio segna:\n$$\n20:00 + 24\\ \\text{min} = 20:24.\n$$\n\n**Risposta:** L'orologio segna **20:24** (8 e mezza di sera).",
+  "branch": {
+   "guesses": 19,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 final #2",
+  "k": 18,
+  "ok": true,
+  "answer_ms": 3553,
+  "think_tokens": 890,
+  "think_ahead": 651,
+  "cut": false,
+  "tail": "l cinema (un quarto di ciò che resta)**:  \n   $ \\frac{1}{4} \\times 30 = 7,5 \\, € $  \n   Rimangono: $ 30 - 7,5 = 22,5 \\, € $.  \n\n**Risposta finale**: **22,5 €**.",
+  "branch": {
+   "guesses": 19,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 final #2",
+  "k": 19,
+  "ok": true,
+  "answer_ms": 4937,
+  "think_tokens": 900,
+  "think_ahead": 557,
+  "cut": false,
+  "tail": "- auto e moto: 30 veicoli (cars and motorcycles)  \n- veicoli in tutto: 30 (total vehicles)  \n- ruote: 100 (wheels)  \n- moto: 10 (motorcycles)",
+  "branch": {
+   "guesses": 13,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 final #2",
+  "k": 20,
+  "ok": true,
+  "answer_ms": 3482,
+  "think_tokens": 717,
+  "think_ahead": 505,
+  "cut": false,
+  "tail": "}\n   $$\n\n2. Moltiplichiamo per 30 biscotti:\n   $$\n   20.833\\ \\text{g} \\times 30 = 625\\ \\text{g}\n   $$\n\n**Risultato:**\n$$\n\\boxed{625}\\ \\text{grammi di farina}\n$$",
+  "branch": {
+   "guesses": 11,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 final #2",
+  "k": 21,
+  "ok": true,
+  "answer_ms": 1726,
+  "think_tokens": 586,
+  "think_ahead": 473,
+  "cut": false,
+  "tail": "**36**  \n- Totale delle vasche: **36 × 25 = 900 metri**  \n- Conversione in chilometri: **900� 1000 = 0,9 km**  \n\nQuindi, Giulia ha nuotato **0,9 chilometri**.�️",
+  "branch": {
+   "guesses": 12,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1 final #2",
+  "k": 22,
+  "ok": true,
+  "answer_ms": 4648,
+  "think_tokens": 1275,
+  "think_ahead": 1009,
+  "cut": false,
+  "tail": " età:  \n  $$\n  x + (x + 4) + (x - 2) = 41\n  $$\n  Semplificando:  \n  $$\n  3x + 2 = 41 \\implies 3x = 39 \\implies x = 13\n  $$\n\n**Risposta finale:** Ho **13 anni**.",
+  "branch": {
+   "guesses": 16,
+   "adopted": "exact",
+   "agreement": 1.0,
+   "guess": "Io e i miei due fratelli: Marco ha 4 anni più di me, Luca 2 anni meno di me, e la somma delle nostre età è 41. Quanti anni ho?"
+  }
+ },
+ {
+  "config": "branches 1 final #2",
+  "k": 23,
+  "ok": true,
+  "answer_ms": 1896,
+  "think_tokens": 655,
+  "think_ahead": 536,
+  "cut": false,
+  "tail": "osti sono occupati, la quantità occupata è $\\frac{2}{3} \\times 432 = 288$.  \nI posti liberi sono quindi $432 - 288 = 144$.\n\n**Risposta:** 144 posti sono liberi.",
+  "branch": {
+   "guesses": 9,
+   "adopted": "",
+   "agreement": 0.75,
+   "guess": "Un cinema ha 18 file da 24 posti e stasera sono occupati i due terzi dei posti. Quanti posti sono occupati?"
+  }
+ }
+]

@@ -16,6 +16,8 @@ previous one ended instead of rereading the history.
 """
 from __future__ import annotations
 
+import contextlib
+import difflib
 import http.client
 import json
 import os
@@ -23,6 +25,7 @@ import re
 import socket
 import threading
 import time
+from dataclasses import dataclass, field
 
 
 # Qwen3 in non-thinking and thinking mode: the sampling settings recommended by its authors.
@@ -83,6 +86,73 @@ AHEAD_CHUNK = 128                   # tokens per request written ahead; the next
 THINK_CHUNK = 32                    # the same while reasoning: short, so it follows the text as it is typed
 BRIDGE_EVERY = 64                   # new reasoning tokens before an edit earns a bridge
 
+# --branches (experimental): guessed endings. The reasoning left after Enter is mostly about the end of
+# the message, the question, which arrives last. So the model also guesses how the user will finish the
+# message, and on a slot of its own (beside the session's) reasons on the guess, through to the answer,
+# while the user is still typing. A branch lives while what is typed agrees with its guess. On Enter a
+# branch that guessed the exact message hands over its reasoning, and its answer if it got that far.
+# On the RTX 2060 (Qwen3-4B, unified KV cache) 2 sequences write 1.7 times as many tokens as one, 4 sequences
+# 2.2 times: each branch slows the rest down. Measured on 24 word problems typed in real time, two runs
+# each (research/thinking_ahead_4b.py): one branch, mean wait after Enter 4.17 s -> 3.51 s (slowest tenth
+# 7.9 s -> 5.3 s), 14 of 48 messages guessed exactly, 48/48 answers right either way; two branches,
+# slower than none (half a run, median 4.50 s against 2.94 s).
+BRANCH_MIN_WORDS = 8                # no guesses on the first words: the ending is still anyone's guess
+# A guessed ending longer than this invents the data still to come (the numbers of a word problem):
+# it is dropped. Short ones (the question, once the data is typed) come true often enough.
+BRANCH_MAX_LEFT = 10
+# The session's reasoning waits while a branch reasons, so a wrong guess costs time: a branch reasons only
+# on a message that this many guesses, sampled one after the other, came out with.
+BRANCH_CONFIRM = 2
+PREDICT_TOKENS = 48                 # longest guessed ending; one that does not end by then is dropped
+# Qwen3-4B seldom ends the user's turn after the guessed ending: it goes to a new line and starts
+# answering ("Okay, let's see..."). So a guess ends at the end of its line.
+PREDICT_SAMPLING = {"temperature": 1.0, "top_p": 0.95, "top_k": 40, "min_p": 0, "stop": ["\n"]}
+BRANCH_KEEP = 0.5                   # a branch lives while the words typed since its guess agree this much with it
+BRANCH_CTX = 3072                   # each branch's share of the KV cache: prompt, reasoning and answer
+# Only a branch that guessed the exact message is adopted: its reasoning is then the very one the model
+# would write for that prompt. Adopting a close guess, with a line asking the model to check its reasoning
+# against the real message, was measured (24 word problems, Qwen3-4B): 2 wrong answers out of 4, where
+# the guess had another number (32 for 41) or a word that changes the problem ("current age").
+
+
+def words(text: str) -> list[str]:
+    return re.findall(r"\w+", text.lower())
+
+
+@dataclass
+class Branch:
+    """A guessed ending of the message and the reasoning on it, on a llama-server slot of its own."""
+    slot: int
+    base: str                       # the text typed when the guess was made (whole words)
+    stream: Stream
+    state: str = "guess"            # "guess": writing the ending; "reason": reasoning on the guessed message
+    guess: str = ""                 # the guessed ending, once written
+    head: list[int] = field(default_factory=list)   # the prompt's notes: the session's at the guess, then SENT
+
+    @property
+    def full(self) -> str:
+        return self.base.rstrip() + self.guess
+
+    def agreement(self, text: str, typing: bool) -> float:
+        """How well `text` agrees with the guess, over the words typed after the guess was made.
+
+        While the user types (`typing`) only the words typed so far count, against as many words of
+        the guess, and the last word is left out if it may still be half typed.
+        """
+        base, typed, guessed = words(self.base), words(text), words(self.guess)
+        if typed[:len(base)] != base:
+            return 0.0                     # the text before the guess was changed: the guess no longer follows
+        new = typed[len(base):]
+        if typing:
+            if text[-1:].isalnum():
+                new = new[:-1]
+            if not new:
+                return 1.0
+            guessed = guessed[:len(new)]
+        if not new and not guessed:
+            return 1.0
+        return difflib.SequenceMatcher(None, new, guessed, autojunk=False).ratio()
+
 
 def turn_separator(tok) -> str:
     """What the chat template puts between an answer and the next user message.
@@ -106,8 +176,11 @@ class Stream:
     same distribution as one started after Enter.
     """
 
-    def __init__(self, session: "Session", prompt: list[int], limit: int, text: str = "", bias: list | None = None):
+    def __init__(self, session: "Session", prompt: list[int], limit: int, text: str = "", bias: list | None = None,
+                 slot: int | None = None, sampling: dict | None = None):
         self.session, self.prompt, self.limit, self.text, self.bias = session, prompt, limit, text, bias
+        # A branch (--branches) runs on a slot of its own, beside the session's: no lock, no cache to follow.
+        self.slot, self.sampling = slot, sampling
         self.tokens: list[int] = []
         self.info: dict = {}                       # the last event: stop_type, timings, tokens_cached
         self.done = self.cancelled = False
@@ -121,11 +194,12 @@ class Stream:
 
     def _run(self):
         s = self.session
-        body = {"prompt": self.prompt, "id_slot": s.eng.slot, "cache_prompt": True, "stream": True,
-                "n_predict": self.limit, "return_tokens": True, **s.sampling}
+        main = self.slot is None
+        body = {"prompt": self.prompt, "id_slot": s.eng.slot if main else self.slot, "cache_prompt": True,
+                "stream": True, "n_predict": self.limit, "return_tokens": True, **(self.sampling or s.sampling)}
         if self.bias:
             body["logit_bias"] = self.bias
-        with s.slot_lock:
+        with s.slot_lock if main else contextlib.nullcontext():
             try:
                 if not self.cancelled:
                     self._conn = http.client.HTTPConnection("127.0.0.1", s.server.port, timeout=600)
@@ -150,6 +224,7 @@ class Stream:
             finally:
                 if self._conn is not None:
                     self._conn.close()
+                if self._conn is not None and main:
                     # The slot now holds the prompt and what was generated: the next request starts from there.
                     cached = self.prompt + self.tokens
                     s.eng.assume_cached(cached[:self.info.get("tokens_cached", len(cached))])
@@ -232,6 +307,19 @@ class Session:
             if not self.think:
                 raise SystemExit("--gatherer hands its material to the main model's reasoning: drop --no-think.")
             self.ahead = 0                         # the gatherer reasons ahead in its place
+        # --branches: guessed endings of the message, each reasoned on in a slot of its own.
+        self.n_branches = getattr(args, "branches", 0) if role == "main" else 0
+        if self.n_branches and not self.think:
+            raise SystemExit("--branches reasons on guessed endings of the message: drop --no-think.")
+        if self.n_branches and getattr(args, "gatherer", ""):
+            raise SystemExit("--branches and --gatherer both write the reasoning ahead: choose one.")
+        self.branches: list[Branch] = []
+        self.free_slots: list[int] = []
+        self.branch_lock = threading.Lock()        # the branches vs. Enter
+        self._guessed = ""                         # a text whose last guess repeated one already there
+        self.n_guesses = 0                         # guesses made for this message
+        self.guessed: dict[str, int] = {}          # how many times each message was guessed
+        self.branch_log: dict = {}                 # what happened to the branches at the last Enter
         self.slot_lock = threading.Lock()          # one request at a time on the slot
         self.tok_lock = threading.Lock()           # the fast tokenizer is not safe across threads
         self.spec_lock = threading.Lock()          # starting an answer ahead vs. pressing Enter
@@ -274,8 +362,12 @@ class Session:
                 if self.gatherer.state == "error":
                     raise SystemExit(f"Gatherer: {self.gatherer.error}")
             args = self._gatherer_args() if self.role == "gatherer" else self.args
-            self.tok, self.server, device, quant = setup_llama(args, n_slots=1)
+            # Branches share one KV cache with the session: its context, plus a share for each branch.
+            self.tok, self.server, device, quant = setup_llama(
+                args, n_slots=1 + self.n_branches,
+                pool=args.ctx + self.n_branches * BRANCH_CTX if self.n_branches else 0)
             self.eng = LlamaPrefill(self.server, slot=self.server.take_slot())
+            self.free_slots = [self.server.take_slot() for _ in range(self.n_branches)]
             tpl = Template.from_tokenizer(self.tok, thinking=self.think)
             self.sampling = THINK_SAMPLING if self.think else SAMPLING
             self.start_ids = encode(self.tok, tpl.prefix)
@@ -313,6 +405,8 @@ class Session:
             if self.state != "closed":
                 self.state, self.error = "error", str(e) or type(e).__name__
             return
+        if self.n_branches:
+            threading.Thread(target=self._branch_loop, daemon=True).start()
         self._prefill_loop()
 
     def close(self):
@@ -607,7 +701,7 @@ class Session:
             has_text = bool(self.text.strip())
             # Reasoning starts on whole words: a pause, or a space or punctuation just typed.
             min_words = GATHER_STEP_WORDS if self.fmt == "trained" else THINK_MIN_WORDS
-            can_start = self._ahead_room() and (not self.think or (
+            can_start = self._ahead_room() and not self._branch_reasoning() and (not self.think or (
                 len(self.text.split()) >= min_words and (paused or not self.text[-1:].isalnum())))
             # Reasoning goes on while the user types; an answer (no --think) waits for a pause.
             go = paused or (self.think and self.ahead and can_start)
@@ -652,10 +746,126 @@ class Session:
                 # the cache to catch up with the text would never let a chunk start (measured on the
                 # 14B: 0.8 s to reread the frame after every word, no reasoning ahead at all).
                 if (goal is final and go and self.think and self.ahead and self.notes and not self.answer_ahead
-                        and self._ahead_room() and final != self._failed):
+                        and self._ahead_room() and not self._branch_reasoning() and final != self._failed):
                     with self.spec_lock:
                         if not self.generating and self.spec is None:
                             self._start_chunk(final, final_text)
+
+    # ---- branches (--branches) ------------------------------------------------------
+    def _branch_loop(self):
+        """Guesses endings of the message on the free slots, and drops the branches the typing contradicts."""
+        while self.state != "closed":
+            time.sleep(0.05)
+            with self.branch_lock:
+                if self.generating:
+                    continue                       # Enter has taken the branches
+                text = self.text
+                for b in list(self.branches):
+                    if b.state == "guess":
+                        if not b.stream.done:
+                            continue
+                        if not self._reason_on(b):
+                            self._drop(b)
+                            continue
+                    if b.agreement(text, typing=True) < BRANCH_KEEP:
+                        self._drop(b)
+                if self.free_slots and self._can_guess(text):
+                    self._guess(text)
+
+    def _can_guess(self, text: str) -> bool:
+        """A guess starts on whole words (a space or punctuation just typed, or a pause), late enough in the
+        message, one at a time: guesses are short, but each one slows down whatever else is running."""
+        return (len(words(text)) >= BRANCH_MIN_WORDS and text != self._guessed
+                and (not text[-1:].isalnum() or self._paused())
+                and not any(b.state == "guess" for b in self.branches))
+
+    def _branch_reasoning(self) -> bool:
+        """A branch is reasoning: the session's own reasoning waits, so the branch runs at full speed.
+
+        A branch reasons on a whole message (guessed), past the point where the user sends it:
+        when it guessed right, its reasoning is worth more than notes on a message still unfinished.
+        """
+        return any(b.state == "reason" and not b.stream.done for b in self.branches)
+
+    def _guess(self, text: str):
+        """Write an ending for `text` on a free slot: the model continues the user's message."""
+        slot = self.free_slots.pop()
+        with self.tok_lock:
+            prompt = self.history + self._encode(self.tok, text.rstrip())
+        self.branches.append(Branch(slot, text, Stream(self, prompt, PREDICT_TOKENS, text, slot=slot,
+                                                       sampling=PREDICT_SAMPLING)))
+        self.n_guesses += 1
+
+    def _reason_on(self, b: Branch) -> bool:
+        """The guess is written: reason on the message it makes, after the session's notes so far.
+
+        The prompt is the one Enter would build if the user sent exactly that message, so a
+        branch that guessed right holds the very reasoning and answer of that prompt.
+        False when the guess is of no use: no ending within PREDICT_TOKENS, or the same
+        message as another branch.
+        """
+        tokens, info = b.stream.tokens, b.stream.info
+        if info.get("error") or (self.end_id not in tokens and info.get("stop_type") != "word"):
+            return False
+        if self.end_id in tokens:
+            tokens = tokens[:tokens.index(self.end_id)]
+        with self.tok_lock:
+            b.guess = self.tok.decode(tokens).split("\n", 1)[0].rstrip()
+        if len(words(b.guess)) > BRANCH_MAX_LEFT:
+            return False
+        self.guessed[b.full] = self.guessed.get(b.full, 0) + 1
+        if self.guessed[b.full] < BRANCH_CONFIRM:
+            return False
+        if any(o is not b and o.state == "reason" and words(o.full) == words(b.full) for o in self.branches):
+            self._guessed = b.base                 # the model keeps guessing the same: wait for more text
+            return False
+        notes, bridge = self.notes, self.last_bridge
+        if len(notes) <= len(self.seed_ids):
+            b.head = []
+        else:
+            if bridge and notes[-len(bridge):] == bridge:
+                notes = notes[:-len(bridge)]
+            b.head = notes + self.sent_ids
+        with self.tok_lock:
+            prompt = self.history + self._encode(self.tok, b.full.rstrip() + self.suffix) + b.head
+        room = BRANCH_CTX - len(prompt) - 8
+        if self.args.max_tokens:
+            room = min(room, self.args.max_tokens)
+        if room < 256:
+            return False                           # a long conversation leaves no room in a branch's share
+        b.state, b.stream = "reason", Stream(self, prompt, room, b.full, slot=b.slot)
+        return True
+
+    def _drop(self, b: Branch):
+        b.stream.cancel()
+        self.branches.remove(b)
+        self.free_slots.append(b.slot)
+
+    def _stop_branches(self) -> list[Branch]:
+        with self.branch_lock:
+            branches, self.branches = self.branches, []
+            for b in branches:
+                b.stream.cancel()
+            for b in branches:
+                b.stream.wait()
+                self.free_slots.append(b.slot)
+            self._guessed, self.guessed = "", {}
+        return branches
+
+    def _take_branch(self, text: str) -> Branch | None:
+        """On Enter: stop the branches and return the one that guessed exactly `text`, if any."""
+        best, score, n = None, 0.0, self.n_guesses
+        for b in self._stop_branches():
+            if b.state != "reason" or b.stream.info.get("error"):
+                continue
+            s = 2.0 if b.full.rstrip() == text.rstrip() else b.agreement(text, typing=False)
+            if s > score:
+                best, score = b, s
+        exact = score > 1
+        self.branch_log = {"guesses": n, "adopted": "exact" if exact else "",
+                           "agreement": round(min(score, 1.0), 2), "guess": best.full if best else ""}
+        self.n_guesses = 0
+        return best if exact else None
 
     def status(self) -> dict:
         s = {"state": self.state, "error": self.error, "model": self.label, "ctx": self.args.ctx,
@@ -682,6 +892,8 @@ class Session:
                  strike=bool(self.ahead), think=self.think, ahead=answer_ahead + answer,
                  ahead_writing=writing, thinking_ahead=notes + thought,
                  answer_ready=finished or (holds and self._answer_complete()))
+        if self.n_branches:
+            s["branches"] = sum(b.state == "reason" for b in self.branches)
         g = self.gatherer
         if g is not None and g.state == "ready":
             gspec = g.spec
@@ -721,7 +933,18 @@ class Session:
         history = len(self.history)
         final = self._prompt(text)
         reused = min(self._prefix_len(self.eng.cached_tokens, final), len(final) - 1)
-        if self.gatherer is not None:
+        branch = self._take_branch(text) if self.n_branches else None
+        if branch is not None:
+            # A branch guessed this very message: what it wrote, reasoning and answer, was written for this
+            # prompt, and takes the place of the notes.
+            if spec is not None:
+                spec.cancel()
+                spec = None
+            tokens = branch.stream.tokens
+            cut = tokens.index(self.think_end) if self.think_end in tokens else len(tokens)
+            self.notes, self.answer_ahead, self.notes_text = branch.head + tokens[:cut], tokens[cut:], text
+            final = self._prompt(text)
+        elif self.gatherer is not None:
             # The gatherer stops; its material, already read at the pauses, gets the sentence saying the
             # message is complete, and this model reasons on from there.
             self.gatherer.take_notes(text)
@@ -830,7 +1053,8 @@ class Session:
                "left": max(0, len(final) - reused), "ahead": max(0, len(answer_pre) - self.think) + answer,
                "think_tokens": reasoning if self.think else 0,
                "think_ahead": len(notes) + thought if self.think else 0,
-               "cut": stream is not None and stream.hit_limit and len(generated) >= limit, "stopped": stopped}
+               "cut": stream is not None and stream.hit_limit and len(generated) >= limit, "stopped": stopped,
+               **({"branch": self.branch_log} if self.n_branches else {})}
 
     def new_chat(self):
         with self.spec_lock:
@@ -838,6 +1062,9 @@ class Session:
             spec, self.spec = self.spec, None
         if spec is not None:
             spec.cancel()
+        if self.n_branches:
+            self._stop_branches()
+            self.n_guesses = 0
         try:
             with self.slot_lock:
                 if self.state == "ready":
