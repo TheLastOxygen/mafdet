@@ -172,7 +172,7 @@ The typing is not replayed in real time. Each prefill really runs on the model, 
 
 All on an RTX 2060 (6 GB), llama.cpp, Q4_K_M models, real-time typing (5 to 8 characters per second, a few natural pauses, Enter right after the last character, no rereading).
 
-**Reasoning ahead, Qwen3-4B** (fits in VRAM, 83 tok/s): 24 word problems with a known numeric answer, typed in Italian (script and data: `research/thinking_ahead_4b.py`).
+**Reasoning ahead, Qwen3-4B** (fits in VRAM, 83 tok/s): 24 word problems with a known numeric answer, typed in Italian (script and data: `research/thinking_ahead.py`).
 
 | | Without reasoning ahead | `mafdet strike` |
 |---|---|---|
@@ -226,6 +226,8 @@ Even perfect material only matches reasoning ahead: the 14B reads it, then redoe
 | Messages guessed exactly | | 14 of 48 |
 
 The reasoning-ahead column was measured again for this comparison, the same day and on the same code: 4.17 s against the 3.2 s of the table above, two runs of the same 24 problems differ that much. A modest gain, mostly on the slowest answers, and on 24 problems not yet a significant one (faster on 16 of 24, sign test p = 0.15). What did not work: adopting a guess that was only close (*"ha rimasto"* for *"gli restano"*), with a line asking the model to check its reasoning against the real message, gave 2 wrong answers out of 4: the guess had another number (32 for 41), or a word that changed the problem (*"current age"*). Two branches at once are slower than none (median 4.50 s against 2.94 s on half the problems): on the RTX 2060 two sequences write 1.7 times as many tokens as one, four 2.2 times, so each branch slows the others down.
+
+**Larger than the VRAM.** On Qwen3-14B (partly on the CPU, 4.5 tok/s through llama-server) a second sequence is not free either: two run at 77% of the speed of one each, three at 55%. And each guess takes seconds: 1 or 2 per message instead of 10 to 20 on the 4B, so on 4 problems no branch ever started reasoning before Enter (mean wait 44.7 s with the option, 43.9 s without: noise, single problems vary from 24 s to 73 s). The arithmetic does not leave much room anyway: between the moment the question can be guessed and Enter there are a few seconds, about 20 tokens of the 14B, against about 200 left after Enter. So in the app *Guess the ending* gives a branch only to models that fit in VRAM, and none to the others.
 
 **Tried, and why they are not on by default:**
 

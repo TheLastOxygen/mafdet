@@ -1,0 +1,68 @@
+[
+ {
+  "config": "gatherer GPU",
+  "k": 0,
+  "ok": true,
+  "answer_s": 37.8,
+  "total_s": 63.5,
+  "think": 722,
+  "ahead": 552,
+  "tps": 4.7,
+  "cut": false
+ },
+ {
+  "config": "gatherer GPU",
+  "k": 4,
+  "ok": true,
+  "answer_s": 48.0,
+  "total_s": 70.6,
+  "think": 1040,
+  "ahead": 830,
+  "tps": 4.6,
+  "cut": false
+ },
+ {
+  "config": "gatherer GPU",
+  "k": 6,
+  "ok": true,
+  "answer_s": 19.8,
+  "total_s": 40.1,
+  "think": 713,
+  "ahead": 629,
+  "tps": 4.7,
+  "cut": false
+ },
+ {
+  "config": "gatherer GPU",
+  "k": 13,
+  "ok": true,
+  "answer_s": 66.5,
+  "total_s": 85.0,
+  "think": 1275,
+  "ahead": 987,
+  "tps": 4.5,
+  "cut": false
+ },
+ {
+  "config": "gatherer GPU",
+  "k": 19,
+  "ok": true,
+  "answer_s": 78.2,
+  "total_s": 161.4,
+  "think": 1013,
+  "ahead": 637,
+  "tps": 4.7,
+  "cut": false
+ },
+ {
+  "config": "gatherer GPU",
+  "k": 23,
+  "ok": true,
+  "answer_s": 107.4,
+  "total_s": 130.3,
+  "think": 1076,
+  "ahead": 589,
+  "tps": 4.6,
+  "cut": false
+ }
+]

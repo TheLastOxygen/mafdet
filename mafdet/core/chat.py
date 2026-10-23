@@ -122,11 +122,23 @@ class ChatService:
             if gpath:
                 argv += ["--gatherer", gpath]
         elif st["branches"] and v.model["reason_ahead"] and st["think"]:   # the gatherer and branches: one at a time
-            argv += ["--branches", "1"]                                     # measured: 1 helps a little, 2 is slower than none
+            argv += ["--branches", str(self._branches(v))]
         args = build_parser().parse_args(argv)
         args.port = free_port()
         args.tokenizer_kwargs = v.model.get("tokenizer_kwargs", {})
         return args
+
+    def _branches(self, v: catalog.Variant) -> int:
+        """How many branches "Guess the ending" gets with this model: one if the model, with a branch's share
+        of the cache, fits in VRAM; none otherwise.
+
+        Measured on the RTX 2060: on Qwen3-4B (in VRAM) one branch shortens the wait and two are slower
+        than none; on Qwen3-14B (partly on the CPU, 4.5 tok/s) the guesses come too slowly for a branch to
+        start reasoning before Enter (none did, on 4 messages), so they only take time from the reasoning.
+        """
+        from ..watch import BRANCH_CTX
+        e = catalog.estimate(v, self.machine(), self.settings["device"], self.settings["ctx"] + BRANCH_CTX)
+        return 1 if e["placement"] == "gpu" else 0
 
     def load(self, variant_id: str = "") -> dict:
         """Load a model (default: the one in the settings). The previous one is closed first."""

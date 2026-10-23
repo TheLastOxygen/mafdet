@@ -172,7 +172,7 @@ La digitazione non viene riprodotta in tempo reale. Ogni prefill viene eseguito 
 
 Tutto su una RTX 2060 (6 GB), llama.cpp, modelli Q4_K_M, digitazione in tempo reale (da 5 a 8 caratteri al secondo, qualche pausa naturale, invio subito dopo l'ultimo carattere, senza rileggere).
 
-**Ragionamento in anticipo, Qwen3-4B** (sta nella VRAM, 83 tok/s): 24 problemi con una risposta numerica nota, scritti in italiano (script e dati: `research/thinking_ahead_4b.py`).
+**Ragionamento in anticipo, Qwen3-4B** (sta nella VRAM, 83 tok/s): 24 problemi con una risposta numerica nota, scritti in italiano (script e dati: `research/thinking_ahead.py`).
 
 | | Senza ragionamento in anticipo | `mafdet strike` |
 |---|---|---|
@@ -226,6 +226,8 @@ Anche il materiale perfetto pareggia soltanto il ragionamento in anticipo: il 14
 | Messaggi indovinati esatti | | 14 su 48 |
 
 La colonna del ragionamento in anticipo è stata rimisurata per questo confronto, lo stesso giorno e sullo stesso codice: 4,17 s contro i 3,2 s della tabella sopra, due run degli stessi 24 problemi differiscono di tanto. Un guadagno modesto, soprattutto sulle risposte più lente, e su 24 problemi non ancora significativo (più veloce in 16 su 24, test dei segni p = 0,15). Cosa non ha funzionato: adottare una previsione solo vicina (*"ha rimasto"* per *"gli restano"*), con una frase che chiede al modello di ricontrollare il ragionamento sul messaggio vero, ha dato 2 risposte sbagliate su 4: la previsione aveva un altro numero (32 per 41), o una parola che cambiava il problema (*"età attuale"*). Due rami insieme sono più lenti di nessuno (mediana 4,50 s contro 2,94 s su metà dei problemi): sulla RTX 2060 due sequenze scrivono 1,7 volte i token di una, quattro 2,2 volte, quindi ogni ramo rallenta gli altri.
+
+**Più grandi della VRAM.** Su Qwen3-14B (in parte sulla CPU, 4,5 tok/s via llama-server) nemmeno una seconda sequenza è gratis: due vanno ciascuna al 77% della velocità di una, tre al 55%. E ogni previsione richiede secondi: 1 o 2 per messaggio invece delle 10-20 del 4B, così su 4 problemi nessun ramo ha mai cominciato a ragionare prima dell'Invio (attesa media 44,7 s con l'opzione, 43,9 s senza: rumore, i singoli problemi vanno da 24 s a 73 s). L'aritmetica comunque lascia poco spazio: tra il momento in cui la domanda è indovinabile e l'Invio passano pochi secondi, circa 20 token del 14B, contro i circa 200 che restano dopo l'Invio. Per questo nell'app *Indovina il finale* dà un ramo solo ai modelli che stanno in VRAM, e nessuno agli altri.
 
 **Provate, e perché non sono attive di default:**
 

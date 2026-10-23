@@ -95,7 +95,9 @@ BRIDGE_EVERY = 64                   # new reasoning tokens before an edit earns 
 # 2.2 times: each branch slows the rest down. Measured on 24 word problems typed in real time, two runs
 # each (research/thinking_ahead_4b.py): one branch, mean wait after Enter 4.17 s -> 3.51 s (slowest tenth
 # 7.9 s -> 5.3 s), 14 of 48 messages guessed exactly, 48/48 answers right either way; two branches,
-# slower than none (half a run, median 4.50 s against 2.94 s).
+# slower than none (half a run, median 4.50 s against 2.94 s). On Qwen3-14B (partly on the CPU, 4.5 tok/s;
+# 2 sequences at 77% each) a guess takes seconds: 1-2 per message, no branch ever reasoning before Enter
+# (4 messages). So the app gives a branch only to models that fit in VRAM (core/chat.py).
 BRANCH_MIN_WORDS = 8                # no guesses on the first words: the ending is still anyone's guess
 # A guessed ending longer than this invents the data still to come (the numbers of a word problem):
 # it is dropped. Short ones (the question, once the data is typed) come true often enough.

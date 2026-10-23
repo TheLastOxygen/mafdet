@@ -1,0 +1,68 @@
+[
+ {
+  "config": "no ahead",
+  "k": 0,
+  "ok": true,
+  "answer_s": 58.2,
+  "total_s": 88.7,
+  "think": 257,
+  "ahead": 0,
+  "tps": 4.5,
+  "cut": false
+ },
+ {
+  "config": "no ahead",
+  "k": 4,
+  "ok": true,
+  "answer_s": 95.8,
+  "total_s": 120.4,
+  "think": 431,
+  "ahead": 0,
+  "tps": 4.5,
+  "cut": false
+ },
+ {
+  "config": "no ahead",
+  "k": 6,
+  "ok": true,
+  "answer_s": 50.4,
+  "total_s": 67.9,
+  "think": 232,
+  "ahead": 0,
+  "tps": 4.7,
+  "cut": false
+ },
+ {
+  "config": "no ahead",
+  "k": 13,
+  "ok": true,
+  "answer_s": 93.9,
+  "total_s": 122.3,
+  "think": 433,
+  "ahead": 0,
+  "tps": 4.7,
+  "cut": false
+ },
+ {
+  "config": "no ahead",
+  "k": 19,
+  "ok": true,
+  "answer_s": 118.3,
+  "total_s": 201.7,
+  "think": 555,
+  "ahead": 0,
+  "tps": 4.6,
+  "cut": false
+ },
+ {
+  "config": "no ahead",
+  "k": 23,
+  "ok": true,
+  "answer_s": 230.3,
+  "total_s": 250.8,
+  "think": 1060,
+  "ahead": 0,
+  "tps": 4.6,
+  "cut": false
+ }
+]

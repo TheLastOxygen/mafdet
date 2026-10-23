@@ -1,10 +1,14 @@
-"""Does reasoning ahead on a partial message hurt the answers? 24 word problems with a known number,
-typed in real time on Qwen3-4B (thinking mode), with and without reasoning ahead.
+"""Does reasoning ahead on a partial message hurt the answers, and how long is the wait after Enter?
+24 word problems with a known number, typed in real time (thinking mode), with and without reasoning ahead.
 
-The README's "Reasoning ahead, Qwen3-4B" table comes from this script (data/thinking_ahead_4b.json):
+The README's "Reasoning ahead, Qwen3-4B" table comes from this script (data/thinking_ahead_4b.json), the
+--branches one too (data/branches_4b.json); the 14B runs use the six problems below and a warm-up answer:
 
-    python research/thinking_ahead_4b.py research/data/thinking_ahead_4b.json
-    python research/thinking_ahead_4b.py out.json --config "branches 1=--branches 1" --problems 0:12
+    python research/thinking_ahead.py research/data/thinking_ahead_4b.json
+    python research/thinking_ahead.py out.json --config "branches 1=--branches 1" --problems 0:12
+    python research/thinking_ahead.py out.json --gguf Qwen/Qwen3-14B-GGUF:Qwen3-14B-Q4_K_M.gguf         --max-tokens 1800 --warm-up --problems 0,4,6,13,19,23 --config "reason ahead="
+
+Runs longer than about ten minutes are better split with --problems and --append.
 """
 import argparse
 import json
@@ -54,7 +58,7 @@ def correct(answer: str, expect: list[str]) -> bool:
     return any(re.search(rf"(?<![\d,.]){re.escape(e)}(?![\d])", tail) for e in expect)
 
 
-def wait(c, t=600):
+def wait(c, t=1800):
     t0 = time.perf_counter()
     while not c():
         assert time.perf_counter() - t0 < t
@@ -90,17 +94,30 @@ if __name__ == "__main__":
     ap.add_argument("out", help="JSON file for the rows (with --append, the rows already there are kept)")
     ap.add_argument("--config", action="append", default=[],
                     help="name=options of mafdet strike, e.g. 'branches 1=--branches 1' (default: the two of the README)")
-    ap.add_argument("--problems", default=":", help="a slice of the problems, e.g. 0:12 (default: all)")
+    ap.add_argument("--problems", default=":", help="a slice of the problems, e.g. 0:12, or a list, e.g. 0,4,6 "
+                                                     "(default: all)")
+    ap.add_argument("--gguf", default="", help="the model, as for mafdet strike (default: its default, Qwen3-4B)")
+    ap.add_argument("--max-tokens", default="3000")
+    ap.add_argument("--warm-up", action="store_true", help="answer a greeting first (CUDA graphs, CPU caches)")
     ap.add_argument("--append", action="store_true")
     a = ap.parse_args()
     configs = dict(c.split("=", 1) for c in a.config) if a.config else {k: " ".join(v) for k, v in CONFIGS.items()}
-    lo, hi = (int(x) if x else None for x in a.problems.split(":"))
+    if ":" in a.problems:
+        lo, hi = (int(x) if x else None for x in a.problems.split(":"))
+        picked = list(range(len(PROBLEMS)))[lo:hi]
+    else:
+        picked = [int(x) for x in a.problems.split(",")]
     rows = json.load(open(a.out, encoding="utf-8")) if a.append and Path(a.out).exists() else []
     for name, extra in configs.items():
-        s = Session(build_parser().parse_args(["strike", "--max-tokens", "3000"] + extra.split()))
+        model = ["--gguf", a.gguf] if a.gguf else []
+        s = Session(build_parser().parse_args(["strike", "--max-tokens", a.max_tokens] + model + extra.split()))
         wait(lambda: s.state != "loading")
         assert s.state == "ready", s.error
-        for k, (msg, expect) in list(enumerate(PROBLEMS))[lo:hi]:
+        if a.warm_up:
+            s.draft("Ciao")
+            list(s.send("Ciao"))
+        for k in picked:
+            msg, expect = PROBLEMS[k]
             s.new_chat()
             type_message(s, msg, random.Random(k))
             answer, d = "", None

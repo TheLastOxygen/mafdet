@@ -303,7 +303,7 @@ def _strike_args(p):
                    help="experimental: the model also guesses how you will finish the message and reasons on up "
                         "to N guesses beside the main reasoning; if one guessed the exact message, its reasoning "
                         "and answer are ready on Enter. Measured on Qwen3-4B: 1 shortens the wait by 16%% on average, 2 is "
-                        "slower than none "
+                        "slower than none; with a model larger than the VRAM the guesses come too slowly to help "
                         "(default: %(default)s, off)")
     p.add_argument("--recycle", action="store_true",
                    help="reuse the answers written for earlier versions of the message as drafts for "

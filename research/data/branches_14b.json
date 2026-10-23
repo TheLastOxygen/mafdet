@@ -1,0 +1,106 @@
+[
+ {
+  "config": "reason ahead",
+  "k": 0,
+  "ok": true,
+  "answer_ms": 44062,
+  "think_tokens": 400,
+  "think_ahead": 184,
+  "cut": false,
+  "tail": "*Una penna da 2 euro**:  \n  $2$ euro.\n\n**Totale speso**:  \n$12 + 2 = 14$ euro.\n\n**Euro rimasti**:  \n$25 - 14 = \\boxed{11}$ euro.  \n\nLuca ha **11 euro** rimasti."
+ },
+ {
+  "config": "reason ahead",
+  "k": 4,
+  "ok": true,
+  "answer_ms": 22445,
+  "think_tokens": 301,
+  "think_ahead": 195,
+  "cut": false,
+  "tail": "re quante pagine le mancano, sottraiamo le pagine lette dal totale:\n\n$$\n400 - 216 = 184 \\text{ pagine}\n$$\n\n**Risposta finale:** Marta le mancano **184 pagine**."
+ },
+ {
+  "config": "branches 1",
+  "k": 0,
+  "ok": true,
+  "answer_ms": 40670,
+  "think_tokens": 370,
+  "think_ahead": 172,
+  "cut": false,
+  "tail": "+ 2 euro (penna) = **14 euro**.  \n\n**Euro rimasti**:  \n25 euro (iniziali) − 14 euro (spesi) = **11 euro**.  \n\n**Risposta finale**: Luca gli restano **11 euro**.",
+  "branch": {
+   "guesses": 1,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1",
+  "k": 4,
+  "ok": true,
+  "answer_ms": 49077,
+  "think_tokens": 410,
+  "think_ahead": 175,
+  "cut": false,
+  "tail": "ibro ha 400 pagine in totale, quindi le pagine che le mancano sono:\n\n$$\n400 - 216 = 184 \\text{ pagine}\n$$\n\n**Risposta finale:** Marta le mancano **184 pagine**.",
+  "branch": {
+   "guesses": 2,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "reason ahead",
+  "k": 6,
+  "ok": true,
+  "answer_ms": 73366,
+  "think_tokens": 553,
+  "think_ahead": 191,
+  "cut": false,
+  "tail": " 9 e regalate 5:  \n**9 + 5 = 14 bottiglie utilizzate/regalate**.  \n\nLe bottiglie rimaste sono:  \n**24 - 14 = 10**.  \n\n**Risposta:** Ti restano **10 bottiglie**."
+ },
+ {
+  "config": "reason ahead",
+  "k": 13,
+  "ok": true,
+  "answer_ms": 35850,
+  "think_tokens": 326,
+  "think_ahead": 169,
+  "cut": false,
+  "tail": "ext{euro}}{15\\ \\text{euro/settimana}} = 18\\ \\text{settimane}\n$$\n\n**Risposta finale:** Paolo ha bisogno di **18 settimane** per risparmiare l'importo necessario."
+ },
+ {
+  "config": "branches 1",
+  "k": 6,
+  "ok": true,
+  "answer_ms": 23779,
+  "think_tokens": 281,
+  "think_ahead": 183,
+  "cut": false,
+  "tail": " quindi hai utilizzato:  \n**9 + 5 = 14 bottiglie**.\n\nLe bottiglie rimaste sono:  \n**24 − 14 = 10 bottiglie**.\n\n**Risposta finale:** Ti restano **10 bottiglie**.",
+  "branch": {
+   "guesses": 2,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ },
+ {
+  "config": "branches 1",
+  "k": 13,
+  "ok": true,
+  "answer_ms": 65188,
+  "think_tokens": 450,
+  "think_ahead": 149,
+  "cut": false,
+  "tail": "o a settimana**, il numero di settimane necessarie è:  \n$$\n\\frac{270}{15} = 18 \\text{ settimane}.\n$$\n\n**Risposta finale:** Paolo ha bisogno di **18 settimane**.",
+  "branch": {
+   "guesses": 1,
+   "adopted": "",
+   "agreement": 0.0,
+   "guess": ""
+  }
+ }
+]

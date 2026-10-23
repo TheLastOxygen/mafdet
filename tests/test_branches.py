@@ -2,6 +2,7 @@
 from mafdet.core import catalog, config
 from mafdet.core.chat import ChatService
 from mafdet.watch import Branch
+from test_hardware_catalog import reference_pc
 
 BASE = "Luca ha 25 euro, compra 3 quaderni da 4 euro e una penna da 2 euro. "
 
@@ -31,16 +32,22 @@ def test_full_message():
     assert branch(" Quanti euro gli restano?", BASE.rstrip() + " ").full == BASE.rstrip() + " Quanti euro gli restano?"
 
 
-def args_for(settings: dict):
+def args_for(settings: dict, model: str = "qwen3-4b", gpu: bool = True):
     service = ChatService.__new__(ChatService)
     service.settings = {**config.DEFAULTS, **settings}
-    v = catalog.find("qwen3-4b")
-    return service._args(v, "model.gguf")
+    service.machine = lambda: reference_pc(gpu)
+    return service._args(catalog.find(model), "model.gguf")
 
 
 def test_setting_turns_one_branch_on():
     assert args_for({"branches": True}).branches == 1
     assert args_for({}).branches == 0
+
+
+def test_no_branch_for_a_model_larger_than_the_vram():
+    """The 14B runs partly on the CPU: its guesses come too slowly to be worth a branch (measured)."""
+    assert args_for({"branches": True}, "qwen3-14b").branches == 0
+    assert args_for({"branches": True}, gpu=False).branches == 0
 
 
 def test_branches_need_reasoning_and_give_way_to_the_gatherer():

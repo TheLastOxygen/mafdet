@@ -1,0 +1,35 @@
+[
+ {
+  "config": "trained GPU",
+  "k": 0,
+  "ok": true,
+  "answer_s": 36.3,
+  "total_s": 56.9,
+  "think": 272,
+  "ahead": 76,
+  "tps": 5.5,
+  "cut": false
+ },
+ {
+  "config": "trained GPU",
+  "k": 4,
+  "ok": true,
+  "answer_s": 123.8,
+  "total_s": 147.5,
+  "think": 742,
+  "ahead": 78,
+  "tps": 5.4,
+  "cut": false
+ },
+ {
+  "config": "trained GPU",
+  "k": 6,
+  "ok": true,
+  "answer_s": 53.1,
+  "total_s": 69.0,
+  "think": 289,
+  "ahead": 0,
+  "tps": 5.5,
+  "cut": false
+ }
+]

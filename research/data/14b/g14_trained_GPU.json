@@ -1,0 +1,68 @@
+[
+ {
+  "config": "trained GPU",
+  "k": 0,
+  "ok": true,
+  "answer_s": 50.2,
+  "total_s": 78.7,
+  "think": 311,
+  "ahead": 71,
+  "tps": 4.9,
+  "cut": false
+ },
+ {
+  "config": "trained GPU",
+  "k": 4,
+  "ok": true,
+  "answer_s": 82.0,
+  "total_s": 103.4,
+  "think": 472,
+  "ahead": 79,
+  "tps": 4.8,
+  "cut": false
+ },
+ {
+  "config": "trained GPU",
+  "k": 6,
+  "ok": true,
+  "answer_s": 39.0,
+  "total_s": 59.2,
+  "think": 260,
+  "ahead": 73,
+  "tps": 4.9,
+  "cut": false
+ },
+ {
+  "config": "trained GPU",
+  "k": 13,
+  "ok": true,
+  "answer_s": 75.0,
+  "total_s": 113.1,
+  "think": 413,
+  "ahead": 56,
+  "tps": 4.8,
+  "cut": false
+ },
+ {
+  "config": "trained GPU",
+  "k": 19,
+  "ok": true,
+  "answer_s": 106.2,
+  "total_s": 161.4,
+  "think": 552,
+  "ahead": 57,
+  "tps": 4.7,
+  "cut": false
+ },
+ {
+  "config": "trained GPU",
+  "k": 23,
+  "ok": true,
+  "answer_s": 122.3,
+  "total_s": 143.0,
+  "think": 641,
+  "ahead": 55,
+  "tps": 4.8,
+  "cut": false
+ }
+]

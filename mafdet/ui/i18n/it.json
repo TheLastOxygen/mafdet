@@ -184,7 +184,7 @@
  "settings.gatherer.hint": "Un modello piccolo raccoglie materiale mentre scrivi e il modello principale lo legge. Misurato sulla RTX 2060: non più veloce del ragionamento in anticipo. Per la ricerca.",
  "settings.gatherer.none": "Spento",
  "settings.branches": "Indovina il finale",
- "settings.branches.hint": "Il modello prova anche a indovinare come finirai il messaggio e ragiona sulla previsione. Misurato su Qwen3-4B: ha indovinato il messaggio esatto circa 1 volta su 3; l'attesa è stata in media più corta del 16%, soprattutto sulle risposte più lente. Usa più VRAM.",
+ "settings.branches.hint": "Il modello prova anche a indovinare come finirai il messaggio e ragiona sulla previsione. Misurato su Qwen3-4B: ha indovinato il messaggio esatto circa 1 volta su 3; l'attesa è stata in media più corta del 16%, soprattutto sulle risposte più lente. Solo con i modelli che stanno in VRAM: su quelli più grandi le previsioni arrivano troppo lente. Usa più VRAM.",
  "settings.tokens": "{n} token",
  "settings.unlimited": "Nessun limite",
  "settings.toast.saved": "Impostazioni salvate",
