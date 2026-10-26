@@ -31,9 +31,9 @@ Premi Invio, e gran parte del lavoro è già fatta.
 
 Le interfacce di chat fanno aspettare il modello finché non premi Invio, e solo allora si mette al lavoro. Mentre scrivi, la GPU resta ferma. Quando invii, il modello deve prima *leggere* tutto il messaggio (prefill). Poi un modello che ragiona, come Qwen3 in modalità ragionamento, *pensa* per centinaia di token prima della prima parola della risposta. Su una GPU di fascia media quel ragionamento è l'attesa più lunga di tutte: dieci secondi e più su un problema, minuti con un modello più grande della VRAM.
 
-MAFDET usa per entrambe le cose il tempo in cui scrivi. **Legge** il messaggio mentre lo scrivi, così all'Invio il prefill è già fatto. E **ragiona in anticipo**: il modello comincia a pensare al tuo messaggio mentre lo stai ancora scrivendo, e conserva quel ragionamento quando cambi il testo. Su Qwen3-4B, con 24 problemi digitati in tempo reale, l'attesa media dopo l'Invio passa da **12,2 s a 3,2 s**, con le stesse 24 risposte corrette su 24; su Qwen3-14B da **108 s a 47 s**.
+MAFDET usa per entrambe le cose il tempo in cui scrivi. **Legge** il messaggio mentre lo scrivi, così all'Invio il prefill è già fatto. E **ragiona in anticipo**: il modello comincia a pensare al tuo messaggio mentre lo stai ancora scrivendo, e conserva quel ragionamento quando cambi il testo. Su Qwen3-4B, con 24 problemi digitati in tempo reale, l'attesa media dopo l'Invio passa da **12,2 s a 3,2 s**, con le stesse 24 risposte corrette su 24; su Qwen3-14B da **108 s a 47 s**. Su un MacBook Pro M2 Pro da **18,1 s a 5,6 s** (4B, 24/24 in entrambi i casi) e da **32,7 s a 12,1 s** (14B).
 
-MAFDET è pensato per l'hardware che la maggior parte delle persone possiede davvero. La macchina di riferimento è una **RTX 2060 con 6 GB di VRAM**, e tutto funziona anche **solo su CPU**.
+MAFDET è pensato per l'hardware che la maggior parte delle persone possiede davvero. La macchina di riferimento è una **RTX 2060 con 6 GB di VRAM**; funziona anche sui **Mac con Apple Silicon** (Metal, misurato su un M2 Pro con 16 GB), e tutto funziona anche **solo su CPU**.
 
 > Il nome viene da Mafdet, la dea felina dell'antico Egitto detta "la corritrice", che colpiva serpenti e scorpioni prima che potessero attaccare.
 
@@ -82,7 +82,7 @@ pip install -e .
 mafdet
 ```
 
-In entrambi i casi niente PyTorch e niente download a mano: MAFDET chiede se aprire la **finestra** o l'**app nel terminale**, e al primo avvio una procedura guidata fa il resto. Guarda il tuo computer, installa da sola la build giusta di llama.cpp (CUDA per una scheda NVIDIA, CPU altrimenti) e scarica il modello che rende di più sul tuo hardware.
+In entrambi i casi niente PyTorch e niente download a mano: MAFDET chiede se aprire la **finestra** o l'**app nel terminale**, e al primo avvio una procedura guidata fa il resto. Guarda il tuo computer, installa da sola la build giusta di llama.cpp (CUDA per una scheda NVIDIA, Metal su un Mac con Apple Silicon, CPU altrimenti) e scarica il modello che rende di più sul tuo hardware.
 
 <p align="center">
   <img src="assets/screenshots/gui-chat.png" alt="La finestra di MAFDET: il modello ha ragionato mentre il messaggio veniva scritto (455 token di ragionamento su 571) e ha risposto 1,6 s dopo l'invio" width="49%">
@@ -104,7 +104,7 @@ La stessa app esiste in due forme, sullo stesso motore:
 
 **Chat.** Mentre scrivi, una riga di stato sotto il messaggio mostra cosa sta facendo il modello: quanto ha già letto e quanti token di ragionamento ha scritto in anticipo (il campo si illumina di ambra mentre ragiona). All'invio resta da calcolare solo la coda. Il ragionamento è mostrato chiuso sopra la risposta, e ogni risposta finisce con i suoi numeri: prima parola dopo l'invio, token letti mentre scrivevi, ragionamento fatto prima dell'invio, velocità.
 
-**Modelli.** Cinque famiglie: **Qwen3**, **Llama 3**, **Gemma 3**, **Mistral** e **Phi-4**, da 0,6 a 32 miliardi di parametri, ognuna in più quantizzazioni. Con ogni modello MAFDET legge il messaggio mentre scrivi e, a una pausa, scrive la risposta in anticipo; Qwen3 in più **ragiona in anticipo**, l'unica famiglia di cui è stata misurata la cornice di ragionamento. Ogni modello del catalogo dice cosa fa sul *tuo* computer, prima di scaricarlo: se sta nella VRAM o gira in parte sulla CPU, quanto veloce scrive e legge e, per Qwen3, dopo quanto arriva la risposta dopo l'invio con e senza MAFDET (per le altre famiglie, quanto ci vuole a scrivere una risposta tipica). La stima viene dal tuo hardware (banda di GPU e RAM, VRAM, ripartizione dei layer di llama.cpp tra GPU e CPU) e sul PC di riferimento sta entro il 12% delle velocità misurate (Qwen3-4B 89,6 stimati / 87,1 misurati tok/s, 8B 16,2 / 16,2, 14B 5,1 / 4,9). Una volta scaricato un modello, **Misura** lo prova in mezzo minuto e i numeri veri sostituiscono la stima. Il modello che rende di più è segnato come *Il migliore per te*, e ogni famiglia ha il suo migliore. Per aggiungere un modello basta una riga in `tools/build_catalog.py`: legge da Hugging Face le dimensioni dei file e la forma del modello.
+**Modelli.** Cinque famiglie: **Qwen3**, **Llama 3**, **Gemma 3**, **Mistral** e **Phi-4**, da 0,6 a 32 miliardi di parametri, ognuna in più quantizzazioni. Con ogni modello MAFDET legge il messaggio mentre scrivi e, a una pausa, scrive la risposta in anticipo; Qwen3 in più **ragiona in anticipo**, l'unica famiglia di cui è stata misurata la cornice di ragionamento. Ogni modello del catalogo dice cosa fa sul *tuo* computer, prima di scaricarlo: se sta nella VRAM o gira in parte sulla CPU, quanto veloce scrive e legge e, per Qwen3, dopo quanto arriva la risposta dopo l'invio con e senza MAFDET (per le altre famiglie, quanto ci vuole a scrivere una risposta tipica). La stima viene dal tuo hardware (banda di GPU e RAM, VRAM, ripartizione dei layer di llama.cpp tra GPU e CPU) e sul PC di riferimento sta entro il 12% delle velocità misurate (Qwen3-4B 89,6 stimati / 87,1 misurati tok/s, 8B 16,2 / 16,2, 14B 5,1 / 4,9) e su un M2 Pro (Qwen3-4B 53 / 57 tok/s). Una volta scaricato un modello, **Misura** lo prova in mezzo minuto e i numeri veri sostituiscono la stima. Il modello che rende di più è segnato come *Il migliore per te*, e ogni famiglia ha il suo migliore. Per aggiungere un modello basta una riga in `tools/build_catalog.py`: legge da Hugging Face le dimensioni dei file e la forma del modello.
 
 **Hardware e impostazioni.** La vista Hardware mostra GPU, CPU, memoria e il runtime llama.cpp, con un pulsante per installarlo o reinstallarlo. Le impostazioni della chat restano da un avvio all'altro (in `~/.mafdet`, oppure `$MAFDET_HOME`).
 
@@ -129,7 +129,7 @@ Nell'app è attivo di default per Qwen3 (Impostazioni, *Ragiona mentre scrivo*);
 
 1. **Mentre scrivi**, il modello ragiona a blocchi brevi di 32 token, sul messaggio così com'è in quel momento, a parole intere (dopo uno spazio o un segno di punteggiatura, oppure a una pausa).
 2. **Quando il testo cambia**, il ragionamento non viene buttato. Resta nel prompt come appunti, dopo la nuova versione del messaggio. Spostarlo lì costa solo un prefill: la fase veloce e parallela, circa 60 volte più rapida che riscrivere gli stessi token sul 14B con la RTX 2060. Una nuova riga degli appunti nomina le parole appena scritte, così il modello continua a raccogliere materiale su di esse invece di ricominciare.
-3. **All'invio**, un'ultima frase dice al modello che il messaggio ora è completo. Finisce di ragionare da dove era arrivato e risponde.
+3. **All'invio**, un'ultima frase dice al modello che il messaggio ora è completo. Finisce di ragionare da dove era arrivato e risponde. Di rado (Qwen3-4B: una volta sui 24 problemi sul Mac, una volta in passato sulla RTX 2060) il modello scrive la risposta tra i suoi pensieri e chiude il turno senza uscire dal ragionamento: l'app allora chiude il ragionamento come fa il template di Qwen3, e il modello scrive la risposta, qualche secondo dopo invece di una risposta vuota.
 
 Gli appunti sono un elenco di **materiale per la risposta**, aperto da una cornice: *"L'utente sta ancora scrivendo. Non mi chiederò cosa chiederà, né osserverò che il testo è incompleto. Mentre aspetto raccolgo materiale per la risposta: per ogni termine chiave, nome o numero già scritto, una riga con cos'è e i fatti che so, oppure un risultato parziale."* seguita da una riga di esempio presa da un altro messaggio. Ogni volta che scrivi altro, una nuova riga nomina le parole nuove: `- New words "finestra di contesto": `. Così da *"Quando finisce la finestra di contesto degli LLM?"* gli appunti contengono già cos'è una finestra di contesto e cosa significa LLM, e da un problema i risultati parziali (`3 × 12 = 36`) prima ancora che la domanda sia stata scritta.
 
@@ -173,7 +173,7 @@ La digitazione non viene riprodotta in tempo reale. Ogni prefill viene eseguito 
 
 ## Risultati
 
-Tutto su una RTX 2060 (6 GB), llama.cpp, modelli Q4_K_M, digitazione in tempo reale (da 5 a 8 caratteri al secondo, qualche pausa naturale, invio subito dopo l'ultimo carattere, senza rileggere).
+Su una RTX 2060 (6 GB) salvo dove indicato (il Mac ha [la sua tabella](#su-un-mac)), llama.cpp, modelli Q4_K_M, digitazione in tempo reale (da 5 a 8 caratteri al secondo, qualche pausa naturale, invio subito dopo l'ultimo carattere, senza rileggere).
 
 **Ragionamento in anticipo, Qwen3-4B** (sta nella VRAM, 83 tok/s): 24 problemi con una risposta numerica nota, scritti in italiano (script e dati: `research/thinking_ahead.py`).
 
@@ -204,6 +204,23 @@ Stessa precisione, meno ragionamento in totale (il materiale raccolto mentre scr
 | Qwen3-14B | no, in parte sulla CPU | 5 tok/s | circa 160 token |
 
 Anche così, sul 14B (6 problemi digitati in tempo reale, 6/6 corretti in entrambi i casi) il ragionamento in anticipo dimezza l'attesa media dopo l'invio: **da 108 s a 47 s**, con 164 token di ragionamento scritti prima dell'invio in media. Le singole prove variano molto (lo stesso problema ha richiesto 106 s una volta e 154 s un'altra), quindi 6 problemi danno l'ordine di grandezza, non una cifra precisa. La lettura in anticipo guadagna di più quanto più il modello è grande: il 14B legge un documento incollato da 3.000 token in circa 10 s, tutti nascosti mentre scrivi.
+
+### Su un Mac
+
+MacBook Pro M2 Pro, 16 GB, macOS 26.2, llama.cpp con Metal: gli stessi script e gli stessi problemi di sopra.
+
+| M2 Pro | Senza ragionamento in anticipo | `mafdet strike` |
+|---|---|---|
+| **Qwen3-4B**, 24 problemi: risposte corrette | 24/24 | 24/24 |
+| Attesa mediana per la prima parola della risposta | 16,7 s | **4,1 s** |
+| Attesa media | 18,1 s | **5,6 s** |
+| Più veloce | | in 24 problemi su 24 |
+| Ragionamento in totale / rimasto dopo l'invio | 966 / 966 token | **773 / 248 token** |
+| **Qwen3-14B**, 6 problemi: risposte corrette | 6/6 | 6/6 |
+| Attesa mediana | 26,5 s | **11,7 s** |
+| Attesa media | 32,7 s | **12,1 s** |
+
+Sull'M2 Pro il 4B scrive a 54 tok/s (83-87 sulla RTX 2060), quindi entrambe le attese sono più lunghe che sul PC, e il ragionamento in anticipo ne toglie più o meno la stessa parte. Il 14B è dove il Mac fa la differenza: Metal può usare 12 GB dei 16 GB di memoria unificata, quindi il modello sta tutto sulla GPU e scrive a 18 tok/s (4,5-5 sulla RTX 2060, con il 62% sulla CPU). L'attesa dopo l'invio è di 12 s invece di 47 s. La colonna senza ragionamento in anticipo viene da una prova precedente dello stesso giorno; in quella prova una risposta è uscita vuota (il modello ha chiuso il turno dentro il ragionamento, vedi [Ragionamento in anticipo, nel dettaglio](#ragionamento-in-anticipo-nel-dettaglio)), cosa che ora l'app gestisce, e la colonna con il ragionamento in anticipo è la prova dopo la correzione. Durante le prove il Mac è arrivato per qualche minuto a una pressione termica *Heavy* (54 → 51 tok/s). Dati: `research/data/thinking_ahead_4b_m2pro.json`, `thinking_ahead_4b_m2pro_fixed.json`, `thinking_ahead_14b_m2pro.json`.
 
 **Un modello piccolo che raccoglie per uno grande (`--gatherer`, sperimentale).** Per i modelli più grandi della VRAM abbiamo provato a far scrivere materiale mentre scrivi a un modello piccolo e veloce (Qwen3-0.6B, anche allenato apposta con `training/`), che il 14B legge all'invio. Sulla RTX 2060 non batte il 14B che ragiona in anticipo da solo:
 

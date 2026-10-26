@@ -4,7 +4,7 @@ Working notes, kept up to date as the work goes. Read this first in a new sessio
 stands, what was measured, what is next. Newest first in each section. Results that are final also go
 into the README (Results, "Tried, and why they are not on by default").
 
-## Where we are (2026-10-23)
+## Where we are (2026-10-26)
 
 Goal: make the hardware run the models as fast as it can, beyond reasoning ahead (which works: Qwen3-4B
 wait after Enter 12.2 s → 3.2 s, Qwen3-14B 108 s → 47 s, see README).
@@ -12,6 +12,12 @@ wait after Enter 12.2 s → 3.2 s, Qwen3-14B 108 s → 47 s, see README).
 Reference machine: RTX 2060 6 GB (about 1.1-1.4 GB taken by the desktop), i5-10400 (6 cores), 16 GB DDR4,
 Windows 11, llama.cpp b11747 in `./llama.cpp`. Qwen3-4B Q4_K_M fits in VRAM (~75-83 tok/s);
 Qwen3-14B Q4_K_M does not (38% on GPU, ~4.5-5 tok/s through llama-server).
+
+Second machine (since 2026-10-26): MacBook Pro M2 Pro 16 GB, macOS 26.2, llama.cpp b11747 macos-arm64 (Metal,
+installed by the app in ~/.mafdet/llama.cpp). Metal may use 12,124 MB of the unified memory: Qwen3-4B 54 tok/s,
+Qwen3-14B all on the GPU at 18 tok/s. Reasoning ahead: 4B 18.1 → 5.6 s, 14B 32.7 → 12.1 s (README, "On a Mac").
+It gets hot under long runs (thermal pressure Heavy after ~25 min of the 4B benchmark): check
+`sudo powermetrics --samplers thermal -n 1` before a run, and compare configs measured close together.
 
 Key fact learned: on a model split between GPU and CPU, the CPU's layers *compute* every token they are
 given. Anything that processes several tokens at once (parallel branches, speculative-decoding drafts)
@@ -42,7 +48,12 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
    - estimate the speedup: bytes of weights skipped on the CPU's layers
    Only if accuracy holds: plan the llama.cpp kernel work (CPU matmul skipping zeroed columns).
 
-3. Other ideas discussed, not started:
+3. **Mac follow-ups** (cheap, the M2 Pro is set up): the README's no-ahead 4B column is from the run before
+   the empty-answer fix; repeat both configs in one run when the Mac is cool. The 8B on the Mac (should fit
+   on the GPU, ~27 tok/s estimated). The SENT frame ("...and answer it") may invite the answer inside the
+   reasoning: count `closed` in future runs (now in the rows) before touching it.
+
+4. Other ideas discussed, not started:
    - show the answer written ahead live under the input field (zero perceived wait; a product/UX change,
      test with people, not a benchmark)
    - harder benchmark (problems the 4B gets wrong 30-50% of the time) to see accuracy effects at all
@@ -62,12 +73,16 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
   b11747 macOS arm64 (Metal). The GPU is detected through Metal (its recommended working set, 12,124 MB here,
   is the "VRAM"; the unified memory counts once). `mafdet bench` Qwen3-4B Q4_K_M: prefill 593 tok/s, decode
   56.9 (catalog estimate 625 / 53).
-  `research/thinking_ahead.py`, before the fix above (data `thinking_ahead_4b_m2pro.json`, `..._14b_m2pro.json`):
-  - 4B, 24 problems: mean wait 18.1 → 6.7 s, median 16.7 → 4.4 s, slowest tenth 29.4 → 9.6 s; 24/24 and 23/24
-    (the empty answer); 54 tok/s; 530 of 845 reasoning tokens ahead.
-  - 14B, the 6 problems of the README, --warm-up, --max-tokens 1800: mean wait 32.7 → 12.1 s, median
-    26.5 → 11.7 s, 6/6 both; 18.3 tok/s, all on the GPU (RTX 2060: 108 → 47 s, 4.5-5 tok/s).
-  The Mac reached thermal pressure "Heavy" for a few minutes during the 4B run (decode 54 → 51-53 tok/s).
+  `research/thinking_ahead.py` (in the README, "On a Mac"):
+  - 4B, 24 problems, no ahead (`thinking_ahead_4b_m2pro.json`): 24/24, mean 18.1 s, median 16.7 s, 966
+    reasoning tokens, 54 tok/s. Reason ahead in that run, before the fix: 23/24 (the empty answer), mean 6.7 s.
+  - 4B reason ahead after the fix (`thinking_ahead_4b_m2pro_fixed.json`): 24/24, mean 5.6 s, median 4.1 s,
+    slowest tenth 8.6 s, faster in 24/24, 773 reasoning tokens of which 525 ahead (248 left after Enter).
+    `closed` was not recorded in the rows then (it is now), so whether the fix fired in it is unknown.
+  - 14B, the 6 problems of the README, --warm-up, --max-tokens 1800 (`thinking_ahead_14b_m2pro.json`):
+    mean 32.7 → 12.1 s, median 26.5 → 11.7 s, 6/6 both; 18.3 tok/s, all on the GPU; 593 reasoning tokens
+    without, 455 with (272 ahead). RTX 2060: 108 → 47 s.
+  The Mac reached thermal pressure "Heavy" for a few minutes during the first 4B run (54 → 51-53 tok/s).
 - **2026-10-23 · Notes as a speculative-decoding draft after Enter** — negative. Offline replay
   (`research/notes_as_draft.py`, data `notes_as_draft_4b.json`): prompt lookup would write 1.5-1.7 tokens
   per step on the 4B (1.3-1.5 without notes). Real, llama.cpp `--spec-type ngram-simple`: 4B 73 tok/s

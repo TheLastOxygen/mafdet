@@ -1039,8 +1039,8 @@ class Session:
             if (self.think and state["thinking"] and not stopped and not stream.hit_limit and not closed
                     and len(generated) < limit - 8):
                 # The turn ended inside the reasoning, the answer written there: nothing for the page but
-                # thoughts (Qwen3-4B after reasoning ahead, about one message in 25). Close the reasoning as
-                # the template does, and the model writes the answer.
+                # thoughts (Qwen3-4B after reasoning ahead: once in 24 problems on the M2 Pro, once on the RTX 2060).
+                # Close the reasoning as the template does, and the model writes the answer.
                 closed = True
                 close = self._encode(self.tok, "\n") + [self.think_end] + self._encode(self.tok, "\n\n")
                 generated = (generated[:-1] if generated[-1:] == [self.end_id] else generated) + close

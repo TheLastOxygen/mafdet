@@ -2,7 +2,8 @@
 24 word problems with a known number, typed in real time (thinking mode), with and without reasoning ahead.
 
 The README's "Reasoning ahead, Qwen3-4B" table comes from this script (data/thinking_ahead_4b.json), the
---branches one too (data/branches_4b.json); the 14B runs use the six problems below and a warm-up answer:
+--branches one too (data/branches_4b.json), the Mac one data/thinking_ahead_4b_m2pro.json ("no ahead") and
+data/thinking_ahead_4b_m2pro_fixed.json; the 14B runs use the six problems below and a warm-up answer:
 
     python research/thinking_ahead.py research/data/thinking_ahead_4b.json
     python research/thinking_ahead.py out.json --config "branches 1=--branches 1" --problems 0:12
@@ -129,7 +130,8 @@ if __name__ == "__main__":
                     d = ev
             ok = correct(answer, expect)
             rows.append({"config": name, "k": k, "ok": ok, "answer_ms": d["answer_ms"], "think_tokens": d["think_tokens"],
-                         "think_ahead": d["think_ahead"], "cut": d["cut"], "tps": d["tps"], "tail": answer[-160:],
+                         "think_ahead": d["think_ahead"], "cut": d["cut"], "closed": d.get("closed", False), "tps": d["tps"],
+                         "tail": answer[-160:],
                          **({"branch": d["branch"]} if "branch" in d else {})})
             b = d.get("branch")
             print(f"{name:12s} #{k:2d} {'OK ' if ok else 'BAD'} answer after {d['answer_ms']:5d} ms | reasoning "
