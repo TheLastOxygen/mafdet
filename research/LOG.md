@@ -19,6 +19,12 @@ Qwen3-14B all on the GPU at 18 tok/s. Reasoning ahead: 4B 18.1 → 5.6 s, 14B 32
 It gets hot under long runs (thermal pressure Heavy after ~25 min of the 4B benchmark): check
 `sudo powermetrics --samplers thermal -n 1` before a run, and compare configs measured close together.
 
+Third machine (since 2026-10-26): RTX 4070 SUPER 12 GB (504 GB/s, ~1.9 GB taken by the desktop), i5-14600KF (14 cores),
+32 GB DDR (~28 GB/s by `doctor`), Windows 11, llama.cpp b11747 CUDA 13. Its C: has 3 GB free: everything is on E:,
+`MAFDET_HOME=E:/mafdet-home HF_HOME=E:/hf-cache` in front of every command (the app itself would still use C:).
+Qwen3-14B Q4_K_M goes all on the GPU here (41 tok/s); the catalog says 95% and 23.8 tok/s and recommends the 8B: wrong,
+see "Done and measured".
+
 AMD Radeon (since 2026-10-26): supported through llama.cpp's Vulkan build, no Radeon here to measure on. The README
 asks for volunteers ("Help wanted: benchmarks on an AMD Radeon"): `mafdet doctor`, Measure, and
 `research/thinking_ahead.py radeon_4b.json`, sent as an issue.
@@ -29,6 +35,18 @@ costs the 14B almost proportionally: 2 sequences run at 77% of the speed of one 
 costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
 
 ## Next
+
+0. **IQ4_XS as the default quantization, and the estimate fixed** (from the 4070 SUPER results below).
+   - Qwen3-4B IQ4_XS against Q4_K_M, 24 problems, `research/thinking_ahead.py` (accuracy on the model most people run);
+     then the same two on the RTX 2060 (Turing's IQ4_XS kernel may not gain what Ada's does) and the 14B there (IQ4_XS
+     on the CPU's layers: the CPU kernels of IQ quants are slower per byte than K-quants, to check).
+     If it holds: IQ4_XS variants in `tools/build_catalog.py` (unsloth's repos have them for every Qwen3) and as
+     `default_quant` where measured.
+   - `catalog.estimate`: llama.cpp's fit keeps the token embeddings on the CPU always (417 MB on the 14B, counted as
+     GPU bytes today), its reserve is smaller than VRAM_RESERVE_MB (it left 800 MB free of 12.3 GB with the 14B
+     loaded), and GPU_EFFICIENCY is 0.66-0.78 on Ada (0.62 on the 2060). As it is, the catalog puts the 14B at 95%
+     and 23.8 tok/s on a 12 GB card and recommends the 8B; measured 41 tok/s, 4-5 s after Enter. Fix the placement
+     first, then the efficiency per GPU generation if the measurements justify it.
 
 1. **Put more of the 14B on the GPU** (configuration only, ~1 hour of measurements). Measure decode tok/s
    and wait after Enter with `research/thinking_ahead.py --gguf Qwen/Qwen3-14B-GGUF:Qwen3-14B-Q4_K_M.gguf
@@ -74,6 +92,19 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
 
 ## Done and measured
 
+- **2026-10-26 · Qwen3-14B on a 12 GB card (RTX 4070 SUPER): all on the GPU, IQ4_XS 31% faster than Q4_K_M, same
+  answers.** The plan was "the largest model entirely in VRAM, with a smaller quantization, against the same model
+  split with the CPU"; on this card the 14B Q4_K_M turned out to be entirely in VRAM already (`-lv 5` in the server
+  log: `offloaded 41/41 layers`, CUDA0 model buffer 8162 MiB, CPU_Mapped 417 MiB = the embeddings, which llama.cpp
+  never offloads; KV 1280 MiB at ctx 8192; 11.5 GB of VRAM in use with the desktop's 1.9), so the comparison became
+  three all-GPU configurations. `thinking_ahead.py`, 6 problems, --warm-up, --max-tokens 1800, reasoning ahead
+  (`thinking_ahead_14b_4070s.json`): Q4_K_M 6/6, mean wait 5.25 s, median 3.99 s, 33-42 tok/s; Q4_K_M with
+  `-ctk q8_0 -ctv q8_0` 6/6, 4.54 / 4.12 s, 38-41 tok/s (KV 680 MiB, nothing else changes); IQ4_XS (unsloth,
+  7335 MiB on the GPU) 6/6, 3.66 / 3.97 s, 43-47 tok/s. Measure-style (prompt of 800 tokens, 128 tokens at
+  temperature 0): prefill 2486 / 2400 / 2567 tok/s, decode **40.9 / 41.1 / 53.5 tok/s**. The IQ4_XS gain (+31%) is
+  three times what its bytes explain (−10%): on Ada the IQ4_XS kernel runs better than Q4_K_M's. The catalog's
+  estimate for this machine was "partial, 95% on the GPU, 23.8 tok/s", and it recommends the 8B (66.7 tok/s
+  estimated): the 14B at 41-53 tok/s is the right pick here (see Next, 0).
 - **2026-10-26 · AMD Radeon through Vulkan: in place, checked on the RTX 2060, not measured on a Radeon.**
   Detection: DXGI on Windows (vendor 0x1002, dedicated memory; the registry also lists cards removed long
   ago), amdgpu's sysfs on Linux; 2 GB or more of its own, so integrated Radeons are left out. Bandwidths of
