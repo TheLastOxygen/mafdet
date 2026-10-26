@@ -4,7 +4,7 @@ Local LLMs that read and think while you type: the KV cache follows the text
 as it is written, and a reasoning model starts thinking about the message
 before it is sent. On Enter, little is left to do.
 """
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 # Kept here (and not in engine.py) so the CLI can show them in --help without
 # importing PyTorch, which takes several seconds.
