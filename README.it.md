@@ -18,6 +18,7 @@ MAFDET legge il tuo messaggio mentre lo scrivi, e **comincia a ragionarci prima 
 Premi Invio, e gran parte del lavoro è già fatta.
 
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-EEEAE2?labelColor=0E0D0C)](LICENSE)
+[![PyPI](https://img.shields.io/pypi/v/mafdet?label=pypi&color=EEEAE2&labelColor=0E0D0C)](https://pypi.org/project/mafdet/)
 [![Runtime: local](https://img.shields.io/badge/runtime-local-D4892A?labelColor=0E0D0C)](#requisiti)
 [![Status: prototype](https://img.shields.io/badge/status-prototype-6A655D?labelColor=0E0D0C)](#roadmap)
 
@@ -71,7 +72,14 @@ La lettura in anticipo è esatta. Il ragionamento in anticipo no, perché il mod
 
 **Su macOS, con un doppio clic.** Lo stesso, con **`start_mafdet.command`** (serve Python 3.10 o successivo: da python.org, oppure `brew install python@3.12`). Se il Finder dice che non può verificare il file, clic destro, *Apri*, poi di nuovo *Apri*: serve solo la prima volta.
 
-**Da terminale:**
+**Con pip** (Python 3.10 o successivo), da [PyPI](https://pypi.org/project/mafdet/):
+
+```bash
+pip install mafdet
+mafdet
+```
+
+**Dai sorgenti, da terminale** (serve anche per le misure in `research/`):
 
 ```bash
 git clone https://github.com/TheLastOxygen/mafdet.git

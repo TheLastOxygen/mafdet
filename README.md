@@ -18,6 +18,7 @@ MAFDET reads your message while you type it, and **starts thinking about it befo
 Hit Enter, and most of the work is already done.
 
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-EEEAE2?labelColor=0E0D0C)](https://github.com/TheLastOxygen/mafdet/blob/main/LICENSE)
+[![PyPI](https://img.shields.io/pypi/v/mafdet?label=pypi&color=EEEAE2&labelColor=0E0D0C)](https://pypi.org/project/mafdet/)
 [![Runtime: local](https://img.shields.io/badge/runtime-local-D4892A?labelColor=0E0D0C)](#requirements)
 [![Status: prototype](https://img.shields.io/badge/status-prototype-6A655D?labelColor=0E0D0C)](#roadmap)
 
@@ -71,7 +72,14 @@ Reading ahead is exact. Thinking ahead is not, because the model reasons on vers
 
 **On macOS, with a double-click.** The same, with **`start_mafdet.command`** (Python 3.10 or later: from python.org, or `brew install python@3.12`). If the Finder says it cannot verify the file, right-click it, *Open*, then *Open* again; this is needed only the first time.
 
-**From a terminal:**
+**With pip** (Python 3.10 or later), from [PyPI](https://pypi.org/project/mafdet/):
+
+```bash
+pip install mafdet
+mafdet
+```
+
+**From the source, in a terminal** (also for the measurements in `research/`):
 
 ```bash
 git clone https://github.com/TheLastOxygen/mafdet.git
