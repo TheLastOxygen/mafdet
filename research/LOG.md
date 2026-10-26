@@ -42,6 +42,15 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
      on the CPU's layers: the CPU kernels of IQ quants are slower per byte than K-quants, to check).
      If it holds: IQ4_XS variants in `tools/build_catalog.py` (unsloth's repos have them for every Qwen3) and as
      `default_quant` where measured.
+     **RTX 2060 done (2026-10-27, below): IQ4_XS is not a default for every GPU.** 4B: same accuracy, decode 84 vs
+     86 tok/s, wait after Enter a bit longer. 14B (split with the CPU): +11% decode, 2 more layers on the GPU, mean
+     wait 63.5 → 43.4 s. So the pick depends on the card and on the split: IQ4_XS where the model does not fit
+     (or on Ada and later, per the 4070 SUPER), Q4_K_M for a model all in VRAM on Turing. Still open: the 4B on
+     the 4070 SUPER with 24 problems.
+   - **Problem 19 on the 2060's 14B** (new, below): wrong with reasoning ahead in 2 of 2 runs (one per quantization),
+     right without it in 2 of 2, right with it on the 4070 SUPER and the M2 Pro. Rows keep only the answer's tail:
+     save the reasoning of that problem and read where the numbers that are not in the text (38 motorbikes,
+     84 wheels) come from, before calling it a limit of reasoning ahead on slow models.
    - `catalog.estimate`: llama.cpp's fit keeps the token embeddings on the CPU always (417 MB on the 14B, counted as
      GPU bytes today), its reserve is smaller than VRAM_RESERVE_MB (it left 800 MB free of 12.3 GB with the 14B
      loaded), and GPU_EFFICIENCY is 0.66-0.78 on Ada (0.62 on the 2060). As it is, the catalog puts the 14B at 95%
@@ -92,6 +101,26 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
 
 ## Done and measured
 
+- **2026-10-27 · IQ4_XS against Q4_K_M on the RTX 2060: no gain on the 4B, +11% decode on the 14B.** Same files as
+  on the 4070 SUPER (Q4_K_M from Qwen's repo, IQ4_XS from unsloth's). `research/measure_gguf.py` (the app's
+  Measure on any GGUF, with the layers on the GPU from the server log; new), two alternated rounds, desktop
+  holding ~1.4 GB of VRAM:
+  - 4B, 37/37 layers on the GPU both: prefill 1861-2076 vs **2318-2347** tok/s, decode **86.0-86.3** vs 83.9-84.1.
+    IQ4_XS's 9% fewer bytes do not make Turing write faster (Ada: +31%).
+  - 14B: Q4_K_M 15/41 layers on the GPU, prefill 305-339, decode 5.2; IQ4_XS 17/41, prefill 396-406, decode
+    **5.8-5.9** (+11%, about what the bytes and the 2 extra layers explain).
+  `thinking_ahead.py`, reasoning ahead only, configs measured one after the other:
+  - 4B, 24 problems (`quant_4b_2060.json`): Q4_K_M 23/24, mean 3.43 s, median 3.15 s (correct answers), 1078
+    reasoning tokens, 74.8 tok/s; IQ4_XS 23/24, mean 3.90 s, median 3.65 s, 1120 tokens, 73.5 tok/s. The one miss
+    of each is a reasoning cut at --max-tokens 3000 with no answer (problem 16 for Q4_K_M, 8 for IQ4_XS), not a
+    wrong number.
+  - 14B, the README's 6 problems, --warm-up, --max-tokens 1800 (`quant_14b_2060.json`): Q4_K_M 5/6, mean 63.5 s,
+    median 65.3 s, 502 tokens (178 ahead), 4.9 tok/s; IQ4_XS 5/6, mean **43.4 s**, median 44.8 s, 406 tokens
+    (180 ahead), 5.6 tok/s. Single runs vary a lot on this model (the README's 47 s mean is one run).
+  - Problem 19 (30 vehicles, 100 wheels, how many motorbikes: 10) was wrong in both, with numbers that are not
+    in the text: "38" with "38 × 2 + 2 × 4 = 84" (Q4_K_M), "30" from "x + y = 60" (IQ4_XS). Rerun without
+    reasoning ahead (IQ4_XS, `--ahead 0`): right twice, 155 and 132 s. The run with it was killed for low
+    memory (the 14B takes most of the 16 GB). See Next, 0.
 - **2026-10-26 · Qwen3-14B on a 12 GB card (RTX 4070 SUPER): all on the GPU, IQ4_XS 31% faster than Q4_K_M, same
   answers.** The plan was "the largest model entirely in VRAM, with a smaller quantization, against the same model
   split with the CPU"; on this card the 14B Q4_K_M turned out to be entirely in VRAM already (`-lv 5` in the server
