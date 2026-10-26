@@ -459,7 +459,8 @@
     } else if (name === "model") {
       const best = M.state.catalog?.recommended;
       const vs = (M.state.catalog?.models || []).filter((m) => best && m.model_id === best.split(":")[0]);
-      if (best) picked[best.split(":")[0]] = best.split(":")[1];
+      // The recommended quantization only until one is picked: show() runs again after every click.
+      if (best && !picked[best.split(":")[0]]) picked[best.split(":")[0]] = best.split(":")[1];
       body.innerHTML = `<h2>${t("onboarding.model.title")}</h2><p>${t("onboarding.model.body")}</p>` +
         `<div class="ob-model">${vs.length ? M.views.models.card(vs, 0, false) : ""}</div>`;
       M.views.models.settle(body, true);
