@@ -28,6 +28,9 @@ def machine(system="windows", arch="amd64", gpu_name=None, driver="617.42"):
      "llama-{tag}-bin-ubuntu-cuda-12.8-x64.tar.gz"),
     (machine("linux", "x86_64"), "cpu", "llama-{tag}-bin-ubuntu-x64.tar.gz"),
     (machine("darwin", "arm64"), "metal", "llama-{tag}-bin-macos-arm64.tar.gz"),
+    (machine("darwin", "arm64", "Apple M2 Pro", driver="Metal · macOS 26.2"), "metal",
+     "llama-{tag}-bin-macos-arm64.tar.gz"),
+    (machine("darwin", "x86_64"), "cpu", "llama-{tag}-bin-macos-x64.tar.gz"),
 ])
 def test_build_for(hw, flavor, first):
     b = llama_setup.build_for(hw)

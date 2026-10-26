@@ -52,6 +52,21 @@ def test_placement():
     assert catalog.estimate(catalog.find("qwen3-4b"), reference_pc(gpu=False))["placement"] == "cpu"
 
 
+def apple_m2_pro() -> Hardware:
+    """MacBook Pro M2 Pro, 16 GB: Metal may use 12,124 MB of the unified memory (its recommended working set)."""
+    return Hardware(os="macOS 26.2", system="darwin", arch="arm64", cpu="Apple M2 Pro", cores=12, threads=12,
+                    ram_mb=16384, ram_free_mb=6000, ram_bandwidth_gbs=100,
+                    gpus=[GPU("Apple M2 Pro", 12124, 0, "Metal · macOS 26.2", 200, True, unified=True)])
+
+
+def test_placement_on_unified_memory():
+    hw = apple_m2_pro()
+    assert catalog.estimate(catalog.find("qwen3-8b"), hw)["placement"] == "gpu"
+    # The GPU's share is in the same RAM: a model larger than the RAM does not fit, whatever the split.
+    assert catalog.estimate(catalog.find("qwen3-14b"), hw)["placement"] in ("gpu", "partial")
+    assert catalog.estimate(catalog.find("qwen3-32b"), hw)["placement"] == "too_big"
+
+
 def test_recommendation():
     entries = [catalog.entry(v, reference_pc()) for v in catalog.variants()]
     assert catalog.recommend(entries) == "qwen3-4b:Q4_K_M"

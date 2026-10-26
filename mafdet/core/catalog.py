@@ -30,6 +30,7 @@ VRAM_RESERVE_MB = 900          # CUDA context, compute buffers and llama.cpp's s
 RAM_RESERVE_MB = 2500          # the system and the app itself
 PCIE_GBS = 12.0                # weights left on the CPU are streamed to the GPU for long prefills
 GPU_PREFILL_FLOPS_PER_GBS = 0.051e12   # usable prefill compute, from the card's bandwidth class (2060: 4B 2,141 tok/s)
+APPLE_PREFILL_FLOPS_PER_GBS = 0.025e12 # the same for Apple Silicon's GPU (no tensor cores)
 CPU_PREFILL_FLOPS_PER_CORE = 30e9
 # Typing a question takes about half a minute (measured: 30-37 s at 5 characters per second with
 # pauses); while reasoning ahead the model covers at most about 60% of its reasoning, because
@@ -134,6 +135,8 @@ def estimate(v: Variant, hw: Hardware, device: str = "auto", ctx: int = 8192) ->
         share = 0.0
     gpu_mb, cpu_mb = weights_mb * share, weights_mb * (1 - share)
     cpu_total_mb = (weights_mb + kv_mb) * (1 - share)
+    if gpu and gpu.unified:                    # Apple Silicon: the GPU's share is in the same RAM
+        cpu_total_mb = total_mb
     fits_ram = cpu_total_mb <= hw.ram_mb - RAM_RESERVE_MB
 
     # Generation: only the active experts of a mixture-of-experts are read for each token.
@@ -148,8 +151,8 @@ def estimate(v: Variant, hw: Hardware, device: str = "auto", ctx: int = 8192) ->
     # Reading the prompt: compute-bound, about 2 operations per active parameter and token.
     flops = 2 * m["active_b"] * 1e9
     if gpu:
-        tps = gpu.bandwidth_gbs * GPU_PREFILL_FLOPS_PER_GBS / flops
-        if share < 1:                          # the CPU's layers cross the bus once per batch of 512 tokens
+        tps = gpu.bandwidth_gbs * (APPLE_PREFILL_FLOPS_PER_GBS if gpu.unified else GPU_PREFILL_FLOPS_PER_GBS) / flops
+        if share < 1 and not gpu.unified:      # the CPU's layers cross the bus once per batch of 512 tokens
             tps = 512 / (512 / tps + cpu_mb / 1024 / PCIE_GBS)
         prefill = tps
     else:

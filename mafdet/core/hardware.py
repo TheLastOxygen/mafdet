@@ -1,5 +1,5 @@
 """
-What the machine has: GPU (NVIDIA, through nvidia-smi), VRAM, RAM, CPU.
+What the machine has: GPU (NVIDIA through nvidia-smi, or Apple Silicon through Metal), VRAM, RAM, CPU.
 
 No PyTorch: llama.cpp runs the models, so the chat must be able to tell
 whether there is a GPU without importing a 4 GB library. The memory
@@ -32,6 +32,15 @@ GPU_BANDWIDTH = {
     "RTX A2000": 288, "RTX A4000": 448, "RTX A5000": 768, "RTX A6000": 768, "RTX 4000 ADA": 360,
     "RTX 6000 ADA": 960, "TESLA T4": 320, "L4": 300, "A10G": 600, "A100": 1555, "H100": 3350,
 }
+# Apple Silicon: the bandwidth of the unified memory, which the GPU and the CPU share (the top
+# configuration of each chip; the binned M3 Max and M4 Max reach 300 and 410).
+APPLE_BANDWIDTH = {
+    "M1": 68, "M1 PRO": 200, "M1 MAX": 400, "M1 ULTRA": 800,
+    "M2": 100, "M2 PRO": 200, "M2 MAX": 400, "M2 ULTRA": 800,
+    "M3": 100, "M3 PRO": 150, "M3 MAX": 400, "M3 ULTRA": 819,
+    "M4": 120, "M4 PRO": 273, "M4 MAX": 546,
+    "M5": 153,
+}
 # Laptop parts share the name of a desktop card but run on a narrower, slower bus.
 LAPTOP_FACTOR = 0.75
 
@@ -44,6 +53,7 @@ class GPU:
     driver: str
     bandwidth_gbs: float
     bandwidth_known: bool             # from the table, not guessed from the amount of VRAM
+    unified: bool = False             # Apple Silicon: the "VRAM" is the share of the RAM Metal may use
 
     @property
     def vram_free_mb(self) -> int:
@@ -123,6 +133,49 @@ def nvidia_gpus() -> list[GPU]:
     return parse_nvidia_smi(r.stdout) if r.returncode == 0 else []
 
 
+def _metal_device() -> tuple[str, int] | None:
+    """Name and recommendedMaxWorkingSetSize (bytes) of the Metal GPU, through the Objective-C runtime."""
+    import ctypes
+    try:
+        objc = ctypes.CDLL("/usr/lib/libobjc.A.dylib")
+        metal = ctypes.CDLL("/System/Library/Frameworks/Metal.framework/Metal")
+    except OSError:
+        return None
+    metal.MTLCreateSystemDefaultDevice.restype = ctypes.c_void_p
+    objc.sel_registerName.restype = ctypes.c_void_p
+    objc.sel_registerName.argtypes = [ctypes.c_char_p]
+    dev = metal.MTLCreateSystemDefaultDevice()
+    if not dev:
+        return None
+
+    def send(obj, sel: bytes, restype):
+        return ctypes.CFUNCTYPE(restype, ctypes.c_void_p, ctypes.c_void_p)(("objc_msgSend", objc))(
+            obj, objc.sel_registerName(sel))
+    name = send(send(dev, b"name", ctypes.c_void_p), b"UTF8String", ctypes.c_char_p)
+    return (name or b"").decode("utf-8", "replace"), send(dev, b"recommendedMaxWorkingSetSize", ctypes.c_uint64)
+
+
+def apple_gpus() -> list[GPU]:
+    """The GPU of an Apple Silicon Mac: llama.cpp's Metal backend may use up to the working set Metal
+    recommends (about 3/4 of the RAM), so that is its "VRAM". Intel Macs: none (the x64 build is CPU only)."""
+    if platform.system() != "Darwin" or platform.machine() != "arm64":
+        return []
+    import psutil
+    ram_mb = psutil.virtual_memory().total >> 20
+    found = _metal_device()
+    name, vram_mb = (found[0], found[1] >> 20) if found and found[1] else (cpu_name(), int(ram_mb * 0.7))
+    m = re.search(r"\b(M\d+(?: (?:PRO|MAX|ULTRA))?)\b", name.upper())
+    known = bool(m and m.group(1) in APPLE_BANDWIDTH)
+    bw = APPLE_BANDWIDTH[m.group(1)] if known else 100
+    # What other apps hold is not counted: llama.cpp's split (-ngl auto) only looks at the working set.
+    return [GPU(name, vram_mb, 0, f"Metal · macOS {platform.mac_ver()[0]}", bw, known, unified=True)]
+
+
+def gpus() -> list[GPU]:
+    """The cards llama.cpp can run models on: NVIDIA (CUDA build) or Apple Silicon (Metal)."""
+    return nvidia_gpus() or apple_gpus()
+
+
 def cpu_name() -> str:
     if os.name == "nt":
         try:
@@ -130,6 +183,13 @@ def cpu_name() -> str:
             with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"HARDWARE\DESCRIPTION\System\CentralProcessor\0") as k:
                 return winreg.QueryValueEx(k, "ProcessorNameString")[0].strip()
         except OSError:
+            pass
+    if platform.system() == "Darwin":
+        try:
+            r = subprocess.run(["sysctl", "-n", "machdep.cpu.brand_string"], capture_output=True, text=True, timeout=5)
+            if r.returncode == 0 and r.stdout.strip():
+                return r.stdout.strip()
+        except (OSError, subprocess.SubprocessError):
             pass
     try:
         with open("/proc/cpuinfo", encoding="utf-8") as f:
@@ -145,6 +205,8 @@ def os_label() -> str:
     if platform.system() == "Windows":
         build = int(platform.version().split(".")[-1] or 0)
         return f"Windows {'11' if build >= 22000 else platform.release()}"
+    if platform.system() == "Darwin":
+        return f"macOS {platform.mac_ver()[0]}"
     return f"{platform.system()} {platform.release()}"
 
 
@@ -202,13 +264,17 @@ def detect(refresh: bool = False) -> Hardware:
     vm = psutil.virtual_memory()
     cpu, ram_mb = cpu_name(), vm.total >> 20
     bw = _cache.ram_bandwidth_gbs if _cache is not None else ram_bandwidth_gbs(cpu, ram_mb)
+    found = gpus()
+    if found and found[0].unified:
+        bw = min(bw, found[0].bandwidth_gbs)  # the factor above is for DDR: never past the chip's own bandwidth
     _cache = Hardware(
         os=os_label(), system=platform.system().lower(), arch=platform.machine().lower(), cpu=cpu,
         cores=psutil.cpu_count(logical=False) or os.cpu_count() or 1, threads=os.cpu_count() or 1,
-        ram_mb=ram_mb, ram_free_mb=vm.available >> 20, ram_bandwidth_gbs=bw, gpus=nvidia_gpus())
+        ram_mb=ram_mb, ram_free_mb=vm.available >> 20, ram_bandwidth_gbs=bw, gpus=found)
     return _cache
 
 
 def has_cuda_gpu() -> bool:
-    """An NVIDIA card with a working driver: llama.cpp's CUDA build can use it."""
-    return bool(nvidia_gpus())
+    """A GPU llama.cpp can use: an NVIDIA card with a working driver (CUDA build), or Apple Silicon (Metal).
+    The name stays: "cuda" is the device id of the GPU in the settings and the measurements."""
+    return bool(gpus())

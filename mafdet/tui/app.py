@@ -859,7 +859,7 @@ class SettingsView(VerticalScroll):
         yield Static("MODEL AND MEMORY", classes="section")
         yield self.row("Context", "How much of the conversation the model keeps in memory. More takes more VRAM.",
                        self.select("ctx", [4096, 8192, 16384, 32768], st["ctx"], "{:,}"))
-        yield self.row("Run on", "Auto uses the NVIDIA card when there is one.",
+        yield self.row("Run on", "Auto uses the GPU when there is one (NVIDIA, or Apple Silicon).",
                        Select([("Auto", "auto"), ("GPU", "cuda"), ("CPU", "cpu")], value=st["device"], allow_blank=False,
                               id="device"))
         yield Static("TERMINAL", classes="section")

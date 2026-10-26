@@ -70,13 +70,14 @@ def find_llama_server(required: bool = True) -> str | None:
 
 
 def pick_device(requested: str) -> str:
-    """cuda or cpu for llama-server: auto means the NVIDIA card if there is one (no PyTorch needed)."""
+    """cuda (the GPU: CUDA, or Metal on Apple Silicon) or cpu for llama-server: auto means the GPU if
+    there is one (no PyTorch needed)."""
     from .core.hardware import has_cuda_gpu
     if requested == "auto":
         return "cuda" if has_cuda_gpu() else "cpu"
     if requested == "cuda" and not has_cuda_gpu():
-        raise SystemExit("You asked for the GPU, but no NVIDIA card was found (nvidia-smi): "
-                         "check the driver, or choose the CPU.")
+        raise SystemExit("You asked for the GPU, but no NVIDIA card was found (nvidia-smi), nor an Apple "
+                         "Silicon GPU: check the driver, or choose the CPU.")
     return requested
 
 
@@ -108,8 +109,11 @@ _JOB = None
 
 
 def _tie_to_this_process(proc: subprocess.Popen):
-    """Windows: put the server in a job object that kills its processes when the app's handle closes."""
+    """Windows: put the server in a job object that kills its processes when the app's handle closes.
+    macOS: a small watcher process stops the server when the app is gone."""
     global _JOB
+    if sys.platform == "darwin":
+        return _watch_from_outside(proc)
     if os.name != "nt":
         return
     import ctypes
@@ -140,8 +144,33 @@ def _tie_to_this_process(proc: subprocess.Popen):
     k32.AssignProcessToJobObject(wintypes.HANDLE(_JOB), wintypes.HANDLE(proc._handle))
 
 
+# macOS has no PR_SET_PDEATHSIG: this watcher, started next to the server, waits for the app to go
+# (it then belongs to launchd) and stops the server. It ends on its own when the server does.
+_WATCHER = """
+import os, signal, sys, time
+app, server = int(sys.argv[1]), int(sys.argv[2])
+while os.getppid() == app:
+    time.sleep(1)
+    try:
+        os.kill(server, 0)
+    except OSError:
+        sys.exit()
+try:
+    os.kill(server, signal.SIGTERM)
+except OSError:
+    pass
+"""
+
+
+def _watch_from_outside(proc: subprocess.Popen):
+    subprocess.Popen([sys.executable, "-I", "-c", _WATCHER, str(os.getpid()), str(proc.pid)],
+                     stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
 def _die_with_parent():
     """Linux: the server gets SIGTERM when the app's process dies."""
+    if not sys.platform.startswith("linux"):
+        return
     try:
         import ctypes
         import signal
@@ -163,7 +192,7 @@ class LlamaServer:
         self.next_slot = 0
         if self._alive():
             raise SystemExit(f"Something is already listening on port {port}: close it first "
-                             "(e.g. Stop-Process -Name llama-server).")
+                             "(e.g. Stop-Process -Name llama-server, or pkill llama-server on macOS and Linux).")
         exe = find_llama_server()
         self.model_path = resolve_gguf(gguf)
         args = [exe, "-m", self.model_path, "-np", str(n_slots)]

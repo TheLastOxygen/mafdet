@@ -51,6 +51,11 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
 
 ## Done and measured
 
+- **2026-10-26 · macOS on Apple Silicon** — the app runs on a MacBook Pro M2 Pro 16 GB, macOS 26.2, llama.cpp
+  b11747 macOS arm64 (Metal). The GPU is detected through Metal (its recommended working set, 12,124 MB here,
+  is the "VRAM"; the unified memory counts once). `mafdet bench` Qwen3-4B Q4_K_M: prefill 593 tok/s, decode
+  56.9 (catalog estimate 625 / 53). A typed question: all 265 reasoning tokens done before Enter. Not yet run
+  here: `research/thinking_ahead.py` (the 24 problems) and the 14B (it should fit on the GPU, ~15 tok/s).
 - **2026-10-23 · Notes as a speculative-decoding draft after Enter** — negative. Offline replay
   (`research/notes_as_draft.py`, data `notes_as_draft_4b.json`): prompt lookup would write 1.5-1.7 tokens
   per step on the 4B (1.3-1.5 without notes). Real, llama.cpp `--spec-type ngram-simple`: 4B 73 tok/s
@@ -68,7 +73,7 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
 
 ## How to work here
 
-- Python: `.venv/Scripts/python`. Tests: `.venv/Scripts/python -m pytest -q`.
+- Python: `.venv/Scripts/python` (Windows), `.venv/bin/python` (Mac). Tests: `<python> -m pytest -q`.
 - Benchmark: `research/thinking_ahead.py` (24 Italian word problems typed in real time; `--problems`,
   `--config "name=strike options"`, `--gguf`, `--append`). The README's 4B table is `thinking_ahead_4b.json`.
 - Runs longer than ~10 minutes get killed: split them with `--problems` and `--append`. A 4B run is

@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import inspect
 import math
+import sys
 import time
 from dataclasses import dataclass, field
 
@@ -188,7 +189,7 @@ def device_label(device: str) -> str:
     # With llama-server the GPU belongs to another process: no CUDA calls here,
     # they would create a context and take VRAM for nothing.
     return {"cuda": torch.cuda.get_device_name(0) if device == "cuda" else "", "cpu": "CPU",
-            "llama-cuda": "llama.cpp CUDA", "llama-cpu": "llama.cpp CPU"}[device]
+            "llama-cuda": "llama.cpp Metal" if sys.platform == "darwin" else "llama.cpp CUDA", "llama-cpu": "llama.cpp CPU"}[device]
 
 
 # --------------------------------------------------------------------------

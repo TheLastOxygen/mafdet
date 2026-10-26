@@ -4,7 +4,7 @@ llama.cpp, the runtime: find it, or install the right release by itself into ~/.
 The release is pinned (LLAMA_TAG): the one MAFDET was tested with. The build
 depends on the machine: CUDA for an NVIDIA card (CUDA 13 from driver 580 on,
 except for the GTX 10 and older, which CUDA 13 no longer supports; CUDA 12
-otherwise), the CPU build without one. A llama.cpp of your own still wins:
+otherwise), the CPU build without one; on a Mac the macOS build (Metal on Apple Silicon). A llama.cpp of your own still wins:
 $MAFDET_LLAMA_DIR and ./llama.cpp are looked at first.
 """
 from __future__ import annotations
@@ -62,7 +62,7 @@ def build_for(hw: Hardware, cuda: str | None = None) -> dict:
         return {"flavor": "cpu", "label": f"Linux · CPU ({cpu})", "assets": [f"llama-{{tag}}-bin-ubuntu-{cpu}.tar.gz"]}
     if system == "darwin":
         cpu = "arm64" if arm else "x64"
-        return {"flavor": "metal" if arm else "cpu", "label": f"macOS · {cpu}",
+        return {"flavor": "metal" if arm else "cpu", "label": f"macOS · {'Metal' if arm else 'CPU'} ({cpu})",
                 "assets": [f"llama-{{tag}}-bin-macos-{cpu}.tar.gz"]}
     raise RuntimeError(f"No llama.cpp build for {hw.os} ({hw.arch})")
 

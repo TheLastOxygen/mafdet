@@ -174,7 +174,7 @@
  "settings.ctx": "Contesto",
  "settings.ctx.hint": "Quanta conversazione il modello tiene in memoria. Di più occupa più VRAM.",
  "settings.device": "Esegui su",
- "settings.device.hint": "Auto usa la scheda NVIDIA quando c'è.",
+ "settings.device.hint": "Auto usa la GPU quando c'è (NVIDIA, o Apple Silicon).",
  "settings.device.auto": "Auto",
  "settings.device.cuda": "GPU",
  "settings.device.cpu": "CPU",

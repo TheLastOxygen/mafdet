@@ -69,6 +69,8 @@ Reading ahead is exact. Thinking ahead is not, because the model reasons on vers
 
 **On Windows, with a double-click.** Download MAFDET (on GitHub, *Code → Download ZIP*, and unzip it; or `git clone https://github.com/TheLastOxygen/mafdet.git`) and double-click **`start_mafdet.bat`**. The first time it creates a Python environment in `.venv` and installs MAFDET in it, which takes about a minute and needs [Python](https://www.python.org/downloads/) 3.10 or later. After that, a double-click opens MAFDET in under a second, and after an update it installs the new libraries by itself. The terminal shows what is being downloaded as it goes: each library, and later llama.cpp and the models you pick in the app, with size, a progress bar, speed and time left.
 
+**On macOS, with a double-click.** The same, with **`start_mafdet.command`** (Python 3.10 or later: from python.org, or `brew install python@3.12`). If the Finder says it cannot verify the file, right-click it, *Open*, then *Open* again; this is needed only the first time.
+
 **From a terminal:**
 
 ```bash
@@ -114,6 +116,7 @@ The same app comes in two forms, on the same engine:
 ## Requirements
 
 - **Windows**, with an **NVIDIA GPU** and up-to-date drivers (tested target: RTX 2060, 6 GB), or just a CPU. **Linux** has its llama.cpp builds and code paths in place, but has not been tested yet
+- **macOS** on Apple Silicon (M1 or later): the models run on the GPU through Metal, in the unified memory (tested: M2 Pro, 16 GB, macOS 26.2; Qwen3-4B reads 593 tokens/s and writes 57). Intel Macs run on the CPU
 - **Python 3.10 or later** (tested with 3.12)
 - Disk space: about 0.7 GB for llama.cpp with CUDA (60 MB without), plus the models, from 0.6 GB (Qwen3-0.6B) to 2.3 GB for the 4B recommended on 6-8 GB cards
 - **16 GB of RAM** recommended for CPU-only runs and for models larger than the VRAM
@@ -248,7 +251,8 @@ The reasoning-ahead column was measured again for this comparison, the same day 
 - [x] A small model gathers while you type, a large one answers: tried and measured (no gain on the RTX 2060, see Results)
 - [ ] Reasoning ahead for models larger than the VRAM that beats the large model thinking by itself
 - [ ] Reasoning ahead beyond Qwen3, including the thinking models with their own formats (DeepSeek-R1, gpt-oss): each needs its frame measured
-- [ ] Linux tested; macOS (Metal) and AMD GPUs
+- [x] macOS on Apple Silicon (Metal)
+- [ ] Linux tested; AMD GPUs
 
 ## Related research
 

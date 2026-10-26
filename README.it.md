@@ -69,6 +69,8 @@ La lettura in anticipo è esatta. Il ragionamento in anticipo no, perché il mod
 
 **Su Windows, con un doppio clic.** Scarica MAFDET (su GitHub, *Code → Download ZIP*, ed estrai lo zip; oppure `git clone https://github.com/TheLastOxygen/mafdet.git`) e fai doppio clic su **`start_mafdet.bat`**. La prima volta crea un ambiente Python in `.venv` e ci installa MAFDET: ci vuole circa un minuto, e serve [Python](https://www.python.org/downloads/) 3.10 o successivo. Dopo, un doppio clic apre MAFDET in meno di un secondo, e dopo un aggiornamento installa da solo le librerie nuove. Il terminale mostra man mano cosa sta scaricando: ogni libreria, e poi llama.cpp e i modelli che scegli nell'app, con dimensione, barra di avanzamento, velocità e tempo rimanente.
 
+**Su macOS, con un doppio clic.** Lo stesso, con **`start_mafdet.command`** (serve Python 3.10 o successivo: da python.org, oppure `brew install python@3.12`). Se il Finder dice che non può verificare il file, clic destro, *Apri*, poi di nuovo *Apri*: serve solo la prima volta.
+
 **Da terminale:**
 
 ```bash
@@ -114,6 +116,7 @@ La stessa app esiste in due forme, sullo stesso motore:
 ## Requisiti
 
 - **Windows**, con una **GPU NVIDIA** e driver aggiornati (obiettivo di test: RTX 2060, 6 GB), oppure solo una CPU. Per **Linux** ci sono già le build di llama.cpp e il codice, ma non è ancora stato provato
+- **macOS** su Apple Silicon (M1 o successivi): i modelli girano sulla GPU con Metal, nella memoria unificata (provato: M2 Pro, 16 GB, macOS 26.2; Qwen3-4B legge 593 token/s e ne scrive 57). I Mac Intel girano sulla CPU
 - **Python 3.10 o successivo** (provato con la 3.12)
 - Spazio su disco: circa 0,7 GB per llama.cpp con CUDA (60 MB senza), più i modelli, da 0,6 GB (Qwen3-0.6B) a 2,3 GB per il 4B consigliato sulle schede da 6-8 GB
 - **16 GB di RAM** consigliati per l'esecuzione solo su CPU e per i modelli più grandi della VRAM
@@ -248,7 +251,8 @@ La colonna del ragionamento in anticipo è stata rimisurata per questo confronto
 - [x] Un modello piccolo raccoglie mentre scrivi, uno grande risponde: provato e misurato (nessun guadagno sulla RTX 2060, vedi Risultati)
 - [ ] Ragionamento in anticipo per i modelli più grandi della VRAM che batta il modello grande che ragiona da solo
 - [ ] Ragionamento in anticipo oltre Qwen3, anche per i modelli di ragionamento con formati propri (DeepSeek-R1, gpt-oss): ognuno richiede di misurare la sua cornice
-- [ ] Linux provato; macOS (Metal) e GPU AMD
+- [x] macOS su Apple Silicon (Metal)
+- [ ] Linux provato; GPU AMD
 
 ## Ricerca correlata
 
