@@ -51,11 +51,23 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
 
 ## Done and measured
 
+- **2026-10-26 · Empty answer after reasoning ahead: fixed.** Qwen3-4B sometimes ends its turn inside the
+  reasoning, the answer written there, with no </think>: the page got only thoughts and an empty answer
+  (`answer_ms` 0). Seen once in the M2 Pro run (problem 5), 1 in 6 repeats of it, and once before on the
+  RTX 2060 (`branches_4b.json`, row 17). Now `_answer` closes the reasoning as the template does
+  ("\n</think>\n\n") and the model writes the answer; the `done` event says `closed`. Forced with
+  </think> banned on 3 problems: 3/3 correct answers in Italian, 4.4-6.3 s. The SENT frame ("...and answer
+  it") may invite it; not changed (it would need the measurements again).
 - **2026-10-26 · macOS on Apple Silicon** — the app runs on a MacBook Pro M2 Pro 16 GB, macOS 26.2, llama.cpp
   b11747 macOS arm64 (Metal). The GPU is detected through Metal (its recommended working set, 12,124 MB here,
   is the "VRAM"; the unified memory counts once). `mafdet bench` Qwen3-4B Q4_K_M: prefill 593 tok/s, decode
-  56.9 (catalog estimate 625 / 53). A typed question: all 265 reasoning tokens done before Enter. Not yet run
-  here: `research/thinking_ahead.py` (the 24 problems) and the 14B (it should fit on the GPU, ~15 tok/s).
+  56.9 (catalog estimate 625 / 53).
+  `research/thinking_ahead.py`, before the fix above (data `thinking_ahead_4b_m2pro.json`, `..._14b_m2pro.json`):
+  - 4B, 24 problems: mean wait 18.1 → 6.7 s, median 16.7 → 4.4 s, slowest tenth 29.4 → 9.6 s; 24/24 and 23/24
+    (the empty answer); 54 tok/s; 530 of 845 reasoning tokens ahead.
+  - 14B, the 6 problems of the README, --warm-up, --max-tokens 1800: mean wait 32.7 → 12.1 s, median
+    26.5 → 11.7 s, 6/6 both; 18.3 tok/s, all on the GPU (RTX 2060: 108 → 47 s, 4.5-5 tok/s).
+  The Mac reached thermal pressure "Heavy" for a few minutes during the 4B run (decode 54 → 51-53 tok/s).
 - **2026-10-23 · Notes as a speculative-decoding draft after Enter** — negative. Offline replay
   (`research/notes_as_draft.py`, data `notes_as_draft_4b.json`): prompt lookup would write 1.5-1.7 tokens
   per step on the 4B (1.3-1.5 without notes). Real, llama.cpp `--spec-type ngram-simple`: 4B 73 tok/s

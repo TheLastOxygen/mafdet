@@ -1,0 +1,134 @@
+[
+ {
+  "config": "no ahead",
+  "k": 0,
+  "ok": true,
+  "answer_ms": 16301,
+  "think_tokens": 294,
+  "think_ahead": 0,
+  "cut": false,
+  "tps": 18.3,
+  "tail": "**Totale speso:** 12 € + 2 € = **14 €**\n\n**Euro rimasti:**\n25 € (iniziali) - 14 € (spesi) = **11 €**\n\n**Risposta finale:**  \nLuca gli restano $\\boxed{11}$ euro."
+ },
+ {
+  "config": "no ahead",
+  "k": 4,
+  "ok": true,
+  "answer_ms": 23792,
+  "think_tokens": 432,
+  "think_ahead": 0,
+  "cut": false,
+  "tps": 18.3,
+  "tail": "e lette}. $$  \n\nIl libro ha 400 pagine, quindi le pagine rimanenti sono:  \n$$ 400 - 216 = 184. $$  \n\n**Risposta finale:** Marta le mancano $\\boxed{184}$ pagine."
+ },
+ {
+  "config": "no ahead",
+  "k": 6,
+  "ok": true,
+  "answer_ms": 20520,
+  "think_tokens": 373,
+  "think_ahead": 0,
+  "cut": false,
+  "tps": 18.4,
+  "tail": "e bevute **9** e regalate **5**, il numero di bottiglie rimaste si calcola sottraendo:  \n**24 - 9 - 5 = 10 bottiglie**.\n\n**Risposta finale:**� **10 bottiglie**."
+ },
+ {
+  "config": "no ahead",
+  "k": 13,
+  "ok": true,
+  "answer_ms": 29254,
+  "think_tokens": 532,
+  "think_ahead": 0,
+  "cut": false,
+  "tps": 18.3,
+  "tail": "Risparmiando 15 € a settimana, il numero di settimane necessarie è:\n\n$$\n\\frac{270}{15} = 18\n$$\n\n**Risposta finale:** Paolo ha bisogno di $\\boxed{18}$ settimane."
+ },
+ {
+  "config": "no ahead",
+  "k": 19,
+  "ok": true,
+  "answer_ms": 52005,
+  "think_tokens": 943,
+  "think_ahead": 0,
+  "cut": false,
+  "tps": 18.2,
+  "tail": "$$\n\n**Verifica:**\n- Auto: $ C = 30 - 10 = 20 $\n- Ruote: $ 20 \\times 4 + 10 \\times 2 = 80 + 20 = 100 $\n\n**Risposta finale:**  \nLe motociclette sono $\\boxed{10}$."
+ },
+ {
+  "config": "no ahead",
+  "k": 23,
+  "ok": true,
+  "answer_ms": 54173,
+  "think_tokens": 982,
+  "think_ahead": 0,
+  "cut": false,
+  "tps": 18.2,
+  "tail": "erzi dei posti sono occupati, allora i posti liberi corrispondono a un terzo del totale:\n\n$$\n\\frac{1}{3} \\times 432 = 144\n$$\n\n**Risposta finale:** $\\boxed{144}$"
+ },
+ {
+  "config": "reason ahead",
+  "k": 0,
+  "ok": true,
+  "answer_ms": 11431,
+  "think_tokens": 434,
+  "think_ahead": 258,
+  "cut": false,
+  "tps": 18.3,
+  "tail": "ro (penna) = **14 euro**.  \n\n4. **Euro rimasti**:  \n   25 euro (iniziali) − 14 euro (spesi) = **11 euro**.  \n\n**Risposta finale**: Luca gli restano **11 euro**."
+ },
+ {
+  "config": "reason ahead",
+  "k": 4,
+  "ok": true,
+  "answer_ms": 11941,
+  "think_tokens": 466,
+  "think_ahead": 281,
+  "cut": false,
+  "tps": 18.2,
+  "tail": "t{ pagine}\n$$\n\nIl libro ha 400 pagine in totale, quindi le mancano:\n\n$$\n400 - 216 = 184 \\text{ pagine}\n$$\n\n**Risposta finale:** Marta le mancano **184 pagine**."
+ },
+ {
+  "config": "reason ahead",
+  "k": 6,
+  "ok": true,
+  "answer_ms": 10304,
+  "think_tokens": 425,
+  "think_ahead": 283,
+  "cut": false,
+  "tps": 18.3,
+  "tail": "** (4 × 6 = 24).  \nDopo averne bevute **9** e regalate **5**, le bottiglie rimaste sono:  \n\n**24 - 9 - 5 = 10 bottiglie**.  \n\nRisposta finale: **10 bottiglie**."
+ },
+ {
+  "config": "reason ahead",
+  "k": 13,
+  "ok": true,
+  "answer_ms": 6646,
+  "think_tokens": 342,
+  "think_ahead": 249,
+  "cut": false,
+  "tps": 18.2,
+  "tail": "o di settimane necessarie per risparmiare i 270 euro è:\n\n$$\n\\frac{270}{15} = 18 \\text{ settimane}\n$$\n\n**Risposta finale:** Paolo ha bisogno di **18 settimane**."
+ },
+ {
+  "config": "reason ahead",
+  "k": 19,
+  "ok": true,
+  "answer_ms": 20186,
+  "think_tokens": 578,
+  "think_ahead": 255,
+  "cut": false,
+  "tps": 18.0,
+  "tail": "$\n   120 - 4y + 2y = 100\n   $$\n   $$\n   120 - 2y = 100\n   $$\n   $$\n   -2y = -20 \\quad \\Rightarrow \\quad y = 10\n   $$\n\n**Risultato finale:**\nLe moto sono **10**."
+ },
+ {
+  "config": "reason ahead",
+  "k": 23,
+  "ok": true,
+  "answer_ms": 12067,
+  "think_tokens": 487,
+  "think_ahead": 305,
+  "cut": false,
+  "tps": 18.0,
+  "tail": "cola i posti liberi**  \n   Sottrai i posti occupati dal totale:  \n   $$\n   432 - 288 = 144 \\text{ posti liberi}.\n   $$\n\n**Risposta finale:**  \n$$\n\\boxed{144}\n$$"
+ }
+]
