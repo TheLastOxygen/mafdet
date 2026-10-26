@@ -1,14 +1,14 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/mafdet-logo-dark.svg">
-  <img src="assets/mafdet-logo.svg" alt="" width="112">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/TheLastOxygen/mafdet/main/assets/mafdet-logo-dark.svg">
+  <img src="https://raw.githubusercontent.com/TheLastOxygen/mafdet/main/assets/mafdet-logo.svg" alt="" width="112">
 </picture>
 
 <h1>
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/mafdet-wordmark-dark.svg">
-  <img src="assets/mafdet-wordmark.svg" alt="MAFDET" height="30">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/TheLastOxygen/mafdet/main/assets/mafdet-wordmark-dark.svg">
+  <img src="https://raw.githubusercontent.com/TheLastOxygen/mafdet/main/assets/mafdet-wordmark.svg" alt="MAFDET" height="30">
 </picture>
 </h1>
 
@@ -17,11 +17,11 @@
 MAFDET reads your message while you type it, and **starts thinking about it before you send it**.<br>
 Hit Enter, and most of the work is already done.
 
-[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-EEEAE2?labelColor=0E0D0C)](LICENSE)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-EEEAE2?labelColor=0E0D0C)](https://github.com/TheLastOxygen/mafdet/blob/main/LICENSE)
 [![Runtime: local](https://img.shields.io/badge/runtime-local-D4892A?labelColor=0E0D0C)](#requirements)
 [![Status: prototype](https://img.shields.io/badge/status-prototype-6A655D?labelColor=0E0D0C)](#roadmap)
 
-[Italiano](README.it.md)
+[Italiano](https://github.com/TheLastOxygen/mafdet/blob/main/README.it.md)
 
 </div>
 
@@ -85,8 +85,8 @@ mafdet
 Either way, no PyTorch and no manual downloads: MAFDET asks whether to open the **window** or the **terminal app**, and the first start guides you through the rest. It looks at your machine, installs the right build of llama.cpp by itself (CUDA for an NVIDIA card, Vulkan for an AMD Radeon, Metal on an Apple Silicon Mac, CPU otherwise) and downloads the model that runs best on your hardware.
 
 <p align="center">
-  <img src="assets/screenshots/gui-chat.png" alt="The MAFDET window: the model reasoned ahead while the message was typed (455 of 571 reasoning tokens) and answered 1.6 s after Enter" width="49%">
-  <img src="assets/screenshots/gui-models.png" alt="The model catalog: for each model, where it runs on this machine, its speed and the wait after Enter with and without MAFDET" width="49%">
+  <img src="https://raw.githubusercontent.com/TheLastOxygen/mafdet/main/assets/screenshots/gui-chat.png" alt="The MAFDET window: the model reasoned ahead while the message was typed (455 of 571 reasoning tokens) and answered 1.6 s after Enter" width="49%">
+  <img src="https://raw.githubusercontent.com/TheLastOxygen/mafdet/main/assets/screenshots/gui-models.png" alt="The model catalog: for each model, where it runs on this machine, its speed and the wait after Enter with and without MAFDET" width="49%">
 </p>
 
 ## The app
@@ -95,10 +95,10 @@ The same app comes in two forms, on the same engine:
 
 | | Command | What it is |
 |---|---|---|
-| <img src="assets/icons/watch.svg" width="22" alt=""> | `mafdet gui` | **The window**: chat, models, hardware and settings, in English, Italian, French or German |
-| <img src="assets/icons/strike.svg" width="22" alt=""> | `mafdet tui` | **The terminal app**: the same views in the terminal, keyboard first (F1 to F4), on an amber phosphor screen with a boot sequence (Settings, *Cinematic effects*, turns the animations off) |
-| <img src="assets/icons/race.svg" width="22" alt=""> | `mafdet models` | the model catalog for this machine (`--family`, `--download`) |
-| <img src="assets/icons/awaken.svg" width="22" alt=""> | `mafdet doctor` | checks the GPU, memory, llama.cpp and the models; `--install` installs llama.cpp (`--build 12`, `13`, `vulkan` or `cpu` to pick the build) |
+| <img src="https://raw.githubusercontent.com/TheLastOxygen/mafdet/main/assets/icons/watch.svg" width="22" alt=""> | `mafdet gui` | **The window**: chat, models, hardware and settings, in English, Italian, French or German |
+| <img src="https://raw.githubusercontent.com/TheLastOxygen/mafdet/main/assets/icons/strike.svg" width="22" alt=""> | `mafdet tui` | **The terminal app**: the same views in the terminal, keyboard first (F1 to F4), on an amber phosphor screen with a boot sequence (Settings, *Cinematic effects*, turns the animations off) |
+| <img src="https://raw.githubusercontent.com/TheLastOxygen/mafdet/main/assets/icons/race.svg" width="22" alt=""> | `mafdet models` | the model catalog for this machine (`--family`, `--download`) |
+| <img src="https://raw.githubusercontent.com/TheLastOxygen/mafdet/main/assets/icons/awaken.svg" width="22" alt=""> | `mafdet doctor` | checks the GPU, memory, llama.cpp and the models; `--install` installs llama.cpp (`--build 12`, `13`, `vulkan` or `cpu` to pick the build) |
 
 `mafdet` alone opens the launcher, which can remember your choice (`mafdet --ask` shows it again).
 
@@ -109,8 +109,8 @@ The same app comes in two forms, on the same engine:
 **Hardware and settings.** The Hardware view shows the GPU, CPU, memory and the llama.cpp runtime, with a button to install or reinstall it. Settings keep the chat options from one start to the next (in `~/.mafdet`, or `$MAFDET_HOME`).
 
 <p align="center">
-  <img src="assets/screenshots/tui-models.png" alt="The terminal app: the model catalog as a table" width="49%">
-  <img src="assets/screenshots/launcher.png" alt="The launcher: window or terminal" width="49%">
+  <img src="https://raw.githubusercontent.com/TheLastOxygen/mafdet/main/assets/screenshots/tui-models.png" alt="The terminal app: the model catalog as a table" width="49%">
+  <img src="https://raw.githubusercontent.com/TheLastOxygen/mafdet/main/assets/screenshots/launcher.png" alt="The launcher: window or terminal" width="49%">
 </p>
 
 ## Requirements
@@ -154,10 +154,10 @@ Reasoning ahead is **not exact**: the model reasons on intermediate versions of 
 
 | | Command | | What it does |
 |---|---|---|---|
-| <img src="assets/icons/hunt.svg" width="22" alt=""> | `mafdet hunt` | the hunt | simulates people typing and measures the wait after sending |
-| <img src="assets/icons/race.svg" width="22" alt=""> | `mafdet race` | the race | benchmarks prefill and decode on your machine |
-| <img src="assets/icons/judge.svg" width="22" alt=""> | `mafdet judge` | the judgement | checks results against a from-scratch computation: must end with 0 errors |
-| <img src="assets/icons/awaken.svg" width="22" alt=""> | `mafdet awaken` | the awakening | checks PyTorch and the GPU, for the PyTorch backend |
+| <img src="https://raw.githubusercontent.com/TheLastOxygen/mafdet/main/assets/icons/hunt.svg" width="22" alt=""> | `mafdet hunt` | the hunt | simulates people typing and measures the wait after sending |
+| <img src="https://raw.githubusercontent.com/TheLastOxygen/mafdet/main/assets/icons/race.svg" width="22" alt=""> | `mafdet race` | the race | benchmarks prefill and decode on your machine |
+| <img src="https://raw.githubusercontent.com/TheLastOxygen/mafdet/main/assets/icons/judge.svg" width="22" alt=""> | `mafdet judge` | the judgement | checks results against a from-scratch computation: must end with 0 errors |
+| <img src="https://raw.githubusercontent.com/TheLastOxygen/mafdet/main/assets/icons/awaken.svg" width="22" alt=""> | `mafdet awaken` | the awakening | checks PyTorch and the GPU, for the PyTorch backend |
 
 They run on llama.cpp with `--backend llama` (no PyTorch needed), or on PyTorch/transformers with the default `--backend hf` (`pip install -e ".[research]"` after installing PyTorch from the CUDA index: from PyPI, on Windows, pip would get the CPU-only build). `mafdet --help` is the full guide, `mafdet <command> --help` the options of one. Add `--device cpu` to any command to measure the no-GPU case. Results are saved as CSV files in `results/` (change it with `--out`).
 
@@ -292,4 +292,4 @@ If something does not work (the card not found, llama.cpp not starting, the mode
 
 ## License
 
-[Apache-2.0](LICENSE)
+[Apache-2.0](https://github.com/TheLastOxygen/mafdet/blob/main/LICENSE)
