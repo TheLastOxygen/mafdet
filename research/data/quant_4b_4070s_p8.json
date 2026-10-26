@@ -1,0 +1,98 @@
+[
+ {
+  "config": "4b iq4xs",
+  "k": 8,
+  "ok": true,
+  "answer_ms": 2262,
+  "think_tokens": 1196,
+  "think_ahead": 966,
+  "cut": false,
+  "closed": false,
+  "tps": 104.0,
+  "tail": " = 2(x + 10)\n  $$  \n  Risolvendo l'equazione:  \n  $$\n  3x + 10 = 2x + 20 \\quad \\Rightarrow \\quad x = 10\n  $$  \n  Quindi, Anna ha $ 3x = 3 \\times 10 = 30 $ anni."
+ },
+ {
+  "config": "4b iq4xs",
+  "k": 8,
+  "ok": true,
+  "answer_ms": 4654,
+  "think_tokens": 1464,
+  "think_ahead": 998,
+  "cut": false,
+  "closed": false,
+  "tps": 101.2,
+  "tail": "   3y + 10 = 2y + 20 \\Rightarrow y = 10\n   $$\n\n4. **Calcoliamo $ x $:**\n   $$\n   x = 3y = 3 \\times 10 = 30\n   $$\n\n**Risposta finale:** Anna ha **30 anni** oggi."
+ },
+ {
+  "config": "4b iq4xs",
+  "k": 8,
+  "ok": true,
+  "answer_ms": 5438,
+  "think_tokens": 1581,
+  "think_ahead": 1049,
+  "cut": false,
+  "closed": false,
+  "tps": 101.4,
+  "tail": "uindi, l'età attuale del figlio è $ x = 10 $ anni, e l'età di Anna è:\n$$\n3x = 3 \\times 10 = 30 \\text{ anni}.\n$$\n\n**Risultato finale:** Anna ha **30 anni** oggi."
+ },
+ {
+  "config": "4b iq4xs",
+  "k": 8,
+  "ok": false,
+  "answer_ms": 0,
+  "think_tokens": 4026,
+  "think_ahead": 1026,
+  "cut": true,
+  "closed": false,
+  "tps": 99.3,
+  "tail": ""
+ },
+ {
+  "config": "4b q4km",
+  "k": 8,
+  "ok": true,
+  "answer_ms": 10077,
+  "think_tokens": 1911,
+  "think_ahead": 946,
+  "cut": false,
+  "closed": false,
+  "tps": 95.4,
+  "tail": "= 30 anni, figlio = 10 anni.  \n- In 10 anni: Anna = 40 anni, figlio = 20 anni.  \n  $ 40 = 2 \\times 20 $ (corretto).  \n\n**Risposta finale:** Anna ha **30 anni**."
+ },
+ {
+  "config": "4b q4km",
+  "k": 8,
+  "ok": true,
+  "answer_ms": 2575,
+  "think_tokens": 1199,
+  "think_ahead": 963,
+  "cut": false,
+  "closed": false,
+  "tps": 91.1,
+  "tail": "20 \\implies x = 10\n   $$\n6. Quindi, l'età di Anna è $ 3x = 3 \\times 10 = 30 $ anni.\n\n**Verifica:** Dopo 10 anni, il figlio avrà 20 anni e Anna 40, che è doppio."
+ },
+ {
+  "config": "4b q4km",
+  "k": 8,
+  "ok": true,
+  "answer_ms": 2801,
+  "think_tokens": 1212,
+  "think_ahead": 958,
+  "cut": false,
+  "closed": false,
+  "tps": 94.8,
+  "tail": "+ 20 \\\\\n   3x - 2x = 20 - 10 \\\\\n   x = 10\n   $$\n6. L'età attuale di Anna è:\n   $$\n   3x = 3 \\times 10 = 30\n   $$\n\n**Risposta finale:** Anna ha **30 anni** oggi."
+ },
+ {
+  "config": "4b q4km",
+  "k": 8,
+  "ok": true,
+  "answer_ms": 3028,
+  "think_tokens": 1311,
+  "think_ahead": 1029,
+  "cut": false,
+  "closed": false,
+  "tps": 90.1,
+  "tail": " + 10 = 2y + 20 \\implies y = 10\n   $$\n\n4. **Calcolo dell'età di Anna:**\n   $$\n   x = 3y = 3 \\times 10 = 30\n   $$\n\n**Risposta finale:** Anna ha **30 anni** oggi."
+ }
+]

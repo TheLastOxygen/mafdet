@@ -37,11 +37,11 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
 ## Next
 
 0. **IQ4_XS as the default quantization, and the estimate fixed** (from the 4070 SUPER results below).
-   - Qwen3-4B IQ4_XS against Q4_K_M, 24 problems, `research/thinking_ahead.py` (accuracy on the model most people run);
-     then the same two on the RTX 2060 (Turing's IQ4_XS kernel may not gain what Ada's does) and the 14B there (IQ4_XS
-     on the CPU's layers: the CPU kernels of IQ quants are slower per byte than K-quants, to check).
-     If it holds: IQ4_XS variants in `tools/build_catalog.py` (unsloth's repos have them for every Qwen3) and as
-     `default_quant` where measured.
+   - Done on the 4B: IQ4_XS is not worth it there (+4%, 26/28 against 28/28, below). For the 14B: the paired run on
+     all 24 problems (`quant_14b_4070s.json`, running) decides whether IQ4_XS becomes its `default_quant`; then the
+     same two on the RTX 2060 (Turing's IQ4_XS kernel may not gain what Ada's does, and there the 14B's CPU layers
+     run IQ4_XS on the CPU kernels, slower per byte than K-quants). If it holds: the IQ4_XS variant in
+     `tools/build_catalog.py` (unsloth's repo) as the 14B's default.
    - `catalog.estimate`: llama.cpp's fit keeps the token embeddings on the CPU always (417 MB on the 14B, counted as
      GPU bytes today), its reserve is smaller than VRAM_RESERVE_MB (it left 800 MB free of 12.3 GB with the 14B
      loaded), and GPU_EFFICIENCY is 0.66-0.78 on Ada (0.62 on the 2060). As it is, the catalog puts the 14B at 95%
@@ -92,6 +92,14 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
 
 ## Done and measured
 
+- **2026-10-26 · Qwen3-4B IQ4_XS against Q4_K_M (4070 SUPER): 4% faster, one answer worse — not worth it on the 4B.**
+  24 problems, reasoning ahead (`quant_4b_4070s.json`): Q4_K_M 24/24, mean wait 2.83 s, median 2.14 s, 106-119 tok/s;
+  IQ4_XS 23/24, 2.37 / 1.73 s, 117-130 tok/s. The miss is problem 8 (Anna's age, the ambiguous "il doppio della sua
+  età"): read as her own age, answer 10. Repeated 4 times each (`quant_4b_4070s_p8.json`): IQ4_XS 3/4 (the miss a
+  reasoning loop cut at 3000 tokens, no answer), Q4_K_M 4/4. In all 26/28 against 28/28. Measure-style: prefill
+  7441 / 7027 tok/s, decode **129.8 / 134.9 tok/s** (2376 / 2160 MiB on the GPU). The 14B's +31% does not carry
+  over to the 4B: +4% clean, +9% in the chat benchmark. During the repeats the tok/s had dropped to 90-104 on both
+  quantizations (the GPU after 40 minutes of runs): compare rows measured one after the other, as on the Mac.
 - **2026-10-26 · Qwen3-14B on a 12 GB card (RTX 4070 SUPER): all on the GPU, IQ4_XS 31% faster than Q4_K_M, same
   answers.** The plan was "the largest model entirely in VRAM, with a smaller quantization, against the same model
   split with the CPU"; on this card the 14B Q4_K_M turned out to be entirely in VRAM already (`-lv 5` in the server
