@@ -1,0 +1,110 @@
+[
+ {
+  "rep": 0,
+  "k": 0,
+  "lang": "en",
+  "ok": true,
+  "answer_ms": 8734,
+  "closed": false,
+  "head": "The train departs at **9:15** and arrives at **11:40**, which is a total journey time of **2 hours and 25 minutes** (or "
+ },
+ {
+  "rep": 0,
+  "k": 1,
+  "lang": "en",
+  "ok": true,
+  "answer_ms": 24286,
+  "closed": false,
+  "head": "To determine the least amount you can spend on 10 pens, we analyze the pricing options:\n\n- **Individual pens**: $1.20 ea"
+ },
+ {
+  "rep": 0,
+  "k": 2,
+  "lang": "en",
+  "ok": true,
+  "answer_ms": 6334,
+  "closed": false,
+  "head": "Anna is currently **30 years old**.\n\n**Step-by-Step Explanation:**\n\n1. **Define Variables:**\n   - Let $ S $ be the son's"
+ },
+ {
+  "rep": 1,
+  "k": 0,
+  "lang": "en",
+  "ok": true,
+  "answer_ms": 6173,
+  "closed": false,
+  "head": "The train departs at **9:15** and arrives at **11:40**, which is a total of **2 hours and 25 minutes** (or **145 minutes"
+ },
+ {
+  "rep": 1,
+  "k": 1,
+  "lang": "en",
+  "ok": true,
+  "answer_ms": 9671,
+  "closed": false,
+  "head": "To find the least cost for 10 pens, we compare the two pricing options:\n\n- **Individual pens**: $1.20 each  \n- **Packs o"
+ },
+ {
+  "rep": 1,
+  "k": 2,
+  "lang": "en",
+  "ok": true,
+  "answer_ms": 12228,
+  "closed": false,
+  "head": "Anna is **30 years old** today.\n\n**Step-by-Step Explanation:**\n\n1. **Define Variables:**\n   - Let $ S $ be the son's cur"
+ },
+ {
+  "rep": 2,
+  "k": 0,
+  "lang": "en",
+  "ok": true,
+  "answer_ms": 9224,
+  "closed": false,
+  "head": "The train departs at **9:15** and arrives at **11:40**, which is a total journey time of **2 hours and 25 minutes (145 m"
+ },
+ {
+  "rep": 2,
+  "k": 1,
+  "lang": "en",
+  "ok": true,
+  "answer_ms": 13562,
+  "closed": false,
+  "head": "To determine the least amount you can spend on **10 pens**, compare the costs of purchasing individual pens versus packs"
+ },
+ {
+  "rep": 2,
+  "k": 2,
+  "lang": "en",
+  "ok": true,
+  "answer_ms": 7609,
+  "closed": false,
+  "head": "Anna is **30** years old today.\n\n**Step-by-Step Explanation:**\n\n1. **Define Variables:**\n   - Let $ A $ be Anna's curren"
+ },
+ {
+  "rep": 3,
+  "k": 0,
+  "lang": "en",
+  "ok": true,
+  "answer_ms": 6148,
+  "closed": false,
+  "head": "To determine how many minutes the train is actually moving, we need to calculate the total travel time and subtract the "
+ },
+ {
+  "rep": 3,
+  "k": 1,
+  "lang": "en",
+  "ok": true,
+  "answer_ms": 22647,
+  "closed": false,
+  "head": "To determine the least amount you can spend on 10 pens, compare the costs of purchasing individual pens versus packs:\n\n-"
+ },
+ {
+  "rep": 3,
+  "k": 2,
+  "lang": "en",
+  "ok": true,
+  "answer_ms": 6521,
+  "closed": false,
+  "head": "Anna is **30 years old** today.  \n\n**Step-by-Step Explanation:**  \n1. Let the son's current age be $ x $.  \n2. Anna's cu"
+ }
+]

@@ -52,6 +52,9 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
    the empty-answer fix; repeat both configs in one run when the Mac is cool. The 8B on the Mac (should fit
    on the GPU, ~27 tok/s estimated). The SENT frame ("...and answer it") may invite the answer inside the
    reasoning: count `closed` in future runs (now in the rows) before touching it.
+   The language: an English question can get an Italian answer (above). Next try, if wanted: SEED's example
+   line in English ("How much does the Moon weigh compared to") and SENT unchanged, which removes the cue
+   without an instruction; measure with `research/language_check.py` and the 24 Italian problems.
 
 4. Other ideas discussed, not started:
    - show the answer written ahead live under the input field (zero perceived wait; a product/UX change,
@@ -62,6 +65,18 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
 
 ## Done and measured
 
+- **2026-10-26 · An English question answered in Italian: found, fix tried, not kept.** Recording the app on
+  the M2 Pro, one of 3 runs of an English word problem got a right answer in Italian, after reasoning ahead.
+  Likely cause: the only Italian in the frame is SEED's example line ("Quanto pesa la Luna rispetto alla").
+  All benchmarks were Italian, so it never showed. `research/language_check.py` (3 English problems typed
+  in real time): 0 of 12 Italian answers as released (`language_4b_m2pro_before.json`), so it is rare (1 in
+  15 counting the app runs). Tried: SENT "...answer it in the language it is written in, using...": 0 of 24
+  (`language_4b_m2pro_after.json`), but the reasoning got longer on both models: 4B, 24 Italian problems,
+  24/24, 773 → 875 reasoning tokens, median 4.1 → 5.0 s, mean 5.6 → 7.2 s
+  (`thinking_ahead_4b_m2pro_language.json`); 14B, 6 problems, 6/6, 455 → 636 tokens, mean 12.1 → 22.7 s
+  (median 11.7 → 11.9; `thinking_ahead_14b_m2pro_language.json`). After Enter the model rereads the Italian
+  message and argues over its translation. Reverted, the user stopped here; the README's numbers are the
+  released frame.
 - **2026-10-26 · Empty answer after reasoning ahead: fixed.** Qwen3-4B sometimes ends its turn inside the
   reasoning, the answer written there, with no </think>: the page got only thoughts and an empty answer
   (`answer_ms` 0). Seen once in the M2 Pro run (problem 5), 1 in 6 repeats of it, and once before on the

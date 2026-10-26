@@ -1,0 +1,74 @@
+[
+ {
+  "config": "reason ahead",
+  "k": 0,
+  "ok": true,
+  "answer_ms": 6629,
+  "think_tokens": 354,
+  "think_ahead": 266,
+  "cut": false,
+  "closed": false,
+  "tps": 18.3,
+  "tail": " \n\n**Totale speso**: 12 euro + 2 euro = **14 euro**.  \n\n**Euro rimasti**: 25 euro - 14 euro = **11 euro**.  \n\n**Risposta finale**: Luca gli restano **11 euro**."
+ },
+ {
+  "config": "reason ahead",
+  "k": 4,
+  "ok": true,
+  "answer_ms": 13723,
+  "think_tokens": 509,
+  "think_ahead": 290,
+  "cut": false,
+  "closed": false,
+  "tps": 18.3,
+  "tail": " totale. Le pagine che le mancano sono:\n\n$$\n400 \\, \\text{pagine} - 216 \\, \\text{pagine} = 184 \\, \\text{pagine}\n$$\n\n**Risposta:** A Marta mancano **184 pagine**."
+ },
+ {
+  "config": "reason ahead",
+  "k": 6,
+  "ok": true,
+  "answer_ms": 10056,
+  "think_tokens": 409,
+  "think_ahead": 260,
+  "cut": false,
+  "closed": false,
+  "tps": 18.0,
+  "tail": " 24 bottiglie totali**.  \n\nNe hai bevute 9 e ne hai regalate 5, quindi:  \n**24 − 9 − 5 = 10 bottiglie rimanenti**.  \n\n**Risposta:** Ti restano **10 bottiglie**."
+ },
+ {
+  "config": "reason ahead",
+  "k": 13,
+  "ok": true,
+  "answer_ms": 52607,
+  "think_tokens": 1142,
+  "think_ahead": 227,
+  "cut": false,
+  "closed": false,
+  "tps": 17.8,
+  "tail": "\n\nDividendo il resto da risparmiare per la somma settimanale:\n\n$$\n\\frac{270}{15} = 18 \\text{ settimane}.\n$$\n\n**Risposta:** Paolo ha bisogno di **18 settimane**."
+ },
+ {
+  "config": "reason ahead",
+  "k": 19,
+  "ok": true,
+  "answer_ms": 43357,
+  "think_tokens": 960,
+  "think_ahead": 209,
+  "cut": false,
+  "closed": false,
+  "tps": 17.9,
+  "tail": "ica:**  \n- Auto: $ c = 30 - 10 = 20 $  \n- Ruote totali:  \n  $$\n  (20 \\times 4) + (10 \\times 2) = 80 + 20 = 100\n  $$\n\n**Risposta finale:**  \nLe **moto sono 10**."
+ },
+ {
+  "config": "reason ahead",
+  "k": 23,
+  "ok": true,
+  "answer_ms": 9539,
+  "think_tokens": 445,
+  "think_ahead": 312,
+  "cut": false,
+  "closed": false,
+  "tps": 18.1,
+  "tail": "sti occupati} = \\frac{2}{3} \\times 432 = 288\n$$\n\nI posti liberi saranno quindi:\n\n$$\n\\text{Posti liberi} = 432 - 288 = 144\n$$\n\n**Risposta finale:** $\\boxed{144}$"
+ }
+]
