@@ -1,5 +1,6 @@
 """
-What the machine has: GPU (NVIDIA through nvidia-smi, or Apple Silicon through Metal), VRAM, RAM, CPU.
+What the machine has: GPU (NVIDIA through nvidia-smi, AMD Radeon through DXGI on Windows or the amdgpu
+driver on Linux, Apple Silicon through Metal), VRAM, RAM, CPU.
 
 No PyTorch: llama.cpp runs the models, so the chat must be able to tell
 whether there is a GPU without importing a 4 GB library. The memory
@@ -16,8 +17,8 @@ import subprocess
 import time
 from dataclasses import asdict, dataclass, field
 
-# Memory bandwidth in GB/s of common NVIDIA cards (manufacturer specifications).
-# Matched against the name nvidia-smi reports, longest key first.
+# Memory bandwidth in GB/s of common NVIDIA and AMD cards (manufacturer specifications).
+# Matched against the name the driver reports, longest key first.
 GPU_BANDWIDTH = {
     "GTX 1050 TI": 112, "GTX 1050": 112, "GTX 1060": 192, "GTX 1070 TI": 256, "GTX 1070": 256,
     "GTX 1080 TI": 484, "GTX 1080": 320, "GTX 1650 SUPER": 192, "GTX 1650": 128, "GTX 1660 SUPER": 336,
@@ -31,6 +32,13 @@ GPU_BANDWIDTH = {
     "RTX 5060 TI": 448, "RTX 5060": 448, "RTX 5070 TI": 896, "RTX 5070": 672, "RTX 5080": 960, "RTX 5090": 1792,
     "RTX A2000": 288, "RTX A4000": 448, "RTX A5000": 768, "RTX A6000": 768, "RTX 4000 ADA": 360,
     "RTX 6000 ADA": 960, "TESLA T4": 320, "L4": 300, "A10G": 600, "A100": 1555, "H100": 3350,
+    # AMD Radeon (the Infinity Cache of the RX 6000 and later does not help here: the weights are far larger)
+    "RX 470": 211, "RX 480": 256, "RX 570": 224, "RX 580": 256, "RX 590": 256, "VEGA 56": 410, "VEGA 64": 484,
+    "RADEON VII": 1024, "RX 5500 XT": 224, "RX 5600 XT": 288, "RX 5700 XT": 448, "RX 5700": 448,
+    "RX 6400": 128, "RX 6500 XT": 144, "RX 6600 XT": 256, "RX 6600": 224, "RX 6650 XT": 280, "RX 6700 XT": 384,
+    "RX 6700": 320, "RX 6750 XT": 432, "RX 6800 XT": 512, "RX 6800": 512, "RX 6900 XT": 512, "RX 6950 XT": 576,
+    "RX 7600 XT": 288, "RX 7600": 288, "RX 7700 XT": 432, "RX 7800 XT": 624, "RX 7900 GRE": 576,
+    "RX 7900 XT": 800, "RX 7900 XTX": 960, "RX 9060 XT": 320, "RX 9070 XT": 640, "RX 9070": 640,
 }
 # Apple Silicon: the bandwidth of the unified memory, which the GPU and the CPU share (the top
 # configuration of each chip; the binned M3 Max and M4 Max reach 300 and 410).
@@ -54,6 +62,7 @@ class GPU:
     bandwidth_gbs: float
     bandwidth_known: bool             # from the table, not guessed from the amount of VRAM
     unified: bool = False             # Apple Silicon: the "VRAM" is the share of the RAM Metal may use
+    backend: str = "cuda"             # the llama.cpp build that runs on it: cuda, vulkan (AMD) or metal
 
     @property
     def vram_free_mb(self) -> int:
@@ -168,12 +177,116 @@ def apple_gpus() -> list[GPU]:
     known = bool(m and m.group(1) in APPLE_BANDWIDTH)
     bw = APPLE_BANDWIDTH[m.group(1)] if known else 100
     # What other apps hold is not counted: llama.cpp's split (-ngl auto) only looks at the working set.
-    return [GPU(name, vram_mb, 0, f"Metal · macOS {platform.mac_ver()[0]}", bw, known, unified=True)]
+    return [GPU(name, vram_mb, 0, f"Metal · macOS {platform.mac_ver()[0]}", bw, known, unified=True,
+                backend="metal")]
+
+
+AMD_VENDOR = 0x1002
+# Integrated Radeons (Ryzen APUs) have a few hundred MB of their own and share the RAM: not counted, they
+# keep the CPU build. A dedicated card has 4 GB or more.
+AMD_MIN_VRAM_MB = 2048
+
+
+def amd_gpu(name: str, vram_mb: int, used_mb: int, driver: str) -> GPU | None:
+    """An AMD card, for llama.cpp's Vulkan build; None for an integrated one."""
+    if vram_mb < AMD_MIN_VRAM_MB:
+        return None
+    bw, known = gpu_bandwidth(name, vram_mb)
+    return GPU(name, vram_mb, used_mb, driver, bw, known, backend="vulkan")
+
+
+def _dxgi_adapters() -> list[tuple[str, int, int, str]]:
+    """Name, vendor id, dedicated memory (bytes) and driver version of the adapters Windows has running
+    (DXGI). The registry also keeps cards taken out of the machine long ago: DXGI only lists the present ones."""
+    import ctypes
+    from ctypes import wintypes
+
+    class GUID(ctypes.Structure):
+        _fields_ = [("a", ctypes.c_uint32), ("b", ctypes.c_uint16), ("c", ctypes.c_uint16), ("d", ctypes.c_ubyte * 8)]
+
+    def guid(text: str) -> GUID:
+        h = text.replace("-", "")
+        return GUID(int(h[:8], 16), int(h[8:12], 16), int(h[12:16], 16), (ctypes.c_ubyte * 8)(*bytes.fromhex(h[16:])))
+
+    class DESC1(ctypes.Structure):
+        _fields_ = [("Description", ctypes.c_wchar * 128), ("VendorId", ctypes.c_uint), ("DeviceId", ctypes.c_uint),
+                    ("SubSysId", ctypes.c_uint), ("Revision", ctypes.c_uint), ("DedicatedVideoMemory", ctypes.c_size_t),
+                    ("DedicatedSystemMemory", ctypes.c_size_t), ("SharedSystemMemory", ctypes.c_size_t),
+                    ("LuidLow", wintypes.DWORD), ("LuidHigh", wintypes.LONG), ("Flags", ctypes.c_uint)]
+
+    def method(obj, index: int, *argtypes):
+        """The COM method at `index` of obj's vtable."""
+        vtable = ctypes.cast(obj, ctypes.POINTER(ctypes.POINTER(ctypes.c_void_p))).contents
+        return ctypes.WINFUNCTYPE(ctypes.c_long, ctypes.c_void_p, *argtypes)(vtable[index])
+
+    try:
+        dxgi = ctypes.WinDLL("dxgi")
+    except OSError:
+        return []
+    factory = ctypes.c_void_p()
+    if dxgi.CreateDXGIFactory1(ctypes.byref(guid("770aae78-f26f-4dba-a829-253c83d1b387")), ctypes.byref(factory)) != 0:
+        return []
+    found = []
+    i = 0
+    while True:
+        adapter = ctypes.c_void_p()
+        # IDXGIFactory1::EnumAdapters1; DXGI_ERROR_NOT_FOUND past the last adapter
+        if method(factory, 12, ctypes.c_uint, ctypes.c_void_p)(factory, i, ctypes.byref(adapter)) != 0:
+            break
+        i += 1
+        desc = DESC1()
+        ok = method(adapter, 10, ctypes.c_void_p)(adapter, ctypes.byref(desc)) == 0                 # GetDesc1
+        version = ctypes.c_longlong()
+        driver = ""
+        if method(adapter, 9, ctypes.c_void_p, ctypes.c_void_p)(                                  # CheckInterfaceSupport
+                adapter, ctypes.byref(guid("54ec77fa-1377-44e6-8c32-88fd5f44c84c")), ctypes.byref(version)) == 0:
+            driver = ".".join(str(version.value >> shift & 0xFFFF) for shift in (48, 32, 16, 0))
+        method(adapter, 2)(adapter)                                                                 # Release
+        if ok and not desc.Flags & 2:                                                               # not the software renderer
+            found.append((desc.Description, desc.VendorId, desc.DedicatedVideoMemory, driver))
+    method(factory, 2)(factory)
+    return found
+
+
+def _read(path: str) -> str:
+    try:
+        with open(path, encoding="utf-8") as f:
+            return f.read().strip()
+    except OSError:
+        return ""
+
+
+def amd_gpus() -> list[GPU]:
+    """AMD Radeon cards, for llama.cpp's Vulkan build. The memory in use is known on Linux (amdgpu), not on
+    Windows, where it counts as free: llama.cpp's own split (-ngl auto) asks Vulkan, which knows it."""
+    found = []
+    if os.name == "nt":
+        try:
+            adapters = _dxgi_adapters()
+        except (OSError, ValueError, AttributeError):
+            adapters = []
+        for name, vendor, vram, driver in adapters:
+            g = amd_gpu(name, vram >> 20, 0, driver) if vendor == AMD_VENDOR else None
+            if g:
+                found.append(g)
+    elif platform.system() == "Linux":
+        import glob
+        for dev in sorted(glob.glob("/sys/class/drm/card[0-9]*/device")):
+            total, used = _read(f"{dev}/mem_info_vram_total"), _read(f"{dev}/mem_info_vram_used")
+            if _read(f"{dev}/vendor") != "0x1002" or not total.isdigit():
+                continue
+            name = _read(f"{dev}/product_name") or f"AMD Radeon ({_read(f'{dev}/device')})"
+            g = amd_gpu(name, int(total) >> 20, int(used) >> 20 if used.isdigit() else 0,
+                        f"amdgpu · Linux {platform.release()}")
+            if g:
+                found.append(g)
+    return found
 
 
 def gpus() -> list[GPU]:
-    """The cards llama.cpp can run models on: NVIDIA (CUDA build) or Apple Silicon (Metal)."""
-    return nvidia_gpus() or apple_gpus()
+    """The cards llama.cpp can run models on: NVIDIA (CUDA build), AMD Radeon (Vulkan) or Apple Silicon (Metal).
+    One kind only: the build installed runs one of them."""
+    return nvidia_gpus() or amd_gpus() or apple_gpus()
 
 
 def cpu_name() -> str:
@@ -275,6 +388,7 @@ def detect(refresh: bool = False) -> Hardware:
 
 
 def has_cuda_gpu() -> bool:
-    """A GPU llama.cpp can use: an NVIDIA card with a working driver (CUDA build), or Apple Silicon (Metal).
+    """A GPU llama.cpp can use: an NVIDIA card with a working driver (CUDA build), an AMD Radeon (Vulkan)
+    or Apple Silicon (Metal).
     The name stays: "cuda" is the device id of the GPU in the settings and the measurements."""
     return bool(gpus())

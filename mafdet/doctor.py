@@ -4,7 +4,7 @@ llama.cpp in place by itself.
 
     mafdet doctor
     mafdet doctor --install
-    mafdet doctor --install --cuda 12     # a given build instead of the automatic choice
+    mafdet doctor --install --build 12    # a given build instead of the automatic choice (12, 13, vulkan, cpu)
 """
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ def run(args) -> int:
         console.print(f"{ok} GPU        {g.name} · {g.vram_mb / 1024:.1f} GB VRAM ({g.vram_free_mb / 1024:.1f} GB free) · "
                       f"driver {g.driver} · {g.bandwidth_gbs:.0f} GB/s")
     else:
-        console.print(f"{warn} GPU        no NVIDIA card found (nvidia-smi): models run on the CPU")
+        console.print(f"{warn} GPU        no GPU found (NVIDIA, AMD Radeon or Apple Silicon): models run on the CPU")
 
     if args.install:
         install(console, args.cuda or None)

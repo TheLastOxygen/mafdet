@@ -68,7 +68,7 @@
     if (!hw) return;
     const others = M.state.catalog?.vram_others_mb || 0;
     $("models-sub").textContent = hw.gpu
-      ? t("models.subtitle_gpu", { gpu: hw.gpu.name.replace(/^NVIDIA (GeForce )?/, ""), ram: M.mb(hw.ram_mb),
+      ? t("models.subtitle_gpu", { gpu: hw.gpu.name.replace(/^(NVIDIA (GeForce )?|AMD (Radeon )?)/, ""), ram: M.mb(hw.ram_mb),
           others: others > 1024 ? t("models.vram_others", { n: M.mb(others) }) : "" })
       : t("models.subtitle_cpu", { cpu: hw.cpu, ram: M.mb(hw.ram_mb) });
   }

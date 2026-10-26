@@ -56,13 +56,18 @@ HINT = {"gpu": "Runs entirely on your GPU: the fastest setup.",
 ERRORS = {"llama_missing": "llama.cpp is not installed.", "port_busy": "The port is taken by another program.",
           "server_exited": "llama.cpp stopped while loading the model.",
           "server_timeout": "llama.cpp did not answer for 10 minutes.",
-          "no_gpu": "No NVIDIA card found: set Run on to CPU in Settings.",
+          "no_gpu": "No GPU found: set Run on to CPU in Settings.",
           "server_stopped": "llama.cpp stopped answering.", "load_failed": "The model could not be loaded."}
 SPIN = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
 
 
 def gb(mb: float) -> str:
     return f"{mb / 1024:.1f} GB" if mb >= 1024 else f"{mb:.0f} MB"
+
+
+def short_gpu(name: str) -> str:
+    """'RTX 2060' for 'NVIDIA GeForce RTX 2060', 'RX 7800 XT' for 'AMD Radeon RX 7800 XT'."""
+    return name.replace("NVIDIA GeForce ", "").replace("AMD Radeon ", "")
 
 
 def dur(s: float | None) -> str:
@@ -126,7 +131,7 @@ class Boot(Screen):
         st, hw, rt = service.settings, service.hardware(), service.runtime()
         g = hw.get("gpu")
         lines = [("OK", "mafdet", f"v{__version__}"),
-                 ("OK", "gpu", f"{g['name'].replace('NVIDIA GeForce ', '')} · {gb(g['vram_mb'])}") if g
+                 ("OK", "gpu", f"{short_gpu(g['name'])} · {gb(g['vram_mb'])}") if g
                  else ("--", "gpu", "none · cpu mode"),
                  ("OK", "llama.cpp", rt["build"] or "found") if rt["installed"] else ("!!", "llama.cpp", "not installed"),
                  ("OK", "model", model_name(service, st["model"])) if st["model"] else ("--", "model", "none chosen"),
@@ -629,7 +634,7 @@ class ModelsView(Vertical):
         hw = self.service.hardware()
         g = hw.get("gpu")
         head = Text()
-        machine = f"{g['name'].replace('NVIDIA GeForce ', '')} {g['vram_mb'] / 1024:.0f} GB" if g else "CPU only"
+        machine = f"{short_gpu(g['name'])} {g['vram_mb'] / 1024:.0f} GB" if g else "CPU only"
         head.append(f"{machine} · {hw['ram_mb'] / 1024:.0f} GB RAM", style=MUTED)
         if cat.get("vram_others_mb", 0) > 1024:
             head.append(f" · {gb(cat['vram_others_mb'])} of VRAM in use elsewhere", style=AMBER)
@@ -787,7 +792,7 @@ class HardwareView(VerticalScroll):
             t.add_row("VRAM", bar(used, 24, GREEN) + Text(f"  {gb(g['vram_mb'])} · {gb(g['vram_used_mb'])} in use"))
             t.add_row("BANDWIDTH", f"{g['bandwidth_gbs']:.0f} GB/s" + ("" if g["bandwidth_known"] else " (estimated)"))
         else:
-            t.add_row("GRAPHICS CARD", Text("No NVIDIA card found: models run on the CPU.", style=MUTED))
+            t.add_row("GRAPHICS CARD", Text("No GPU found (NVIDIA, AMD Radeon or Apple Silicon): models run on the CPU.", style=MUTED))
         t.add_row("", "")
         t.add_row("PROCESSOR", Text(hw["cpu"], style=Style(bold=True)))
         t.add_row("", f"{hw['cores']} cores · {hw['threads']} threads")
@@ -859,7 +864,7 @@ class SettingsView(VerticalScroll):
         yield Static("MODEL AND MEMORY", classes="section")
         yield self.row("Context", "How much of the conversation the model keeps in memory. More takes more VRAM.",
                        self.select("ctx", [4096, 8192, 16384, 32768], st["ctx"], "{:,}"))
-        yield self.row("Run on", "Auto uses the GPU when there is one (NVIDIA, or Apple Silicon).",
+        yield self.row("Run on", "Auto uses the GPU when there is one (NVIDIA, AMD Radeon or Apple Silicon).",
                        Select([("Auto", "auto"), ("GPU", "cuda"), ("CPU", "cpu")], value=st["device"], allow_blank=False,
                               id="device"))
         yield Static("TERMINAL", classes="section")
@@ -989,7 +994,7 @@ class Setup(ModalScreen):
             found = ""
             if self.revealed >= len(rows):
                 found = (f"{g['name']} with {gb(g['vram_mb'])} of VRAM: models will run on the GPU." if g
-                         else "No NVIDIA card: models will run on the CPU. Smaller models answer fastest.")
+                         else "No GPU found: models will run on the CPU. Smaller models answer fastest.")
             body.update(_stack(Text("Looking at your machine\n", style=Style(color=PAPER, bold=True)), t,
                                Text("\n" + found, style=PAPER)))
         elif name == "Runtime":

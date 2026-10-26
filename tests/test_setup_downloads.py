@@ -13,7 +13,8 @@ from mafdet.progress import follow
 
 
 def machine(system="windows", arch="amd64", gpu_name=None, driver="617.42"):
-    gpus = [GPU(gpu_name, 8192, 0, driver, 400, True)] if gpu_name else []
+    backend = "vulkan" if gpu_name and gpu_name.startswith("AMD") else "cuda"
+    gpus = [GPU(gpu_name, 8192, 0, driver, 400, True, backend=backend)] if gpu_name else []
     return Hardware(os=system, system=system, arch=arch, cpu="cpu", cores=8, threads=16, ram_mb=32000,
                     ram_free_mb=20000, ram_bandwidth_gbs=40, gpus=gpus)
 
@@ -23,6 +24,9 @@ def machine(system="windows", arch="amd64", gpu_name=None, driver="617.42"):
     (machine(gpu_name="NVIDIA GeForce RTX 2060", driver="552.22"), "cuda-12.4", "llama-{tag}-bin-win-cuda-12.4-x64.zip"),
     (machine(gpu_name="NVIDIA GeForce GTX 1080"), "cuda-12.4", "llama-{tag}-bin-win-cuda-12.4-x64.zip"),
     (machine(), "cpu", "llama-{tag}-bin-win-cpu-x64.zip"),
+    (machine(gpu_name="AMD Radeon RX 7800 XT", driver="32.0.21025.1024"), "vulkan", "llama-{tag}-bin-win-vulkan-x64.zip"),
+    (machine("linux", "x86_64", "AMD Radeon RX 6700 XT", driver="amdgpu · Linux 6.8"), "vulkan",
+     "llama-{tag}-bin-ubuntu-vulkan-x64.tar.gz"),
     (machine("linux", "x86_64", "NVIDIA GeForce RTX 4090"), "cuda-13.4", "llama-{tag}-bin-ubuntu-cuda-13.4-x64.tar.gz"),
     (machine("linux", "x86_64", "NVIDIA GeForce RTX 3060", driver="550.1"), "cuda-12.8",
      "llama-{tag}-bin-ubuntu-cuda-12.8-x64.tar.gz"),
@@ -106,6 +110,9 @@ def test_follow_names_the_file(server, tmp_path):
     (machine("linux", "x86_64", "NVIDIA GeForce RTX 4090"), "12", "cuda-12.8"),
     (machine(), "12", "cuda-12.4"),                                             # no card seen: the user knows better
     (machine("darwin", "arm64"), "12", "metal"),                                # no CUDA on a Mac
+    (machine(gpu_name="NVIDIA GeForce RTX 2060"), "vulkan", "vulkan"),          # Vulkan runs on NVIDIA too
+    (machine(gpu_name="AMD Radeon RX 7800 XT"), "cpu", "cpu"),
+    (machine("darwin", "arm64"), "vulkan", "metal"),
 ])
 def test_build_override(hw, cuda, flavor):
     assert llama_setup.build_for(hw, cuda)["flavor"] == flavor

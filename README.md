@@ -33,7 +33,7 @@ Chat interfaces make the model wait for you to press Enter before it does anythi
 
 MAFDET uses the time you spend typing for both. It **reads** your message as you write it, so the prefill is done before Enter. And it **thinks ahead**: the model starts reasoning about your message while you are still typing it, and keeps that reasoning when you change the text. On Qwen3-4B, with 24 word problems typed in real time, the mean wait after Enter goes from **12.2 s to 3.2 s**, with the same 24/24 correct answers; on Qwen3-14B, from **108 s to 47 s**. On a MacBook Pro M2 Pro, from **18.1 s to 5.6 s** (4B, 24/24 both ways) and from **32.7 s to 12.1 s** (14B).
 
-MAFDET is built for the hardware most people actually own. The reference machine is an **RTX 2060 with 6 GB of VRAM**; it also runs on **Apple Silicon Macs** (Metal, measured on an M2 Pro with 16 GB), and everything also runs on **CPU only**.
+MAFDET is built for the hardware most people actually own. The reference machine is an **RTX 2060 with 6 GB of VRAM**; it also runs on **Apple Silicon Macs** (Metal, measured on an M2 Pro with 16 GB), and everything also runs on **CPU only**. **AMD Radeon** cards run through Vulkan, not measured yet: [help wanted](#help-wanted-benchmarks-on-an-amd-radeon).
 
 > Named after Mafdet, the ancient Egyptian feline goddess known as "the runner", who struck snakes and scorpions before they could attack.
 
@@ -82,7 +82,7 @@ pip install -e .
 mafdet
 ```
 
-Either way, no PyTorch and no manual downloads: MAFDET asks whether to open the **window** or the **terminal app**, and the first start guides you through the rest. It looks at your machine, installs the right build of llama.cpp by itself (CUDA for an NVIDIA card, Metal on an Apple Silicon Mac, CPU otherwise) and downloads the model that runs best on your hardware.
+Either way, no PyTorch and no manual downloads: MAFDET asks whether to open the **window** or the **terminal app**, and the first start guides you through the rest. It looks at your machine, installs the right build of llama.cpp by itself (CUDA for an NVIDIA card, Vulkan for an AMD Radeon, Metal on an Apple Silicon Mac, CPU otherwise) and downloads the model that runs best on your hardware.
 
 <p align="center">
   <img src="assets/screenshots/gui-chat.png" alt="The MAFDET window: the model reasoned ahead while the message was typed (455 of 571 reasoning tokens) and answered 1.6 s after Enter" width="49%">
@@ -98,7 +98,7 @@ The same app comes in two forms, on the same engine:
 | <img src="assets/icons/watch.svg" width="22" alt=""> | `mafdet gui` | **The window**: chat, models, hardware and settings, in English, Italian, French or German |
 | <img src="assets/icons/strike.svg" width="22" alt=""> | `mafdet tui` | **The terminal app**: the same views in the terminal, keyboard first (F1 to F4), on an amber phosphor screen with a boot sequence (Settings, *Cinematic effects*, turns the animations off) |
 | <img src="assets/icons/race.svg" width="22" alt=""> | `mafdet models` | the model catalog for this machine (`--family`, `--download`) |
-| <img src="assets/icons/awaken.svg" width="22" alt=""> | `mafdet doctor` | checks the GPU, memory, llama.cpp and the models; `--install` installs llama.cpp (`--cuda 12`, `13` or `cpu` to pick the build) |
+| <img src="assets/icons/awaken.svg" width="22" alt=""> | `mafdet doctor` | checks the GPU, memory, llama.cpp and the models; `--install` installs llama.cpp (`--build 12`, `13`, `vulkan` or `cpu` to pick the build) |
 
 `mafdet` alone opens the launcher, which can remember your choice (`mafdet --ask` shows it again).
 
@@ -115,10 +115,10 @@ The same app comes in two forms, on the same engine:
 
 ## Requirements
 
-- **Windows**, with an **NVIDIA GPU** and up-to-date drivers (tested target: RTX 2060, 6 GB), or just a CPU. **Linux** has its llama.cpp builds and code paths in place, but has not been tested yet
+- **Windows**, with an **NVIDIA GPU** and up-to-date drivers (tested target: RTX 2060, 6 GB), an **AMD Radeon** through Vulkan (in place, not measured yet: [help wanted](#help-wanted-benchmarks-on-an-amd-radeon)), or just a CPU. **Linux** has its llama.cpp builds and code paths in place, but has not been tested yet
 - **macOS** on Apple Silicon (M1 or later): the models run on the GPU through Metal, in the unified memory (tested: M2 Pro, 16 GB, macOS 26.2; Qwen3-4B reads 593 tokens/s and writes 57). Intel Macs run on the CPU
 - **Python 3.10 or later** (tested with 3.12)
-- Disk space: about 0.7 GB for llama.cpp with CUDA (60 MB without), plus the models, from 0.6 GB (Qwen3-0.6B) to 2.3 GB for the 4B recommended on 6-8 GB cards
+- Disk space: about 0.7 GB for llama.cpp with CUDA (100 MB with Vulkan, 60 MB for the CPU), plus the models, from 0.6 GB (Qwen3-0.6B) to 2.3 GB for the 4B recommended on 6-8 GB cards
 - **16 GB of RAM** recommended for CPU-only runs and for models larger than the VRAM
 
 The app needs no PyTorch: llama.cpp runs the models, and transformers only provides the tokenizers. PyTorch is needed only for the measurements on the PyTorch backend (below): install it first from the CUDA index, then `pip install -e ".[research]"`.
@@ -255,6 +255,17 @@ The reasoning-ahead column was measured again for this comparison, the same day 
 - `--draft` (Qwen3-0.6B drafting for the 14B): on the GPU it takes VRAM from the 14B, which then runs more of its layers on the CPU (4.8 → 3.5 tok/s); on the CPU it gains 8% with 4-token drafts and halves the reading speed.
 - The reasoning ahead as the draft for speculative decoding after Enter (`--spec-type ngram-simple`: the notes are in the prompt, and after Enter the model works the same steps out again). Replayed offline, prompt lookup would write 1.5 to 1.7 tokens per decoding step on Qwen3-4B, against 1.3 to 1.5 without notes. For real it is no faster on the 4B (73 tok/s either way) and slower on the 14B (5.0 → 3.1 tok/s): checking a 9-token draft costs the 14B 2.4 decoding steps, because its layers on the CPU compute every token of the draft, and only 11% of the drafted tokens were right. Script and data: `research/notes_as_draft.py`.
 
+## Help wanted: benchmarks on an AMD Radeon
+
+MAFDET runs on AMD Radeon cards through llama.cpp's Vulkan build, but nobody has measured it on one yet: the machines here are an RTX 2060 and an M2 Pro. The Vulkan path itself is checked, on the RTX 2060 (Qwen3-4B reads 2,103 tokens/s and writes 83, about as with CUDA; 3/3 word problems correct, reasoning ahead working). What is missing is a Radeon. If you have one (a dedicated card, RX 5000 or later; 8 GB or more is ideal), about half an hour of it would fill this page:
+
+1. Install MAFDET ([Quick start](#quick-start)) and open it once: it should find your card, install llama.cpp *Windows · Vulkan* (or *Linux · Vulkan*) and download Qwen3-4B. `mafdet doctor` shows what it found.
+2. In the app, *Models*, **Measure** Qwen3-4B.
+3. From the MAFDET folder, with its environment active: `python research/thinking_ahead.py radeon_4b.json`. It types 24 word problems in real time, with and without reasoning ahead, and takes about 20 minutes; leave the machine otherwise idle.
+4. [Open an issue](https://github.com/TheLastOxygen/mafdet/issues/new) with the output of `mafdet doctor`, the numbers of *Measure* and `radeon_4b.json`.
+
+If something does not work (the card not found, llama.cpp not starting, the model running on the CPU), an issue with the output of `mafdet doctor` and the `server*.log` files next to llama-server (in `~/.mafdet/llama.cpp`) is just as useful. Integrated Radeons (Ryzen APUs) are not used yet: they keep the CPU build. Any card with a Vulkan driver can try it with `mafdet doctor --install --build vulkan`.
+
 ## Roadmap
 
 - [x] Incremental prefill engine with common-prefix sync and token hold-back
@@ -269,7 +280,8 @@ The reasoning-ahead column was measured again for this comparison, the same day 
 - [ ] Reasoning ahead for models larger than the VRAM that beats the large model thinking by itself
 - [ ] Reasoning ahead beyond Qwen3, including the thinking models with their own formats (DeepSeek-R1, gpt-oss): each needs its frame measured
 - [x] macOS on Apple Silicon (Metal)
-- [ ] Linux tested; AMD GPUs
+- [x] AMD Radeon through Vulkan (in place; measured on a Radeon: help wanted, above)
+- [ ] Linux tested
 
 ## Related research
 

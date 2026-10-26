@@ -19,6 +19,10 @@ Qwen3-14B all on the GPU at 18 tok/s. Reasoning ahead: 4B 18.1 → 5.6 s, 14B 32
 It gets hot under long runs (thermal pressure Heavy after ~25 min of the 4B benchmark): check
 `sudo powermetrics --samplers thermal -n 1` before a run, and compare configs measured close together.
 
+AMD Radeon (since 2026-10-26): supported through llama.cpp's Vulkan build, no Radeon here to measure on. The README
+asks for volunteers ("Help wanted: benchmarks on an AMD Radeon"): `mafdet doctor`, Measure, and
+`research/thinking_ahead.py radeon_4b.json`, sent as an issue.
+
 Key fact learned: on a model split between GPU and CPU, the CPU's layers *compute* every token they are
 given. Anything that processes several tokens at once (parallel branches, speculative-decoding drafts)
 costs the 14B almost proportionally: 2 sequences run at 77% of the speed of one each, a 9-token draft
@@ -56,7 +60,12 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
    line in English ("How much does the Moon weigh compared to") and SENT unchanged, which removes the cue
    without an instruction; measure with `research/language_check.py` and the 24 Italian problems.
 
-4. Other ideas discussed, not started:
+4. **AMD Radeon results**, when someone sends them (README, help wanted): a "On an AMD Radeon" table next to
+   "On a Mac", and the catalog's estimates checked against Measure (GPU_PREFILL_FLOPS_PER_GBS and
+   GPU_EFFICIENCY are calibrated on the RTX 2060's CUDA). Integrated Radeons (Ryzen APUs) are left on the CPU
+   build (AMD_MIN_VRAM_MB): whether Vulkan on one beats the CPU is open.
+
+5. Other ideas discussed, not started:
    - show the answer written ahead live under the input field (zero perceived wait; a product/UX change,
      test with people, not a benchmark)
    - harder benchmark (problems the 4B gets wrong 30-50% of the time) to see accuracy effects at all
@@ -65,6 +74,16 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
 
 ## Done and measured
 
+- **2026-10-26 · AMD Radeon through Vulkan: in place, checked on the RTX 2060, not measured on a Radeon.**
+  Detection: DXGI on Windows (vendor 0x1002, dedicated memory; the registry also lists cards removed long
+  ago), amdgpu's sysfs on Linux; 2 GB or more of its own, so integrated Radeons are left out. Bandwidths of
+  RX 400-9000 in the table. `build_for` picks `win-vulkan-x64` / `ubuntu-vulkan-x64`; `mafdet doctor
+  --install --build vulkan` forces it on any card (`--cuda` still works). On Windows the VRAM in use is not
+  known (it counts as free); llama.cpp's own fit asks Vulkan. Checked with the Vulkan build on the RTX 2060
+  (MAFDET_HOME and MAFDET_LLAMA_DIR in a scratch folder): llama-bench Qwen3-4B pp512 2103 tok/s, tg64 82.8
+  (CUDA 2141 / 87); llama.cpp sees the Intel UHD 630 too (Vulkan1) but uses only Vulkan0, the 14B splits
+  17/41 layers on Vulkan0 and the rest on the CPU, never on the iGPU; `-dev none` keeps the CPU mode.
+  `research/thinking_ahead.py --problems 0:3`: 3/3 both ways, mean wait 9.05 → 4.42 s, ~70 tok/s.
 - **2026-10-26 · An English question answered in Italian: found, fix tried, not kept.** Recording the app on
   the M2 Pro, one of 3 runs of an English word problem got a right answer in Italian, after reasoning ahead.
   Likely cause: the only Italian in the frame is SEED's example line ("Quanto pesa la Luna rispetto alla").

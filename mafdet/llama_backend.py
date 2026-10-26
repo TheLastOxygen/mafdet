@@ -70,14 +70,14 @@ def find_llama_server(required: bool = True) -> str | None:
 
 
 def pick_device(requested: str) -> str:
-    """cuda (the GPU: CUDA, or Metal on Apple Silicon) or cpu for llama-server: auto means the GPU if
+    """cuda (the GPU: CUDA, Vulkan on an AMD Radeon, or Metal on Apple Silicon) or cpu for llama-server: auto means the GPU if
     there is one (no PyTorch needed)."""
     from .core.hardware import has_cuda_gpu
     if requested == "auto":
         return "cuda" if has_cuda_gpu() else "cpu"
     if requested == "cuda" and not has_cuda_gpu():
-        raise SystemExit("You asked for the GPU, but no NVIDIA card was found (nvidia-smi), nor an Apple "
-                         "Silicon GPU: check the driver, or choose the CPU.")
+        raise SystemExit("You asked for the GPU, but none was found (an NVIDIA card through nvidia-smi, an AMD "
+                         "Radeon, or Apple Silicon): check the driver, or choose the CPU.")
     return requested
 
 

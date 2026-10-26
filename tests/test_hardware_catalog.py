@@ -2,7 +2,7 @@
 import pytest
 
 from mafdet.core import catalog
-from mafdet.core.hardware import GPU, Hardware, gpu_bandwidth, parse_nvidia_smi
+from mafdet.core.hardware import GPU, Hardware, amd_gpu, gpu_bandwidth, parse_nvidia_smi
 
 
 def reference_pc(gpu: bool = True) -> Hardware:
@@ -24,6 +24,8 @@ def test_parse_nvidia_smi():
 @pytest.mark.parametrize("name,expected", [
     ("NVIDIA GeForce RTX 2060 SUPER", 448), ("NVIDIA GeForce RTX 2060", 336), ("NVIDIA GeForce RTX 4070 Ti SUPER", 672),
     ("NVIDIA GeForce RTX 5070 Ti", 896), ("NVIDIA GeForce RTX 4060 Laptop GPU", 272 * 0.75), ("Tesla T4", 320),
+    ("AMD Radeon RX 7900 XTX", 960), ("AMD Radeon RX 7900 XT", 800), ("AMD Radeon RX 6700 XT", 384),
+    ("AMD Radeon RX 6700", 320), ("AMD Radeon RX 9070 XT", 640), ("Radeon RX 580 Series", 256),
 ])
 def test_gpu_bandwidth_table(name, expected):
     assert gpu_bandwidth(name, 8192) == (expected, True)
@@ -31,6 +33,13 @@ def test_gpu_bandwidth_table(name, expected):
 
 def test_unknown_gpu_guessed_from_vram():
     assert gpu_bandwidth("NVIDIA Some Future Card", 6144) == (250, False)
+
+
+def test_amd_gpu():
+    """A dedicated Radeon runs on the Vulkan build; an integrated one (a few hundred MB of its own) does not count."""
+    g = amd_gpu("AMD Radeon RX 7800 XT", 16368, 0, "32.0.21025.1024")
+    assert (g.backend, g.bandwidth_gbs, g.bandwidth_known, g.unified) == ("vulkan", 624, True, False)
+    assert amd_gpu("AMD Radeon(TM) Graphics", 512, 0, "31.0.21921.1000") is None
 
 
 @pytest.mark.parametrize("variant,decode,prefill", [

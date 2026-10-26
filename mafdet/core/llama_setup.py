@@ -4,7 +4,8 @@ llama.cpp, the runtime: find it, or install the right release by itself into ~/.
 The release is pinned (LLAMA_TAG): the one MAFDET was tested with. The build
 depends on the machine: CUDA for an NVIDIA card (CUDA 13 from driver 580 on,
 except for the GTX 10 and older, which CUDA 13 no longer supports; CUDA 12
-otherwise), the CPU build without one; on a Mac the macOS build (Metal on Apple Silicon). A llama.cpp of your own still wins:
+otherwise), Vulkan for an AMD Radeon, the CPU build without one; on a Mac the macOS build (Metal on
+Apple Silicon). A llama.cpp of your own still wins:
 $MAFDET_LLAMA_DIR and ./llama.cpp are looked at first.
 """
 from __future__ import annotations
@@ -36,10 +37,18 @@ def build_for(hw: Hardware, cuda: str | None = None) -> dict:
     """Which build of the release fits this machine: {flavor, assets (name patterns), label}.
 
     `cuda` overrides the choice: "12" or "13" for that CUDA build (an older driver, a card the
-    automatic choice gets wrong), "cpu" for the build without CUDA.
+    automatic choice gets wrong), "vulkan" for the Vulkan build (AMD and Intel cards, any GPU with a
+    Vulkan driver), "cpu" for the build without a GPU.
     """
     system, arm = hw.system, hw.arch in ("arm64", "aarch64")
     gpu = hw.gpu
+    if cuda is None and gpu and gpu.backend == "vulkan":
+        cuda = "vulkan"
+    if system in ("windows", "linux") and cuda == "vulkan":
+        cpu = "arm64" if arm else "x64"
+        return {"flavor": "vulkan", "label": f"{'Windows' if system == 'windows' else 'Linux'} · Vulkan",
+                "assets": [f"llama-{{tag}}-bin-win-vulkan-{cpu}.zip" if system == "windows"
+                           else f"llama-{{tag}}-bin-ubuntu-vulkan-{cpu}.tar.gz"]}
     if cuda == "cpu" or arm or system not in ("windows", "linux"):
         cuda = None
     elif cuda is None and gpu:
