@@ -20,10 +20,12 @@ import json
 import os
 import subprocess
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
+from types import SimpleNamespace
 
 from . import DEFAULT_MODEL
 from .text import Stats, common_prefix_len
@@ -95,12 +97,75 @@ def resolve_gguf(spec: str) -> str:
     return hf_hub_download(repo, fname)
 
 
+# The tokenizer inside the GGUF, read by llama-server (ServerTokenizer): what --model takes for a file with
+# no tokenizer on Hugging Face.
+SERVER_TOKENIZER = "llama-server"
+
+
 def tokenizer_id(gguf: str) -> str:
-    """The matching HF tokenizer: 'Qwen/Qwen3-4B-GGUF:...' → 'Qwen/Qwen3-4B'."""
+    """The matching HF tokenizer: 'Qwen/Qwen3-4B-GGUF:...' → 'Qwen/Qwen3-4B'; a local file: its own."""
     repo = gguf.split(":", 1)[0]
     if repo.endswith("-GGUF"):
         return repo[:-len("-GGUF")]
-    raise SystemExit("With a local GGUF file, pass the tokenizer with --model (e.g. Qwen/Qwen3-4B).")
+    if os.path.exists(gguf):
+        return SERVER_TOKENIZER
+    raise SystemExit(f"{gguf}: no such file, and no Hugging Face repository to guess the tokenizer from: "
+                     "pass it with --model (e.g. Qwen/Qwen3-4B).")
+
+
+class ServerTokenizer:
+    """The tokenizer of the GGUF itself, through llama-server's endpoints: for any model llama.cpp can load,
+    with nothing to download from Hugging Face (a file downloaded by hand, a gated repository).
+
+    It answers the calls the chat makes of a transformers tokenizer, with the same results: checked on
+    Qwen3-4B against Qwen/Qwen3-4B, the same ids (special tokens and odd spacing included), the same text
+    back and the same chat template, thinking on and off. A call costs well under a millisecond on the
+    machine's own address; each thread keeps its own connection.
+    """
+
+    def __init__(self, port: int):
+        self.port = port
+        self._local = threading.local()
+
+    def _call(self, path: str, body: dict) -> dict:
+        for attempt in range(2):
+            conn = getattr(self._local, "conn", None)
+            if conn is None:
+                conn = self._local.conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=60)
+            try:
+                conn.request("POST", path, json.dumps(body), {"Content-Type": "application/json"})
+                resp = conn.getresponse()
+                data = resp.read()
+            except (http.client.HTTPException, OSError):
+                conn.close()
+                self._local.conn = None
+                if attempt:
+                    raise
+                continue
+            if resp.status >= 400:
+                raise RuntimeError(f"llama-server answered {resp.status} to {path}: {data[:300]!r}")
+            return json.loads(data)
+
+    def __call__(self, text: str, add_special_tokens: bool = True):
+        body = {"content": text, "add_special": add_special_tokens, "parse_special": True}
+        return SimpleNamespace(input_ids=self._call("/tokenize", body)["tokens"])
+
+    def decode(self, ids) -> str:
+        return self._call("/detokenize", {"tokens": list(ids)})["content"] if len(ids) else ""
+
+    def convert_tokens_to_ids(self, token: str) -> int | None:
+        """The id of a special token ('</think>'), None if the vocabulary has no such single token."""
+        ids = self(token, add_special_tokens=False).input_ids
+        return ids[0] if len(ids) == 1 else None
+
+    def apply_chat_template(self, messages: list[dict], tokenize: bool = False, add_generation_prompt: bool = False,
+                            **kwargs) -> str:
+        """The GGUF's own chat template (the one of the original model), run by llama-server; the extra
+        options (enable_thinking) go to the template as they do in transformers."""
+        if tokenize:
+            raise NotImplementedError("apply_chat_template(tokenize=True): encode the text instead")
+        body = {"messages": messages, "add_generation_prompt": add_generation_prompt, "chat_template_kwargs": kwargs}
+        return self._call("/apply-template", body)["prompt"]
 
 
 # A llama-server holds gigabytes of VRAM. If the app dies without closing it (the terminal closed
@@ -374,15 +439,16 @@ class LlamaPrefill:
 
 def setup_llama(args, device: str | None = None, n_slots: int = 1, pool: int = 0):
     """Return (tokenizer, server, device, quantization). The tokenizer is the only thing taken from
-    transformers: no PyTorch."""
+    transformers (no PyTorch); with SERVER_TOKENIZER, not even that: the GGUF's own, once the server is up."""
     # Without PyTorch transformers says at import that models are unavailable: only its tokenizers are used here.
     os.environ.setdefault("TRANSFORMERS_NO_ADVISORY_WARNINGS", "1")
-    from transformers import AutoTokenizer
 
     device = device or pick_device(args.device)
 
     tok_id = tokenizer_id(args.gguf) if args.model == DEFAULT_MODEL else args.model
-    tok = AutoTokenizer.from_pretrained(tok_id, **getattr(args, "tokenizer_kwargs", {}))
+    if tok_id != SERVER_TOKENIZER:
+        from transformers import AutoTokenizer
+        tok = AutoTokenizer.from_pretrained(tok_id, **getattr(args, "tokenizer_kwargs", {}))
     extra = (RECYCLE_ARGS if getattr(args, "recycle", False) else ())
     if getattr(args, "draft", ""):
         extra += ("-md", resolve_gguf(args.draft)) + DRAFT_ARGS
@@ -390,7 +456,10 @@ def setup_llama(args, device: str | None = None, n_slots: int = 1, pool: int = 0
     server = LlamaServer(args.gguf, device, ctx=args.ctx, n_slots=n_slots, port=getattr(args, "port", 8089),
                          extra_args=extra, log_name=getattr(args, "log_name", "server"), pool=pool)
     fname = os.path.basename(server.model_path)
-    if not fname.startswith(tok_id.split("/")[-1]):
+    if tok_id == SERVER_TOKENIZER:
+        tok = ServerTokenizer(server.port)
+    elif not fname.startswith(tok_id.split("/")[-1]):
         print(f"Warning: tokenizer {tok_id} may not match {fname}", file=sys.stderr)
-    quant = fname.removesuffix(".gguf").rsplit("-", 1)[-1]          # e.g. Q4_K_M
+    from .core.gguf import quant_label
+    quant = quant_label(fname)                                      # e.g. Q4_K_M
     return tok, server, f"llama-{device}", quant

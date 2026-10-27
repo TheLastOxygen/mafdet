@@ -214,7 +214,9 @@
   }
 
   function taskEnded(task) {
-    const name = M.modelName(task.target);
+    // A download from the Hugging Face search has "repo:file" as target, and the model's id in its result.
+    const id = task.result?.id || task.target;
+    const name = task.result?.id ? M.modelName(id) : M.modelName(task.target).split("/").pop();
     if (task.state === "error") M.toast(t("models.toast.failed", { model: name || task.kind, error: task.error }), "error");
     else if (task.state === "done") {
       if (task.kind === "download") M.toast(t("models.toast.downloaded", { model: name }), "ok");
@@ -224,7 +226,7 @@
     // "Download and use": the model loads as soon as its file is complete.
     if (task.kind === "download" && task.state === "done" && M.pendingUse.has(task.target)) {
       M.pendingUse.delete(task.target);
-      M.post("/api/model/load", { model: task.target }).then(M.setStatus).catch(() => {});
+      M.post("/api/model/load", { model: id }).then(M.setStatus).catch(() => {});
     }
     M.refresh.catalog();
     if (task.kind === "llama") M.refresh.runtime();

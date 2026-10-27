@@ -4,7 +4,8 @@ Where MAFDET keeps its files, and the settings that survive a restart.
 Everything lives in one folder, ~/.mafdet (or $MAFDET_HOME):
     config.json     settings (language, model, chat options, launcher choice)
     bench.json      speeds measured on this machine, per model
-    models/         GGUF files downloaded from the catalog
+    models/         GGUF files downloaded from the catalog; any other GGUF here is a model of your own
+                    (models/hf/<owner>/<repo>/: the ones downloaded from the Hugging Face search)
     llama.cpp/      the llama.cpp release installed by the app
 """
 from __future__ import annotations
@@ -19,6 +20,7 @@ LANGUAGES = ("en", "it", "fr", "de")
 DEFAULTS = {
     "language": "en",
     "model": "",                      # catalog id of the model to load at start ("" = none chosen yet)
+    "local_models": [],               # GGUF files added from elsewhere on disk (they stay where they are)
     "launcher": "",                   # "gui" or "tui" when the launcher should not ask again
     "first_run_done": False,
     "think": True,                    # reason ahead while the user types (Qwen3 thinking mode)

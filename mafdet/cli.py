@@ -42,8 +42,11 @@ COMMANDS = [
     Command("models", "the catalog", "which models run well on this machine",
             "Lists the models MAFDET can download, with where each one runs here (all on the GPU, partly on the "
             "CPU), how fast it writes and how long the answer takes after Enter, with and without MAFDET. "
-            "Estimated from the hardware, or measured once you benchmark a model in the app.",
-            ("mafdet models", "mafdet models --family gemma", "mafdet models --download qwen3-4b"), "app", common=False),
+            "Estimated from the hardware, or measured once you benchmark a model in the app. Your own GGUF files "
+            "(in ~/.mafdet/models, or added in the app) are listed too, and any GGUF on Hugging Face can be "
+            "downloaded as repository:file.",
+            ("mafdet models", "mafdet models --family gemma", "mafdet models --download qwen3-4b",
+             "mafdet models --download unsloth/Qwen3-4B-GGUF:Qwen3-4B-UD-Q4_K_XL.gguf"), "app", common=False),
     Command("doctor", "the check-up", "check the machine, llama.cpp and the models",
             "Checks the GPU, memory, llama.cpp and the downloaded models, and says what is missing. With "
             "--install it downloads the llama.cpp build for this machine by itself.",
@@ -251,9 +254,11 @@ def _tui_args(p):
 
 def _models_args(p):
     p.add_argument("--all", action="store_true", help="every quantization, not only the recommended one")
-    p.add_argument("--family", default="", help="only one family: qwen3, llama, gemma, mistral or phi")
+    p.add_argument("--family", default="", help="only one family: qwen3, llama, gemma, mistral, phi, or local "
+                                                "(your own GGUF files)")
     p.add_argument("--download", metavar="ID", default="",
-                   help="download a model: an id from the list (qwen3-4b) or with its quantization (qwen3-4b:Q8_0)")
+                   help="download a model: an id from the list (qwen3-4b) or with its quantization (qwen3-4b:Q8_0), "
+                        "or any GGUF on Hugging Face as repository:file")
     p.add_argument("--device", default="auto", choices=["auto", "cuda", "cpu"],
                    help="estimate for the GPU (auto, cuda) or as if there were none (cpu)")
 

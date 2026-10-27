@@ -12,16 +12,24 @@ Qwen3-8B about 13 and Qwen3-14B 4.8 with part of the model on the CPU.
 From the speed comes what the user cares about: how long the answer takes
 after Enter, with MAFDET reasoning ahead while they type and without it.
 A measured speed (bench.py) replaces the estimate as soon as there is one.
+
+Besides the catalog, every GGUF in ~/.mafdet/models (downloaded by hand, or
+from the Hugging Face search) and every file added in the app is a model of
+its own: its header gives what the estimate needs.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from dataclasses import dataclass
 from functools import lru_cache
 from importlib.resources import files
+from pathlib import Path
+from struct import error as struct_error
 
-from . import config
+from ..llama_backend import SERVER_TOKENIZER
+from . import config, gguf
 from .hardware import Hardware
 
 GPU_EFFICIENCY = 0.62          # share of the GPU's bandwidth llama.cpp reaches while generating
@@ -71,17 +79,152 @@ def variants() -> list[Variant]:
 
 
 def find(variant_id: str) -> Variant | None:
-    """A variant by id ('qwen3-4b:Q4_K_M'); a bare model id means its default quantization."""
+    """A variant by id ('qwen3-4b:Q4_K_M', 'local-…:Q4_K_M'); a bare model id means its default quantization."""
+    if variant_id.startswith(LOCAL_PREFIX):
+        own = local_variants()
+        return next((v for v in own if v.id == variant_id), None) or \
+            next((v for v in own if v.model["id"] == variant_id), None)
     if ":" not in variant_id:
         m = next((m for m in catalog()["models"] if m["id"] == variant_id), None)
         variant_id = f"{variant_id}:{m['default_quant']}" if m else variant_id
     return next((v for v in variants() if v.id == variant_id), None)
 
 
+# ---- models of your own: GGUF files outside the catalog ------------------------
+
+LOCAL_PREFIX = "local-"
+LOCAL_FAMILY = {"id": "local", "name": "Your models", "vendor": "", "license": "", "reason_ahead": False}
+HF_DIR = "hf"                       # downloads from the search: models/hf/<owner>/<repo>/<file>
+# Reasoning ahead is measured on Qwen3's thinking mode (the frame in watch.py): a file of your own reasons
+# ahead when it is a Qwen3 with that mode, and is otherwise a plain chat model, as Llama or Gemma.
+THINKING_ARCHS = ("qwen3", "qwen3moe")
+_headers: dict[tuple, dict | None] = {}
+
+
+def local_files() -> list[Path]:
+    """The GGUF models of your own: under the models folder (not the catalog's files) and the ones added by
+    hand. Only the first part of a split model, when all its parts are there; no vision projectors."""
+    root = config.models_dir()
+    ours = {v.file for v in variants()}
+    found = [p for p in sorted(root.rglob("*.gguf")) if not (p.parent == root and p.name in ours)]
+    found += [Path(p) for p in config.load()["local_models"]]
+    out, seen = [], set()
+    for p in found:
+        key = os.path.normcase(os.path.abspath(p))
+        if key in seen or not p.is_file() or gguf.is_projector(p.name) or not gguf.is_first_part(p.name):
+            continue
+        seen.add(key)
+        if all(s.is_file() for s in gguf.shards(p)):
+            out.append(p)
+    return out
+
+
+def header(path: Path) -> dict | None:
+    """The file's header, read once per version of the file; None if it is not a readable GGUF."""
+    st = path.stat()
+    key = (str(path), st.st_size, st.st_mtime_ns)
+    if key not in _headers:
+        try:
+            parts = gguf.shards(path)
+            info = gguf.read(path)
+            for extra in parts[1:]:                # the tensors of a split model are spread over its parts
+                more = gguf.read(extra)
+                info["params"] += more["params"]
+                info["expert_params"] += more["expert_params"]
+            info["bytes"] = sum(p.stat().st_size for p in parts)
+            _headers[key] = info
+        except (OSError, ValueError, KeyError, IndexError, struct_error) as e:
+            print(f"Cannot read {path.name}: {e}")
+            _headers[key] = None
+    return _headers[key]
+
+
+def repo_of(path: Path) -> str:
+    """The Hugging Face repository a file was downloaded from by the search, else ''."""
+    try:
+        rel = path.relative_to(config.models_dir() / HF_DIR)
+    except ValueError:
+        return ""
+    return "/".join(rel.parts[:2]) if len(rel.parts) > 2 else ""
+
+
+def local_model(path: Path, info: dict) -> dict:
+    """A catalog entry for a file of your own, from its header."""
+    meta = info["meta"]
+    arch = meta.get("general.architecture", "")
+    get = lambda k, default=0: meta.get(f"{arch}.{k}", default)
+    avg = lambda v: sum(v) / len(v) if isinstance(v, list) and v else v          # per-layer values
+    top = lambda v: max(v) if isinstance(v, list) and v else v
+    heads = top(get("attention.head_count")) or 1
+    head_dim = get("attention.key_length") or (get("embedding_length") // heads)
+    experts, used = get("expert_count"), get("expert_used_count")
+    active = info["params"] - info["expert_params"] * (1 - used / experts) if experts and used else info["params"]
+    name = gguf.model_name(path.name)
+    repo = repo_of(path)
+    template = meta.get("tokenizer.chat_template", "")
+    # Quantizations of one model, in one folder, are one card with a button each.
+    model_id = LOCAL_PREFIX + hashlib.sha1(f"{path.parent}/{name}".encode("utf-8")).hexdigest()[:10]
+    return {
+        "id": model_id, "name": name, "family": LOCAL_FAMILY["id"], "tokenizer": SERVER_TOKENIZER,
+        "params_b": max(info["params"], 1) / 1e9, "active_b": max(active, 1) / 1e9,
+        "layers": get("block_count") or 1, "kv_heads": avg(get("attention.head_count_kv")) or 0,
+        "head_dim": head_dim, "tier": "custom", "default_quant": gguf.quant_label(path.name),
+        "reason_ahead": arch in THINKING_ARCHS and "enable_thinking" in template,
+        "reasoning_tokens": 900,            # as Qwen3-4B in the catalog
+        "local": True, "arch": arch, "repo": repo, "chat_template": bool(template),
+        "vendor": repo or path.name, "license": meta.get("general.license", ""),
+    }
+
+
+def local_variants() -> list[Variant]:
+    out, ids = [], set()
+    for p in local_files():
+        info = header(p)
+        if info is None:
+            continue
+        m = local_model(p, info)
+        v = Variant(m, gguf.quant_label(p.name), m["repo"], str(p), info["bytes"])
+        if v.id in ids:                        # two files with the same name and quantization: one card each
+            m["id"] = LOCAL_PREFIX + hashlib.sha1(str(p).encode("utf-8")).hexdigest()[:10]
+        ids.add(v.id)
+        out.append(v)
+    return out
+
+
+def add_local(path: str) -> Variant:
+    """A GGUF from anywhere on disk, added to your models (it stays where it is)."""
+    p = Path(path).expanduser().absolute()
+    if p.suffix.lower() != ".gguf" or not p.is_file():
+        raise ValueError(f"{p.name} is not a .gguf file")
+    if header(p) is None:
+        raise ValueError(f"{p.name} is not a GGUF model llama.cpp can read")
+    if gguf.is_projector(p.name):
+        raise ValueError(f"{p.name} is the vision part of a model, not a model to chat with")
+    p = gguf.shards(p)[0]
+    root = config.models_dir().absolute()
+    if p.parent == root:                      # a catalog file: its own card
+        same = next((v for v in variants() if v.file == p.name), None)
+        if same is not None:
+            return same
+    paths = config.load()["local_models"]
+    if root not in p.parents and str(p) not in paths:      # the models folder is read anyway
+        config.save({"local_models": paths + [str(p)]})
+    return next(v for v in local_variants() if os.path.normcase(v.file) == os.path.normcase(str(p)))
+
+
+def remove_local(variant_id: str):
+    """Forget a file added by hand (the file itself stays)."""
+    v = find(variant_id)
+    if v is not None:
+        config.save({"local_models": [p for p in config.load()["local_models"] if p != v.file]})
+
+
 # ---- installed files ---------------------------------------------------------
 
 def local_path(v: Variant) -> str | None:
     """Where the file is on disk: the app's models folder, or the Hugging Face cache (no download twice)."""
+    if v.model.get("local"):
+        return v.file if os.path.exists(v.file) else None
     p = config.models_dir() / v.file
     if p.exists() and p.stat().st_size == v.bytes:
         return str(p)
@@ -195,9 +338,11 @@ def entry(v: Variant, hw: Hardware, device: str = "auto", ctx: int = 8192) -> di
                  measured_at=got.get("date", ""))
     e.update(waits(v.model, e["decode_tps"]))
     path = local_path(v)
-    fam = next(f for f in families() if f["id"] == v.model["family"])
+    fam = next((f for f in families() if f["id"] == v.model["family"]), LOCAL_FAMILY)
     return {"id": v.id, "model_id": v.model["id"], "name": v.model["name"], "quant": v.quant,
-            "family": fam["id"], "family_name": fam["name"], "vendor": fam["vendor"], "license": fam["license"],
+            "family": fam["id"], "family_name": fam["name"], "vendor": v.model.get("vendor", fam["vendor"]),
+            "license": v.model.get("license", fam["license"]), "local": bool(v.model.get("local")),
+            "file": os.path.basename(v.file), "added": bool(v.model.get("local")) and v.file in config.load()["local_models"],
             "default": v.quant == v.model["default_quant"], "tier": v.model["tier"],
             "params_b": v.model["params_b"], "active_b": v.model["active_b"],
             "reason_ahead": v.model["reason_ahead"], "bytes": v.bytes, "installed": bool(path),
@@ -212,7 +357,7 @@ def recommend(entries: list[dict]) -> str | None:
     fastest that fits at all.
     """
     pool = [e for e in entries if e["default"] and e["reason_ahead"] and e["placement"] != "too_big"
-            and e["with_mafdet_s"] is not None]
+            and e["with_mafdet_s"] is not None and not e["local"]]
     for ok in (lambda e: e["placement"] == "gpu" and e["with_mafdet_s"] <= 8,
                lambda e: e["with_mafdet_s"] <= 15):
         good = [e for e in pool if ok(e)]
@@ -233,10 +378,14 @@ def best_in_family(entries: list[dict], family: str) -> str | None:
 
 
 def listing(hw: Hardware, device: str = "auto", ctx: int = 8192) -> dict:
-    entries = [entry(v, hw, device, ctx) for v in variants()]
+    own = local_variants()
+    entries = [entry(v, hw, device, ctx) for v in variants() + own]
+    fams = families() + ([LOCAL_FAMILY] if own else [])
     best = recommend(entries)
-    family_best = {f["id"]: best_in_family(entries, f["id"]) for f in families()}
+    # No "best of the family" among your own files: they are not a family, and you chose them.
+    family_best = {f["id"]: best_in_family(entries, f["id"]) if f is not LOCAL_FAMILY else None for f in fams}
     for e in entries:
         e["recommended"] = e["id"] == best
         e["family_best"] = e["id"] == family_best[e["family"]]
-    return {"models": entries, "recommended": best, "family_best": family_best, "families": families()}
+    return {"models": entries, "recommended": best, "family_best": family_best, "families": fams,
+            "models_dir": str(config.models_dir())}

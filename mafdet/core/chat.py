@@ -19,7 +19,7 @@ import socket
 import threading
 import time
 
-from . import bench, catalog, config, downloads, hardware, llama_setup
+from . import bench, catalog, config, downloads, hardware, hub, llama_setup
 from ..llama_backend import find_llama_server
 from .tasks import TaskManager
 
@@ -220,6 +220,26 @@ class ChatService:
     def download(self, variant_id: str) -> dict:
         task = self.tasks.start("download", variant_id, lambda t: downloads.download_model(variant_id, t))
         return task.to_dict()
+
+    # ---- models of your own: files on disk, the Hugging Face search ------------------
+
+    def hf_search(self, query: str) -> list[dict]:
+        return hub.search(query)
+
+    def hf_files(self, repo: str) -> dict:
+        return hub.files(repo, self.machine(), self.settings["device"], self.settings["ctx"])
+
+    def hf_download(self, repo: str, file: str) -> dict:
+        """The task's target is 'repo:file'; its result names the model's id once the file is complete."""
+        return self.tasks.start("download", f"{repo}:{file}", lambda t: hub.download(repo, file, t)).to_dict()
+
+    def add_model(self, path: str) -> dict:
+        return {"id": catalog.add_local(path).id}
+
+    def forget_model(self, variant_id: str):
+        if variant_id == self.variant_id:
+            self.unload()
+        catalog.remove_local(variant_id)
 
     def install_runtime(self) -> dict:
         return self.tasks.start("llama", llama_setup.LLAMA_TAG, llama_setup.install).to_dict()

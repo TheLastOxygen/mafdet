@@ -105,7 +105,7 @@ La stessa app esiste in due forme, sullo stesso motore:
 |---|---|---|
 | <img src="assets/icons/watch.svg" width="22" alt=""> | `mafdet gui` | **La finestra**: chat, modelli, hardware e impostazioni, in italiano, inglese, francese o tedesco |
 | <img src="assets/icons/strike.svg" width="22" alt=""> | `mafdet tui` | **L'app nel terminale**: le stesse viste nel terminale, pensate per la tastiera (da F1 a F4), su uno schermo a fosfori ambra con una sequenza di avvio (Impostazioni, *Cinematic effects*, spegne le animazioni) |
-| <img src="assets/icons/race.svg" width="22" alt=""> | `mafdet models` | il catalogo dei modelli per questo computer (`--family`, `--download`) |
+| <img src="assets/icons/race.svg" width="22" alt=""> | `mafdet models` | il catalogo dei modelli per questo computer (`--family`, `--download`, anche `--download repository:file.gguf` da Hugging Face) |
 | <img src="assets/icons/awaken.svg" width="22" alt=""> | `mafdet doctor` | controlla GPU, memoria, llama.cpp e modelli; `--install` installa llama.cpp (`--build 12`, `13`, `vulkan` o `cpu` per scegliere la build) |
 
 `mafdet` da solo apre il launcher, che può ricordare la scelta (`mafdet --ask` lo mostra di nuovo).
@@ -113,6 +113,13 @@ La stessa app esiste in due forme, sullo stesso motore:
 **Chat.** Mentre scrivi, una riga di stato sotto il messaggio mostra cosa sta facendo il modello: quanto ha già letto e quanti token di ragionamento ha scritto in anticipo (il campo si illumina di ambra mentre ragiona). All'invio resta da calcolare solo la coda. Il ragionamento è mostrato chiuso sopra la risposta, e ogni risposta finisce con i suoi numeri: prima parola dopo l'invio, token letti mentre scrivevi, ragionamento fatto prima dell'invio, velocità.
 
 **Modelli.** Cinque famiglie: **Qwen3**, **Llama 3**, **Gemma 3**, **Mistral** e **Phi-4**, da 0,6 a 32 miliardi di parametri, ognuna in più quantizzazioni. Con ogni modello MAFDET legge il messaggio mentre scrivi e, a una pausa, scrive la risposta in anticipo; Qwen3 in più **ragiona in anticipo**, l'unica famiglia di cui è stata misurata la cornice di ragionamento. Ogni modello del catalogo dice cosa fa sul *tuo* computer, prima di scaricarlo: se sta nella VRAM o gira in parte sulla CPU, quanto veloce scrive e legge e, per Qwen3, dopo quanto arriva la risposta dopo l'invio con e senza MAFDET (per le altre famiglie, quanto ci vuole a scrivere una risposta tipica). La stima viene dal tuo hardware (banda di GPU e RAM, VRAM, ripartizione dei layer di llama.cpp tra GPU e CPU) e sul PC di riferimento sta entro il 12% delle velocità misurate (Qwen3-4B 89,6 stimati / 87,1 misurati tok/s, 8B 16,2 / 16,2, 14B 5,1 / 4,9) e su un M2 Pro (Qwen3-4B 53 / 57 tok/s). Una volta scaricato un modello, **Misura** lo prova in mezzo minuto e i numeri veri sostituiscono la stima. Il modello che rende di più è segnato come *Il migliore per te*, e ogni famiglia ha il suo migliore. Per aggiungere un modello basta una riga in `tools/build_catalog.py`: legge da Hugging Face le dimensioni dei file e la forma del modello.
+
+**I tuoi modelli.** Funziona anche qualsiasi GGUF fuori dal catalogo:
+
+- **Cerca su Hugging Face** (vista Modelli) trova i repository GGUF, prima i più scaricati, e ne elenca i file con la stessa stima per il tuo computer; una quantizzazione è consigliata (Q4_K_M quando c'è). Il download riprende da dove si era fermato, con tutte le parti di un modello diviso, in `~/.mafdet/models/hf/<owner>/<repo>/`. I modelli ad accesso riservato (Llama, Gemma) richiedono la licenza accettata su huggingface.co e `hf auth login` sul computer.
+- **Un file scaricato a mano**: mettilo in `~/.mafdet/models` (anche in una sottocartella), oppure sceglilo ovunque sul disco con **Aggiungi un file GGUF** (resta dov'è).
+
+Compaiono sotto *I tuoi modelli*, con i numeri letti dall'header del file (layer, teste KV, parametri, esperti attivi) e **Misura** come per il catalogo. Non serve scaricare altro: tokenizer e chat template sono quelli del GGUF, letti tramite llama-server (identici al tokenizer di Hugging Face su Qwen3-4B: id, token speciali, testo decodificato, template). Un Qwen3 con la modalità thinking ragiona in anticipo mentre scrivi; ogni altro modello legge mentre scrivi e scrive la risposta in anticipo alle pause. L'architettura deve essere supportata dal llama.cpp installato.
 
 **Hardware e impostazioni.** La vista Hardware mostra GPU, CPU, memoria e il runtime llama.cpp, con un pulsante per installarlo o reinstallarlo. Le impostazioni della chat restano da un avvio all'altro (in `~/.mafdet`, oppure `$MAFDET_HOME`).
 
@@ -284,6 +291,7 @@ Se qualcosa non funziona (la scheda non trovata, llama.cpp che non parte, il mod
 - [x] `mafdet strike`: ragionamento in anticipo mentre scrivi, conservato tra le modifiche; la risposta esatta in anticipo a una pausa
 - [x] L'app: finestra e terminale, catalogo dei modelli con le stime per il tuo hardware, installazione automatica di llama.cpp, primo avvio guidato, quattro lingue
 - [x] Cinque famiglie di modelli: Qwen3, Llama 3, Gemma 3, Mistral, Phi-4
+- [x] Qualsiasi GGUF: ricerca e download da Hugging Face nell'app, o file tuoi
 - [x] Un modello piccolo raccoglie mentre scrivi, uno grande risponde: provato e misurato (nessun guadagno sulla RTX 2060, vedi Risultati)
 - [ ] Ragionamento in anticipo per i modelli più grandi della VRAM che batta il modello grande che ragiona da solo
 - [ ] Ragionamento in anticipo oltre Qwen3, anche per i modelli di ragionamento con formati propri (DeepSeek-R1, gpt-oss): ognuno richiede di misurare la sua cornice

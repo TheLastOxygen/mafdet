@@ -23,11 +23,26 @@ def size_text(n: int) -> str:
     return f"{n / 2**30:.1f} GB" if n >= 2**30 else f"{n / 2**20:.0f} MB"
 
 
-def fetch(url: str, dest: Path, task: Task, size: int | None = None, offset: int = 0, total: int | None = None) -> Path:
+class _KeepAuthAtHome(urllib.request.HTTPRedirectHandler):
+    """A token for huggingface.co is not sent on to the storage it redirects to (a signed address that
+    refuses a second credential)."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        new = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if new is not None and urlparse(newurl).hostname != urlparse(req.full_url).hostname:
+            new.remove_header("Authorization")
+        return new
+
+
+_opener = urllib.request.build_opener(_KeepAuthAtHome)
+
+
+def fetch(url: str, dest: Path, task: Task, size: int | None = None, offset: int = 0, total: int | None = None,
+          headers: dict | None = None) -> Path:
     """Download `url` to `dest`, resuming a .part file; progress goes to `task`.
 
     `offset` and `total` place this file inside a job of several files, so the
-    progress bar covers them all.
+    progress bar covers them all. `headers`: extra ones (a token for a gated model).
     """
     dest = Path(dest)
     if dest.exists() and (size is None or dest.stat().st_size == size):
@@ -39,10 +54,10 @@ def fetch(url: str, dest: Path, task: Task, size: int | None = None, offset: int
         part.unlink()
         have = 0
     task.detail = f"{dest.name}{f', {size_text(size)}' if size else ''}, from {urlparse(url).hostname}"
-    headers = {"User-Agent": USER_AGENT}
+    headers = {"User-Agent": USER_AGENT, **(headers or {})}
     if have:
         headers["Range"] = f"bytes={have}-"
-    with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=60) as r:
+    with _opener.open(urllib.request.Request(url, headers=headers), timeout=60) as r:
         if have and r.status != 206:              # the server sent the whole file: start over
             have = 0
         length = int(r.headers.get("Content-Length") or 0)

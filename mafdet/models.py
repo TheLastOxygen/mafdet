@@ -5,6 +5,7 @@ mafdet models: the catalog in the terminal, with what each model does on this ma
     mafdet models --family gemma         # one family
     mafdet models --all                  # every quantization
     mafdet models --download qwen3-4b    # download one (its default quantization, or qwen3-4b:Q8_0)
+    mafdet models --download unsloth/Qwen3-4B-GGUF:Qwen3-4B-UD-Q4_K_XL.gguf   # any GGUF on Hugging Face
 """
 from __future__ import annotations
 
@@ -48,8 +49,10 @@ def run(args) -> int:
         f = fams[fid]
         table = Table(box=box.SIMPLE_HEAD, show_header=i == 0, header_style="dim",
                       pad_edge=False, show_edge=False, title_justify="left",
-                      title=f"\n[bold]{f['name']}[/] [dim]{f['vendor']} · {f['license']}"
-                            f"{' · reasons while you type' if f['reason_ahead'] else ''}[/]")
+                      title=f"\n[bold]{f['name']}[/] [dim]"
+                            + " · ".join(x for x in (f["vendor"], f["license"],
+                                                     "reasons while you type" if f["reason_ahead"] else "") if x)
+                            + "[/]")
         for name, width, justify in columns:
             table.add_column(name, width=width, justify=justify, no_wrap=True)
         for e in (x for x in shown if x["family"] == fid):
@@ -57,7 +60,7 @@ def run(args) -> int:
             mark = "[bold #D4892A]★[/]" if e["id"] == best else "[#D4892A]·[/]" if e["family_best"] else ""
             think = (f"[#D4892A]≈ {dur(e['with_mafdet_s'])}[/] [dim]({dur(e['without_s'])})[/]" if e["reason_ahead"]
                      else "[dim]–[/]")
-            table.add_row(mark, e["id"], f"[{colour}]{label.format(p=round(e['gpu_share'] * 100))}[/]",
+            table.add_row(mark, f"{e['name']} {e['quant']}" if e["local"] else e["id"], f"[{colour}]{label.format(p=round(e['gpu_share'] * 100))}[/]",
                           f"{e['decode_tps']:.0f} tok/s" + (" [green]✓[/]" if e["measured"] else ""), think,
                           f"≈ {dur(e['answer_s'])}", f"[dim]{e['bytes'] / 2**30:.1f} GB[/]",
                           "[green]on disk[/]" if e["installed"] else "")
@@ -68,6 +71,14 @@ def run(args) -> int:
 
 
 def download(console: Console, variant_id: str) -> int:
+    if "/" in variant_id:                          # repository:file, from Hugging Face
+        from .core import hub
+        repo, _, file = variant_id.partition(":")
+        if not file.lower().endswith(".gguf"):
+            console.print(f"[red]Give the file too[/]: {repo}:<name>.gguf (the files are on huggingface.co/{repo})")
+            return 1
+        task = TaskManager().start("download", variant_id, lambda t: hub.download(repo, file, t))
+        return 0 if follow(task, console) else 1
     v = catalog.find(variant_id)
     if v is None:
         console.print(f"[red]Unknown model {variant_id}[/]: see `mafdet models --all`.")

@@ -38,6 +38,7 @@
   };
 
   const inFamily = (vs) => family === "all" || vs[0].family === family;
+  const familyName = (id, name) => (id === "local" ? t("models.family.local") : name);
 
   // Two rows of chips: the family, then what to show of it.
   function renderFilter() {
@@ -48,7 +49,7 @@
       `${esc(label)}<span class="count">${n}</span></button>`;
     $("models-filter").innerHTML =
       `<div class="chips">${chip("data-fam", "all", family === "all", t("models.filter.all"), gs.length)}` +
-      fams.map((f) => chip("data-fam", f.id, family === f.id, f.name, gs.filter((vs) => vs[0].family === f.id).length)).join("") + `</div>` +
+      fams.map((f) => chip("data-fam", f.id, family === f.id, familyName(f.id, f.name), gs.filter((vs) => vs[0].family === f.id).length)).join("") + `</div>` +
       `<div class="chips">${["fits", "installed"].map((f) =>
         chip("data-f", f, filter === f, t(`models.filter.${f}`), gs.filter(inFamily).filter(keep[f]).length)).join("")}</div>`;
     $("models-filter").querySelectorAll("[data-fam]").forEach((b) => b.addEventListener("click", () => {
@@ -79,18 +80,21 @@
     return `<span class="badge ${e.placement}">${esc(text)}</span>`;
   }
 
+  // A download under way: its bar, what is done and the time left, and a button to stop it.
+  function downloadProgress(dl) {
+    const p = Math.round(100 * dl.progress);
+    const text = dl.total_bytes
+      ? t("models.downloading", { done: M.bytes(dl.done_bytes), total: M.bytes(dl.total_bytes), speed: M.bytes(dl.speed_bps), eta: M.dur(dl.eta_s) })
+      : t("models.download_starting");
+    return `<div class="progress"><div class="progress-bar${p ? "" : " indeterminate"}"><i style="width:${p}%"></i></div>` +
+      `<div class="progress-text"><span>${esc(text)}</span><button type="button" class="btn ghost" data-cancel="${dl.id}">${t("action.cancel")}</button></div></div>`;
+  }
+
   // What can be done with a variant right now: download, use, measure, or the progress of one of them.
   function actions(e) {
     const s = M.state.status || {};
     const dl = M.taskFor("download", e.id), bench = M.taskFor("bench", e.id);
-    if (dl && dl.state === "running") {
-      const p = Math.round(100 * dl.progress);
-      const text = dl.total_bytes
-        ? t("models.downloading", { done: M.bytes(dl.done_bytes), total: M.bytes(dl.total_bytes), speed: M.bytes(dl.speed_bps), eta: M.dur(dl.eta_s) })
-        : t("models.download_starting");
-      return `<div class="progress"><div class="progress-bar${p ? "" : " indeterminate"}"><i style="width:${p}%"></i></div>` +
-        `<div class="progress-text"><span>${esc(text)}</span><button type="button" class="btn ghost" data-cancel="${dl.id}">${t("action.cancel")}</button></div></div>`;
-    }
+    if (dl && dl.state === "running") return downloadProgress(dl);
     if (bench && bench.state === "running") {
       return `<div class="progress"><div class="progress-bar indeterminate"><i></i></div>` +
         `<div class="progress-text"><span>${esc(t("models.benchmarking", { stage: t(`models.bench_stage.${bench.stage || "starting"}`) }))}</span></div></div>`;
@@ -103,7 +107,8 @@
     const main = inUse && s.state === "ready" ? `<button type="button" class="btn" disabled>${M.glyph("check", 10)}${t("action.in_use")}</button>`
       : inUse && s.state === "loading" ? `<button type="button" class="btn" disabled>${t("action.loading")}</button>`
       : `<button type="button" class="btn primary" data-use="${e.id}">${t("action.use")}</button>`;
-    return main + `<button type="button" class="btn ghost" data-bench="${e.id}">${t(e.measured ? "action.remeasure" : "action.benchmark")}</button>`;
+    return main + `<button type="button" class="btn ghost" data-bench="${e.id}">${t(e.measured ? "action.remeasure" : "action.benchmark")}</button>` +
+      (e.added ? `<button type="button" class="btn ghost" data-forget="${e.id}" title="${esc(e.path || "")}">${t("models.forget")}</button>` : "");
   }
 
   function card(vs, i, animate) {
@@ -112,7 +117,7 @@
     // The overall pick in the full catalog; the best of the family when one family is shown.
     const pick = family === "all" ? M.state.catalog?.recommended : M.state.catalog?.family_best?.[family];
     const rec = (pick || "").startsWith(e.model_id + ":");
-    const ribbon = family === "all" ? t("models.recommended") : t("models.recommended_family", { family: e.family_name });
+    const ribbon = family === "all" ? t("models.recommended") : t("models.recommended_family", { family: familyName(e.family, e.family_name) });
     const loaded = vs.some((v) => v.id === s.model_id && s.state === "ready");
     const params = e.active_b < e.params_b ? t("models.params_moe", { n: M.num(e.params_b, 1), a: M.num(e.active_b, 1) })
       : t("models.params", { n: M.num(e.params_b, 1) });
@@ -121,7 +126,7 @@
     return `<article class="card${rec ? " recommended" : ""}${loaded ? " loaded" : ""}${e.placement === "too_big" ? " dim" : ""}${animate ? " enter" : ""}" style="--i:${i}" data-model="${e.model_id}">
       <div class="card-head">
         <div><h3 class="card-name">${esc(e.name)}</h3><div class="card-params label">${esc(params)}</div>
-          <div class="card-vendor">${esc(e.vendor)} · ${esc(e.license)}</div></div>
+          <div class="card-vendor"${e.local ? ` title="${esc(e.path || "")}"` : ""}>${[e.vendor, e.license].filter(Boolean).map(esc).join(" · ")}</div></div>
         ${rec ? `<span class="ribbon">${M.glyph("bolt", 10)}${esc(ribbon)}</span>` : ""}
       </div>
       <p class="card-blurb">${t(`models.tier.${e.tier}`)}</p>
@@ -198,8 +203,9 @@
 
   // One listener for every card button, wherever the card is (Models view or setup).
   document.addEventListener("click", async (ev) => {
-    const b = ev.target.closest("[data-get],[data-dl],[data-use],[data-bench],[data-cancel]");
+    const b = ev.target.closest("[data-get],[data-dl],[data-use],[data-bench],[data-cancel],[data-forget]");
     if (!b || !b.closest(".card, .ob-model")) return;
+    if (b.dataset.forget) { await M.post("/api/models/forget", { model: b.dataset.forget }); await M.refresh.catalog(); return; }
     if (b.dataset.get) { M.pendingUse.add(b.dataset.get); await M.startTask("/api/download", { model: b.dataset.get }); }
     else if (b.dataset.dl) await M.startTask("/api/download", { model: b.dataset.dl });
     else if (b.dataset.bench) await M.startTask("/api/bench", { model: b.dataset.bench });
@@ -215,6 +221,164 @@
   M.on("view", (v) => { if (v === "models") { animateNext = true; renderModels(); M.refresh.catalog(); } });
   M.on("lang", () => renderModels());
   M.views.models = { card, settle, actions };
+
+  // =====================================================================================
+  // Models of your own: the Hugging Face search, a file from disk, the models folder
+  // =====================================================================================
+
+  const hf = { query: null, results: [], loading: false, error: "", seq: 0, repo: "", files: null, filesError: "" };
+  const compact = (n) => new Intl.NumberFormat(M.lang, { notation: "compact", maximumFractionDigits: 1 }).format(n);
+  const paramsText = (b) => (b ? t("models.params", { n: M.num(b, b < 10 ? 1 : 0) }) : "");
+  const own = (path) => (M.state.catalog?.models || []).find((m) => m.local && m.path === path);
+
+  async function hfSearch(query) {
+    const seq = ++hf.seq;
+    Object.assign(hf, { query, loading: true, error: "" });
+    renderResults();
+    const r = await M.post("/api/hf/search", { query }).catch((e) => ({ error: e.message }));
+    if (seq !== hf.seq) return;                   // a newer search went out meanwhile
+    hf.loading = false;
+    if (r.error) Object.assign(hf, { error: r.error, results: [] });
+    else hf.results = r;
+    renderResults();
+  }
+
+  function renderResults() {
+    const box = $("hf-results");
+    if (hf.loading && !hf.results.length) box.innerHTML = `<p class="hf-note">${t("hf.searching")}</p>`;
+    else if (hf.error) box.innerHTML = `<p class="hf-note error">${esc(t("hf.error", { error: hf.error }))}</p>`;
+    else if (!hf.results.length) box.innerHTML = `<p class="hf-note">${t("hf.none")}</p>`;
+    else box.innerHTML = hf.results.map((r) => {
+      const [owner, name] = r.repo.split("/");
+      const meta = [r.arch, paramsText(r.params_b), t("hf.downloads", { n: compact(r.downloads) }), r.updated].filter(Boolean);
+      return `<button type="button" class="hf-repo${r.repo === hf.repo ? " on" : ""}" data-repo="${esc(r.repo)}">` +
+        `<span class="hf-repo-name"><span class="hf-owner">${esc(owner)}/</span>${esc(name)}</span>` +
+        `<span class="hf-repo-meta label">${meta.map(esc).join(" · ")}${r.gated ? ` <span class="badge partial">${t("hf.gated_badge")}</span>` : ""}</span></button>`;
+    }).join("");
+  }
+
+  async function hfOpenRepo(repo) {
+    Object.assign(hf, { repo, files: null, filesError: "" });
+    renderResults();
+    renderFiles();
+    const r = await M.post("/api/hf/files", { repo }).catch((e) => ({ error: e.message }));
+    if (hf.repo !== repo) return;                 // another repository was chosen meanwhile
+    if (r.error) hf.filesError = r.error;
+    else hf.files = r;
+    renderFiles();
+  }
+
+  function fileActions(f) {
+    const dl = M.taskFor("download", `${hf.files.repo}:${f.file}`);
+    if (dl && dl.state === "running") return downloadProgress(dl);
+    const mine = own(f.path);
+    if (mine) {
+      const s = M.state.status || {};
+      return s.model_id === mine.id && ["ready", "loading"].includes(s.state)
+        ? `<button type="button" class="btn" disabled>${M.glyph("check", 10)}${t("action.in_use")}</button>`
+        : `<button type="button" class="btn primary" data-hf-use="${esc(mine.id)}">${t("action.use")}</button>`;
+    }
+    return `<button type="button" class="btn accent" data-hf-get="${esc(f.file)}">${t("action.download_and_use")}</button>` +
+      `<button type="button" class="btn ghost" data-hf-dl="${esc(f.file)}">${t("action.download")}</button>`;
+  }
+
+  function renderFiles() {
+    const box = $("hf-files");
+    if (!hf.repo) { box.innerHTML = `<p class="hf-note">${t("hf.pick")}</p>`; return; }
+    if (hf.filesError) { box.innerHTML = `<p class="hf-note error">${esc(t("hf.error", { error: hf.filesError }))}</p>`; return; }
+    if (!hf.files) { box.innerHTML = `<p class="hf-note">${t("hf.loading_files")}</p>`; return; }
+    const r = hf.files;
+    const params = r.active_b && r.active_b < r.params_b ? t("models.params_moe", { n: M.num(r.params_b, 1), a: M.num(r.active_b, 1) }) : paramsText(r.params_b);
+    const head = `<div><h3>${esc(r.repo)}</h3><p class="label" style="margin:8px 0 0">${[r.arch, params, r.license].filter(Boolean).map(esc).join(" · ")}` +
+      ` · <a href="https://huggingface.co/${esc(r.repo)}" data-link>${t("hf.view")}</a></p></div>` +
+      `<div class="card-tags"><span class="badge">◆ ${t(r.reason_ahead ? "models.reason_ahead" : "models.answers_ahead")}</span>` +
+      `${r.gated ? `<span class="badge partial">${t("hf.gated_badge")}</span>` : ""}</div>` +
+      (r.gated ? `<p class="hf-note" style="padding:0">${t("hf.gated")}</p>` : "");
+    if (!r.files.length) { box.innerHTML = head + `<p class="hf-note" style="padding:0">${t("hf.no_files")}</p>`; return; }
+    const rows = r.files.map((f) => {
+      const speed = f.decode_tps ? `≈ ${M.num(f.decode_tps, f.decode_tps < 20 ? 1 : 0)} tok/s` : "";
+      const wait = r.reason_ahead && f.with_mafdet_s != null ? t("hf.wait", { s: M.dur(f.with_mafdet_s) }) : "";
+      const parts = f.parts.length > 1 ? ` · ${t("hf.parts", { n: f.parts.length })}` : "";
+      return `<div class="hf-file${f.placement === "too_big" ? " dim" : ""}">` +
+        `<div><span class="hf-quant">${esc(f.quant)}</span><span class="label">${M.bytes(f.bytes)}${parts}</span>` +
+        `${f.suggested ? `<span class="ribbon hf-suggested">${M.glyph("bolt", 9)}${t("hf.suggested")}</span>` : ""}</div>` +
+        `<div class="hf-fit">${placementBadge(f)}<span>${[speed, wait].filter(Boolean).join(" · ")}</span></div>` +
+        `<div class="hf-act" data-hf-actions="${esc(f.file)}">${fileActions(f)}</div></div>`;
+    }).join("");
+    box.innerHTML = head + `<div class="hf-list">${rows}</div><p class="stat-note">${t("hf.estimate_note")}</p>`;
+  }
+
+  // Progress changes only the buttons of each file.
+  function updateFileActions() {
+    if ($("hf").hidden || !hf.files) return;
+    document.querySelectorAll("[data-hf-actions]").forEach((el) => {
+      const f = hf.files.files.find((x) => x.file === el.dataset.hfActions);
+      const html = f ? fileActions(f) : "";
+      if (el.dataset.html !== html) { el.innerHTML = html; el.dataset.html = html; }
+    });
+  }
+
+  let lastFocus = null, typing = 0;
+  function openHf() {
+    lastFocus = document.activeElement;
+    $("hf").hidden = false;
+    $("hf-query").focus();
+    if (hf.query === null) hfSearch("");          // the first time: the most downloaded GGUF models
+    renderFiles();
+  }
+  function closeHf() {
+    $("hf").hidden = true;
+    lastFocus?.focus?.();
+  }
+
+  $("hf-open").addEventListener("click", openHf);
+  $("hf-close").addEventListener("click", closeHf);
+  $("hf").addEventListener("mousedown", (e) => { if (e.target === $("hf")) closeHf(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("hf").hidden) closeHf(); });
+  $("hf-query").addEventListener("input", (e) => {
+    clearTimeout(typing);
+    typing = setTimeout(() => hfSearch(e.target.value), 350);
+  });
+  $("hf-query").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { clearTimeout(typing); hfSearch(e.target.value); }
+  });
+  $("hf").addEventListener("click", async (e) => {
+    const repo = e.target.closest("[data-repo]");
+    if (repo) return hfOpenRepo(repo.dataset.repo);
+    const link = e.target.closest("[data-link]");
+    if (link) { e.preventDefault(); return M.post("/api/open", { url: link.href }); }
+    const b = e.target.closest("[data-hf-get],[data-hf-dl],[data-hf-use],[data-cancel]");
+    if (!b || !hf.files) return;
+    if (b.dataset.hfUse) {
+      M.setStatus(await M.post("/api/model/load", { model: b.dataset.hfUse }));
+      closeHf();
+      M.go("chat");
+      return;
+    }
+    if (b.dataset.cancel) await M.post("/api/tasks/cancel", { id: b.dataset.cancel });
+    else {
+      const file = b.dataset.hfGet || b.dataset.hfDl;
+      if (b.dataset.hfGet) M.pendingUse.add(`${hf.files.repo}:${file}`);
+      await M.startTask("/api/hf/download", { repo: hf.files.repo, file });
+    }
+    updateFileActions();
+  });
+
+  $("model-add").addEventListener("click", async () => {
+    const r = await M.post("/api/models/add", {}).catch((e) => ({ error: e.message }));
+    if (r.no_dialog) M.toast(t("hf.no_dialog", { path: M.state.catalog?.models_dir || "" }));
+    else if (r.error) M.toast(t("hf.add_failed", { error: r.error }), "error");
+    else if (r.id) {
+      await M.refresh.catalog();
+      M.toast(t("hf.added", { model: M.modelName(r.id) }), "ok");
+    }
+  });
+  $("model-folder").addEventListener("click", () => M.post("/api/models/folder").catch(() => {}));
+
+  M.on("tasks", updateFileActions);
+  M.on("catalog", updateFileActions);
+  M.on("status", updateFileActions);
+  M.on("lang", () => { if (!$("hf").hidden) { renderResults(); renderFiles(); } });
 
   // =====================================================================================
   // Hardware

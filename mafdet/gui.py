@@ -15,6 +15,7 @@ import http.server
 import json
 import os
 import secrets
+import subprocess
 import sys
 import tempfile
 import threading
@@ -23,6 +24,7 @@ import webbrowser
 from importlib.resources import files
 
 from . import __version__
+from .core import config
 from .core.chat import ChatService
 from .identity import INK, SHAPES, WORDMARK, WORDMARK_SIZE
 from .progress import watch
@@ -45,6 +47,36 @@ def identity_js() -> bytes:
     data = {"shapes": {k: [[d, a, o] for d, a, o in v] for k, v in SHAPES.items()},
             "wordmark": {"size": WORDMARK_SIZE, "letters": WORDMARK}, "version": __version__}
     return f"window.MAFDET_SHAPES = {json.dumps(data)};\n".encode("utf-8")
+
+
+def pick_gguf() -> str | None:
+    """A GGUF chosen in the system's file dialog; None if cancelled. Only in the window (pywebview)."""
+    import webview
+    if not webview.windows:
+        raise RuntimeError("no window")
+    kind = webview.FileDialog.OPEN if hasattr(webview, "FileDialog") else webview.OPEN_DIALOG
+    chosen = webview.windows[0].create_file_dialog(kind, file_types=("GGUF models (*.gguf)", "All files (*.*)"))
+    return chosen[0] if chosen else None
+
+
+def open_folder(path: str):
+    """The folder in Explorer, Finder or the file manager."""
+    if os.name == "nt":
+        os.startfile(path)
+    else:
+        subprocess.Popen(["open" if sys.platform == "darwin" else "xdg-open", path])
+
+
+def add_model(app: ChatService, path: str) -> dict:
+    """A GGUF from anywhere: the path given, else the one chosen in the file dialog."""
+    if not path:
+        try:
+            path = pick_gguf()
+        except (ImportError, RuntimeError):
+            return {"no_dialog": True}             # in the browser (mafdet gui --browser): no file dialog
+        if not path:
+            return {"cancelled": True}
+    return app.add_model(path)
 
 
 def make_handler(app: ChatService, token: str, port_box: list):
@@ -100,6 +132,18 @@ def make_handler(app: ChatService, token: str, port_box: list):
             data = json.loads(self.rfile.read(length) or b"{}")
             text = str(data.get("text", ""))
             model = str(data.get("model", ""))
+            repo, file = str(data.get("repo", "")), str(data.get("file", ""))
+            # Calls that reach the network or the disk: a failure is an answer for the page, not a dropped request.
+            guarded = {
+                "/api/hf/search": lambda: app.hf_search(str(data.get("query", ""))),
+                "/api/hf/files": lambda: app.hf_files(repo),
+                "/api/models/add": lambda: add_model(app, str(data.get("path", ""))),
+            }
+            if self.path in guarded:
+                try:
+                    return self._json(guarded[self.path]())
+                except Exception as e:             # offline, a repository gone, a file that is not a GGUF
+                    return self._json({"error": str(e) or type(e).__name__})
             routes = {
                 "/api/draft": lambda: app.draft(text),
                 "/api/stop": lambda: app.stop() or {},
@@ -107,6 +151,9 @@ def make_handler(app: ChatService, token: str, port_box: list):
                 "/api/model/load": lambda: app.load(model),
                 "/api/model/unload": lambda: app.unload() or {},
                 "/api/download": lambda: app.download(model),
+                "/api/hf/download": lambda: app.hf_download(repo, file),
+                "/api/models/forget": lambda: app.forget_model(model) or {},
+                "/api/models/folder": lambda: open_folder(str(config.models_dir())) or {},
                 "/api/bench": lambda: app.benchmark(model),
                 "/api/runtime/install": app.install_runtime,
                 "/api/tasks/cancel": lambda: app.cancel(str(data.get("id", ""))) or {},

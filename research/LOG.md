@@ -92,6 +92,16 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
 
 ## Done and measured
 
+- **2026-10-27 · Any GGUF: the Hugging Face search and files of your own.** The app now runs models outside
+  the catalog: searched and downloaded in the app (`mafdet/core/hub.py`), put in `~/.mafdet/models`, or added
+  from anywhere. Their tokenizer is the GGUF's own, through llama-server's `/tokenize`, `/detokenize` and
+  `/apply-template` (`ServerTokenizer` in `llama_backend.py`): on Qwen3-4B identical to `Qwen/Qwen3-4B`'s
+  (ids with special tokens and odd spacing, every prefix decoded the same, emoji cut mid-character
+  included, chat template thinking on and off); 0.16 ms a call, also while the server generates. The
+  catalog's models keep the Hugging Face tokenizer. Reasoning ahead stays on Qwen3 only (architecture
+  qwen3/qwen3moe and `enable_thinking` in the template). Checked end to end on the M2 Pro: SmolLM2-135M
+  downloaded from the search (interrupted and resumed), answer written ahead at the pause; the Qwen3-4B
+  file as a model of its own reasoned ahead (342 of 637 reasoning tokens before Enter), right answer.
 - **2026-10-26 · Qwen3-4B IQ4_XS against Q4_K_M (4070 SUPER): 4% faster, one answer worse — not worth it on the 4B.**
   24 problems, reasoning ahead (`quant_4b_4070s.json`): Q4_K_M 24/24, mean wait 2.83 s, median 2.14 s, 106-119 tok/s;
   IQ4_XS 23/24, 2.37 / 1.73 s, 117-130 tok/s. The miss is problem 8 (Anna's age, the ambiguous "il doppio della sua

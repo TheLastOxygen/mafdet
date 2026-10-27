@@ -76,6 +76,11 @@
         <div>
           <h1 class="view-title" data-i18n="models.title">Models</h1>
           <p class="page-sub" id="models-sub"></p>
+          <div class="head-actions">
+            <button class="btn accent" id="hf-open" type="button" data-i18n="hf.open">Search Hugging Face</button>
+            <button class="btn" id="model-add" type="button" data-i18n="hf.add_file">Add a GGUF file</button>
+            <button class="btn ghost" id="model-folder" type="button" data-i18n="hf.folder">Open the models folder</button>
+          </div>
         </div>
         <div class="filters" id="models-filter"></div>
       </header>
@@ -113,6 +118,26 @@
     <ol class="ob-steps" id="ob-steps"></ol>
     <div class="ob-body" id="ob-body"></div>
     <div class="ob-actions" id="ob-actions"></div>
+  </div>
+</div>
+
+<!-- Hugging Face: GGUF models beyond the catalog, searched and downloaded. -->
+<div class="overlay" id="hf" hidden>
+  <div class="hf-card" role="dialog" aria-modal="true" aria-labelledby="hf-title">
+    <header class="hf-head">
+      <div>
+        <h2 id="hf-title" data-i18n="hf.title">Hugging Face</h2>
+        <p class="page-sub" data-i18n="hf.sub"></p>
+      </div>
+      <button class="btn ghost" id="hf-close" type="button" data-i18n="action.close">Close</button>
+    </header>
+    <div class="hf-search">
+      <input id="hf-query" type="search" autocomplete="off" spellcheck="false" data-i18n-placeholder="hf.placeholder">
+    </div>
+    <div class="hf-body">
+      <div class="hf-results" id="hf-results"></div>
+      <div class="hf-files" id="hf-files"></div>
+    </div>
   </div>
 </div>
 

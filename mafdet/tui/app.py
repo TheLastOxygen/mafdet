@@ -49,7 +49,8 @@ TIER = {"tiny": "Tiny and instant: simple chats and quick drafts.",
         "strong": "Strong: sharper reasoning, at its best with 8 GB of VRAM.",
         "very_strong": "Very strong: careful reasoning, at its best with 12 GB or more.",
         "moe": "Mixture of experts: big-model knowledge at small-model speed. Needs plenty of RAM.",
-        "best": "The largest: top quality, for 24 GB cards."}
+        "best": "The largest: top quality, for 24 GB cards.",
+        "custom": "A GGUF of yours: the numbers come from its header, estimated until you measure it."}
 HINT = {"gpu": "Runs entirely on your GPU: the fastest setup.",
         "partial": "Part of it runs on the CPU: it works, but slower, and less reasoning fits before Enter.",
         "cpu": "Runs on the CPU.", "too_big": "Needs more memory than this machine has."}
@@ -686,7 +687,7 @@ class ModelsView(Vertical):
             line.append("No model matches: Tab for another family, F or I to show everything.", style=MUTED)
         else:
             _, e = cur
-            line.append(f"{e['name']} · {e['vendor']} · {e['license']}", style=Style(color=PAPER, bold=True))
+            line.append(" · ".join(x for x in (e["name"], e["vendor"], e["license"]) if x), style=Style(color=PAPER, bold=True))
             line.append(f"   {TIER[e['tier']]}\n", style=PAPER)
             line.append(HINT[e["placement"]], style=MUTED)
             line.append("   Reasons while you type." if e["reason_ahead"] else

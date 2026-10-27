@@ -397,7 +397,8 @@ class Session:
             # How far the cache can run past the stable text after a read at a pause.
             self.tail_slack = len(encode(self.tok, tpl.suffix)) + self.holdback + 2
             self.history = list(self.start_ids)
-            name = os.path.basename(self.server.model_path).removesuffix(".gguf").removesuffix(f"-{quant}")
+            from .core.gguf import model_name
+            name = model_name(os.path.basename(self.server.model_path))
             self.label = f"{name} · {quant} · {'GPU' if device == 'llama-cuda' else 'CPU'}"
             self._retarget()
             if self.state == "closed":             # closed while loading: close() shuts the servers down
