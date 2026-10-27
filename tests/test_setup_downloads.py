@@ -116,3 +116,23 @@ def test_follow_names_the_file(server, tmp_path):
 ])
 def test_build_override(hw, cuda, flavor):
     assert llama_setup.build_for(hw, cuda)["flavor"] == flavor
+
+
+def test_tls_trusts_the_system_store(monkeypatch):
+    """python.org's Python on a Mac has no certificates of its own: downloads use the keychain (truststore),
+    unless SSL_CERT_FILE names a file of certificates."""
+    import ssl
+    import sys
+
+    import truststore
+    monkeypatch.delenv("SSL_CERT_FILE", raising=False)
+    monkeypatch.delenv("SSL_CERT_DIR", raising=False)
+    monkeypatch.setattr(sys, "platform", "darwin")
+    assert isinstance(downloads.tls_context(), truststore.SSLContext)
+    monkeypatch.setattr(sys, "platform", "win32")
+    assert isinstance(downloads.tls_context(), truststore.SSLContext)
+    monkeypatch.setattr(sys, "platform", "linux")
+    assert not isinstance(downloads.tls_context(), truststore.SSLContext)
+    monkeypatch.setattr(sys, "platform", "darwin")
+    monkeypatch.setenv("SSL_CERT_FILE", ssl.get_default_verify_paths().openssl_cafile)
+    assert not isinstance(downloads.tls_context(), truststore.SSLContext)

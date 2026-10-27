@@ -8,6 +8,8 @@ has its full size. No half-written model is ever loaded.
 from __future__ import annotations
 
 import os
+import ssl
+import sys
 import urllib.request
 from pathlib import Path
 from urllib.parse import urlparse
@@ -34,7 +36,28 @@ class _KeepAuthAtHome(urllib.request.HTTPRedirectHandler):
         return new
 
 
-_opener = urllib.request.build_opener(_KeepAuthAtHome)
+def tls_context() -> ssl.SSLContext:
+    """Certificates checked against the system's own store on macOS and Windows (the keychain, Windows'
+    store), as pip and huggingface_hub do. Python from python.org on a Mac has no certificates of its own
+    until its "Install Certificates" script runs: without this, every download failed with
+    CERTIFICATE_VERIFY_FAILED. A certificate file named in SSL_CERT_FILE or SSL_CERT_DIR (a company proxy)
+    comes first; on Linux, OpenSSL's own store, as before."""
+    if os.environ.get("SSL_CERT_FILE") or os.environ.get("SSL_CERT_DIR"):
+        return ssl.create_default_context()           # reads both variables
+    if sys.platform in ("darwin", "win32"):
+        try:
+            import truststore
+            return truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        except ImportError:
+            pass
+    return ssl.create_default_context()
+
+
+_opener = urllib.request.build_opener(_KeepAuthAtHome, urllib.request.HTTPSHandler(context=tls_context()))
+
+
+def open_url(req: urllib.request.Request | str, timeout: float = 60):
+    return _opener.open(req, timeout=timeout)
 
 
 def fetch(url: str, dest: Path, task: Task, size: int | None = None, offset: int = 0, total: int | None = None,
@@ -57,7 +80,7 @@ def fetch(url: str, dest: Path, task: Task, size: int | None = None, offset: int
     headers = {"User-Agent": USER_AGENT, **(headers or {})}
     if have:
         headers["Range"] = f"bytes={have}-"
-    with _opener.open(urllib.request.Request(url, headers=headers), timeout=60) as r:
+    with open_url(urllib.request.Request(url, headers=headers), timeout=60) as r:
         if have and r.status != 206:              # the server sent the whole file: start over
             have = 0
         length = int(r.headers.get("Content-Length") or 0)

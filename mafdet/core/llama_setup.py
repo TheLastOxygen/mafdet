@@ -22,7 +22,7 @@ import zipfile
 from pathlib import Path
 
 from . import config
-from .downloads import USER_AGENT, fetch
+from .downloads import USER_AGENT, fetch, open_url
 from .hardware import Hardware, detect
 from .tasks import Task
 
@@ -106,7 +106,7 @@ def status() -> dict:
 def _release_assets(tag: str) -> dict[str, dict]:
     req = urllib.request.Request(RELEASE_API.format(tag=tag),
                                  headers={"User-Agent": USER_AGENT, "Accept": "application/vnd.github+json"})
-    with urllib.request.urlopen(req, timeout=30) as r:
+    with open_url(req, timeout=30) as r:
         return {a["name"]: a for a in json.load(r)["assets"]}
 
 

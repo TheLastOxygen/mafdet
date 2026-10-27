@@ -30,6 +30,7 @@ dependencies = [
     "jinja2>=3.1",        # the chat templates (it came with PyTorch before)
     "packaging",
     "psutil>=5.9",        # RAM and CPU of the hardware panel
+    "truststore>=0.9",    # downloads trust the system's certificates (python.org's Python on a Mac has none)
     "pywebview>=5",       # the window (mafdet gui)
     "textual>=8.0",       # the terminal app (mafdet tui) and the launcher
 ]
