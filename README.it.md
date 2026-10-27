@@ -72,12 +72,16 @@ La lettura in anticipo è esatta. Il ragionamento in anticipo no, perché il mod
 
 **Su macOS, con un doppio clic.** Lo stesso, con **`start_mafdet.command`** (serve Python 3.10 o successivo: da python.org, oppure `brew install python@3.12`). Se il Finder dice che non può verificare il file, clic destro, *Apri*, poi di nuovo *Apri*: serve solo la prima volta.
 
-**Con pip** (Python 3.10 o successivo), da [PyPI](https://pypi.org/project/mafdet/):
+**Da [PyPI](https://pypi.org/project/mafdet/)** (Python 3.10 o successivo). Su macOS con il Python di Homebrew, e su Ubuntu e Debian recenti, `pip install` fuori da un ambiente virtuale si ferma con *externally-managed-environment*: installa con [pipx](https://pipx.pypa.io), che dà a MAFDET un ambiente tutto suo e mette `mafdet` nel PATH.
 
 ```bash
-pip install mafdet
+brew install pipx             # Ubuntu/Debian: sudo apt install pipx · Windows: py -m pip install --user pipx
+pipx ensurepath               # poi apri un nuovo terminale
+pipx install mafdet
 mafdet
 ```
+
+Su Windows con il Python di python.org, `pip install mafdet` funziona così com'è. Per aggiornare: `pipx upgrade mafdet` (oppure `pip install -U mafdet`).
 
 **Dai sorgenti, da terminale** (serve anche per le misure in `research/`):
 

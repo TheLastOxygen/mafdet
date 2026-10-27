@@ -72,12 +72,16 @@ Reading ahead is exact. Thinking ahead is not, because the model reasons on vers
 
 **On macOS, with a double-click.** The same, with **`start_mafdet.command`** (Python 3.10 or later: from python.org, or `brew install python@3.12`). If the Finder says it cannot verify the file, right-click it, *Open*, then *Open* again; this is needed only the first time.
 
-**With pip** (Python 3.10 or later), from [PyPI](https://pypi.org/project/mafdet/):
+**From [PyPI](https://pypi.org/project/mafdet/)** (Python 3.10 or later). On macOS with Homebrew's Python, and on recent Ubuntu and Debian, `pip install` outside a virtual environment stops with *externally-managed-environment*: install with [pipx](https://pipx.pypa.io), which gives MAFDET an environment of its own and puts `mafdet` on the PATH.
 
 ```bash
-pip install mafdet
+brew install pipx             # Ubuntu/Debian: sudo apt install pipx · Windows: py -m pip install --user pipx
+pipx ensurepath               # then open a new terminal
+pipx install mafdet
 mafdet
 ```
+
+On Windows with Python from python.org, `pip install mafdet` works as it is. To update: `pipx upgrade mafdet` (or `pip install -U mafdet`).
 
 **From the source, in a terminal** (also for the measurements in `research/`):
 
