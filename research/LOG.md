@@ -104,6 +104,15 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
    endpoint, cancelling, and a frame measured per model family.
 
 6. Other ideas discussed, not started:
+   - **past reasoning out of the history** (2026-10-28, idea from github.com/GionaGranchelli/context-watcher, a
+     context compactor for coding agents: young repo, marketing-heavy numbers, take the idea, not the code).
+     `Session._answer` keeps notes + reasoning + answer in `self.history` (`history = final + generated + sep`),
+     so every turn starts from the cache, but the 8192-token context fills after a few problems ("no longer fits
+     in the context") and Qwen3's own template drops past reasoning (the model is trained without it). Dropping
+     the last turn's reasoning means rereading its answer and the new message, which mafdet already does while
+     the next message is typed: nearly free. To measure before adopting: conversations of 5-6 problems in a row
+     with `thinking_ahead.py`, with and without, for accuracy, wait after Enter and turns per 8192 tokens.
+     Not started on purpose (the user's call, 2026-10-28): keep it in mind.
    - show the answer written ahead live under the input field (zero perceived wait; a product/UX change,
      test with people, not a benchmark)
    - harder benchmark (problems the 4B gets wrong 30-50% of the time) to see accuracy effects at all
