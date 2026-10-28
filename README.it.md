@@ -243,7 +243,7 @@ Sull'M2 Pro il 4B scrive a 54 tok/s (83-87 sulla RTX 2060), quindi entrambe le a
 
 ### Su una AMD Radeon
 
-**Un primo dato, da indagare più a fondo**: una scheda, una prova, mandata da un volontario ([issue #1](https://github.com/TheLastOxygen/mafdet/issues/1)). Radeon RX 5700 XT (8 GB), Ryzen 5 3600, 16 GB, Windows 11, driver AMD 31.0.23013.1023, llama.cpp b11747 con Vulkan: lo stesso script e gli stessi problemi di sopra.
+**Un primo dato, da indagare più a fondo**: una scheda, una prova, mandata da [SpykeBTW](https://github.com/SpykeBTW) ([issue #1](https://github.com/TheLastOxygen/mafdet/issues/1)). Radeon RX 5700 XT (8 GB), Ryzen 5 3600, 16 GB, Windows 11, driver AMD 31.0.23013.1023, llama.cpp b11747 con Vulkan: lo stesso script e gli stessi problemi di sopra.
 
 | RX 5700 XT | Senza ragionamento in anticipo | `mafdet strike` |
 |---|---|---|
@@ -292,12 +292,12 @@ La colonna del ragionamento in anticipo è stata rimisurata per questo confronto
 
 ## Cercasi: misure su una AMD Radeon
 
-MAFDET gira sulle schede AMD Radeon con la build Vulkan di llama.cpp, e le macchine qui sono una RTX 2060 e un M2 Pro: finora è stata misurata una sola Radeon, da un volontario ([primi numeri](#su-una-amd-radeon): il ragionamento in anticipo funziona, ma quella scheda legge molto più lentamente del previsto, ancora da capire). Il percorso Vulkan in sé è verificato, sulla RTX 2060 (Qwen3-4B legge 2.103 token/s e ne scrive 83, più o meno come con CUDA; 3 problemi su 3 corretti, il ragionamento in anticipo funziona). Mancano altre Radeon, soprattutto di altre generazioni. Se ne hai una (una scheda dedicata, RX 5000 o successiva; 8 GB o più è l'ideale), una mezz'ora riempirebbe questa pagina:
+MAFDET gira sulle schede AMD Radeon con la build Vulkan di llama.cpp, e le macchine qui sono una RTX 2060 e un M2 Pro: finora è stata misurata una sola Radeon, da [SpykeBTW](https://github.com/SpykeBTW) ([primi numeri](#su-una-amd-radeon): il ragionamento in anticipo funziona, ma quella scheda legge molto più lentamente del previsto, ancora da capire). Il percorso Vulkan in sé è verificato, sulla RTX 2060 (Qwen3-4B legge 2.103 token/s e ne scrive 83, più o meno come con CUDA; 3 problemi su 3 corretti, il ragionamento in anticipo funziona). Mancano altre Radeon, soprattutto di altre generazioni. Se ne hai una (una scheda dedicata, RX 5000 o successiva; 8 GB o più è l'ideale), una mezz'ora riempirebbe questa pagina:
 
 1. Installa MAFDET ([Avvio rapido](#avvio-rapido)) e aprilo una volta: dovrebbe trovare la scheda, installare llama.cpp *Windows · Vulkan* (o *Linux · Vulkan*) e scaricare Qwen3-4B. `mafdet doctor` mostra cosa ha trovato.
 2. Nell'app, *Modelli*, **Misura** Qwen3-4B.
 3. Dalla cartella di MAFDET, con il suo ambiente attivo: `python research/thinking_ahead.py radeon_4b.json`. Scrive 24 problemi in tempo reale, con e senza ragionamento in anticipo, e ci mette circa 20 minuti; lascia la macchina libera nel frattempo.
-4. [Apri una issue](https://github.com/TheLastOxygen/mafdet/issues/new) con l'output di `mafdet doctor`, i numeri di *Misura* e `radeon_4b.json`.
+4. [Apri una issue](https://github.com/TheLastOxygen/mafdet/issues/new) con l'output di `mafdet doctor`, i numeri di *Misura* e `radeon_4b.json`. Il tuo nome va in [Grazie](#grazie), accanto ai tuoi numeri.
 5. Se puoi, anche l'output di `%USERPROFILE%\.mafdet\llama.cpp\llama-bench.exe -m %USERPROFILE%\.mafdet\models\Qwen3-4B-Q4_K_M.gguf -p 512 -n 128` (su Linux, gli stessi percorsi sotto `~`): le velocità di llama.cpp da solo, senza MAFDET in mezzo.
 
 Se qualcosa non funziona (la scheda non trovata, llama.cpp che non parte, il modello che gira sulla CPU), una issue con l'output di `mafdet doctor` e i file `server*.log` accanto a llama-server (in `~/.mafdet/llama.cpp`) è altrettanto utile. Le Radeon integrate (APU Ryzen) per ora non vengono usate: restano sulla build per CPU. Qualsiasi scheda con un driver Vulkan può provarla con `mafdet doctor --install --build vulkan`.
@@ -326,6 +326,12 @@ Se qualcosa non funziona (la scheda non trovata, llama.cpp che non parte, il mod
 - [StreamingThinker: Large Language Models Can Think While Reading](https://arxiv.org/abs/2510.17238)
 - [SHANKS: Simultaneous Hearing and Thinking for Spoken Language Models](https://arxiv.org/abs/2510.06917)
 - [Asynchronous Reasoning: Training-Free Interactive Thinking LLMs](https://arxiv.org/abs/2512.10931)
+
+## Grazie
+
+A chi ha misurato MAFDET sul proprio hardware:
+
+- [SpykeBTW](https://github.com/SpykeBTW): la prima AMD Radeon, una RX 5700 XT ([issue #1](https://github.com/TheLastOxygen/mafdet/issues/1), [numeri](#su-una-amd-radeon)).
 
 ## Licenza
 

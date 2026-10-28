@@ -243,7 +243,7 @@ The 4B writes at 54 tok/s on the M2 Pro (83-87 on the RTX 2060), so both waits a
 
 ### On an AMD Radeon
 
-**A first data point, to be investigated further**: one card, one run, sent by a volunteer ([issue #1](https://github.com/TheLastOxygen/mafdet/issues/1)). Radeon RX 5700 XT (8 GB), Ryzen 5 3600, 16 GB, Windows 11, AMD driver 31.0.23013.1023, llama.cpp b11747 with Vulkan: the same script and problems as above.
+**A first data point, to be investigated further**: one card, one run, sent by [SpykeBTW](https://github.com/SpykeBTW) ([issue #1](https://github.com/TheLastOxygen/mafdet/issues/1)). Radeon RX 5700 XT (8 GB), Ryzen 5 3600, 16 GB, Windows 11, AMD driver 31.0.23013.1023, llama.cpp b11747 with Vulkan: the same script and problems as above.
 
 | RX 5700 XT | Without reasoning ahead | `mafdet strike` |
 |---|---|---|
@@ -292,12 +292,12 @@ The reasoning-ahead column was measured again for this comparison, the same day 
 
 ## Help wanted: benchmarks on an AMD Radeon
 
-MAFDET runs on AMD Radeon cards through llama.cpp's Vulkan build, and the machines here are an RTX 2060 and an M2 Pro: so far one Radeon has been measured, by a volunteer ([first numbers](#on-an-amd-radeon): reasoning ahead works, but that card reads much more slowly than expected, still to be understood). The Vulkan path itself is checked, on the RTX 2060 (Qwen3-4B reads 2,103 tokens/s and writes 83, about as with CUDA; 3/3 word problems correct, reasoning ahead working). What is missing is more Radeons, of other generations especially. If you have one (a dedicated card, RX 5000 or later; 8 GB or more is ideal), about half an hour of it would fill this page:
+MAFDET runs on AMD Radeon cards through llama.cpp's Vulkan build, and the machines here are an RTX 2060 and an M2 Pro: so far one Radeon has been measured, by [SpykeBTW](https://github.com/SpykeBTW) ([first numbers](#on-an-amd-radeon): reasoning ahead works, but that card reads much more slowly than expected, still to be understood). The Vulkan path itself is checked, on the RTX 2060 (Qwen3-4B reads 2,103 tokens/s and writes 83, about as with CUDA; 3/3 word problems correct, reasoning ahead working). What is missing is more Radeons, of other generations especially. If you have one (a dedicated card, RX 5000 or later; 8 GB or more is ideal), about half an hour of it would fill this page:
 
 1. Install MAFDET ([Quick start](#quick-start)) and open it once: it should find your card, install llama.cpp *Windows · Vulkan* (or *Linux · Vulkan*) and download Qwen3-4B. `mafdet doctor` shows what it found.
 2. In the app, *Models*, **Measure** Qwen3-4B.
 3. From the MAFDET folder, with its environment active: `python research/thinking_ahead.py radeon_4b.json`. It types 24 word problems in real time, with and without reasoning ahead, and takes about 20 minutes; leave the machine otherwise idle.
-4. [Open an issue](https://github.com/TheLastOxygen/mafdet/issues/new) with the output of `mafdet doctor`, the numbers of *Measure* and `radeon_4b.json`.
+4. [Open an issue](https://github.com/TheLastOxygen/mafdet/issues/new) with the output of `mafdet doctor`, the numbers of *Measure* and `radeon_4b.json`. Your name goes in [Thanks](#thanks), next to your numbers.
 5. If you can, also the output of `%USERPROFILE%\.mafdet\llama.cpp\llama-bench.exe -m %USERPROFILE%\.mafdet\models\Qwen3-4B-Q4_K_M.gguf -p 512 -n 128` (on Linux, the same paths under `~`): llama.cpp's own speeds, without MAFDET in between.
 
 If something does not work (the card not found, llama.cpp not starting, the model running on the CPU), an issue with the output of `mafdet doctor` and the `server*.log` files next to llama-server (in `~/.mafdet/llama.cpp`) is just as useful. Integrated Radeons (Ryzen APUs) are not used yet: they keep the CPU build. Any card with a Vulkan driver can try it with `mafdet doctor --install --build vulkan`.
@@ -326,6 +326,12 @@ If something does not work (the card not found, llama.cpp not starting, the mode
 - [StreamingThinker: Large Language Models Can Think While Reading](https://arxiv.org/abs/2510.17238)
 - [SHANKS: Simultaneous Hearing and Thinking for Spoken Language Models](https://arxiv.org/abs/2510.06917)
 - [Asynchronous Reasoning: Training-Free Interactive Thinking LLMs](https://arxiv.org/abs/2512.10931)
+
+## Thanks
+
+To the people who measured MAFDET on their own hardware:
+
+- [SpykeBTW](https://github.com/SpykeBTW): the first AMD Radeon, an RX 5700 XT ([issue #1](https://github.com/TheLastOxygen/mafdet/issues/1), [numbers](#on-an-amd-radeon)).
 
 ## License
 
