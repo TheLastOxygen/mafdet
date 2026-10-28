@@ -97,7 +97,7 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
    steps now ask for that llama-bench too. Integrated Radeons (Ryzen APUs) are left on the CPU
    build (AMD_MIN_VRAM_MB): whether Vulkan on one beats the CPU is open.
 
-5. **Proxy** (2026-10-28, proposed on Reddit by a user of SGLang, vLLM-like engines, Open WebUI and Hermes):
+5. **Proxy** (2026-10-28, proposed on Reddit by a user of SGLang, llama.cpp and other engines, with Open WebUI and Hermes):
    an OpenAI-compatible server in front of any engine, fed debounced drafts by the front end. `PROXY.md` has
    the scope and the contract; contributions as pull requests to `main`, code in `mafdet/proxy/`. Nothing
    built yet. Reading ahead ports to any engine with prefix caching; thinking ahead needs a raw completion
