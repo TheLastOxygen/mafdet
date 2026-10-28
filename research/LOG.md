@@ -97,7 +97,13 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
    steps now ask for that llama-bench too. Integrated Radeons (Ryzen APUs) are left on the CPU
    build (AMD_MIN_VRAM_MB): whether Vulkan on one beats the CPU is open.
 
-5. Other ideas discussed, not started:
+5. **Proxy** (2026-10-28, proposed on Reddit by a user of SGLang, vLLM-like engines, Open WebUI and Hermes):
+   an OpenAI-compatible server in front of any engine, fed debounced drafts by the front end. `PROXY.md` has
+   the scope and the contract; contributions as pull requests to `main`, code in `mafdet/proxy/`. Nothing
+   built yet. Reading ahead ports to any engine with prefix caching; thinking ahead needs a raw completion
+   endpoint, cancelling, and a frame measured per model family.
+
+6. Other ideas discussed, not started:
    - show the answer written ahead live under the input field (zero perceived wait; a product/UX change,
      test with people, not a benchmark)
    - harder benchmark (problems the 4B gets wrong 30-50% of the time) to see accuracy effects at all
