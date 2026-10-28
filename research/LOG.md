@@ -92,7 +92,9 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
    GPU_EFFICIENCY are calibrated on the RTX 2060's CUDA). On the 5700 XT both are far off (prefill 93 tok/s
    measured, ~2,850 estimated; decode 69, ~115 estimated). Before changing the catalog: is 93 tok/s llama.cpp's
    Vulkan on RDNA1 with AMD's Windows driver, or something in the app? `llama-bench -m <4B gguf> -p 512 -n 128`
-   from ~/.mafdet/llama.cpp on that card would tell. Integrated Radeons (Ryzen APUs) are left on the CPU
+   from ~/.mafdet/llama.cpp on that card would tell.
+   README: "On an AMD Radeon" table in (2026-10-28), marked as a first data point to investigate; the help-wanted
+   steps now ask for that llama-bench too. Integrated Radeons (Ryzen APUs) are left on the CPU
    build (AMD_MIN_VRAM_MB): whether Vulkan on one beats the CPU is open.
 
 5. Other ideas discussed, not started:

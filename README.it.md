@@ -34,7 +34,7 @@ Le interfacce di chat fanno aspettare il modello finché non premi Invio, e solo
 
 MAFDET usa per entrambe le cose il tempo in cui scrivi. **Legge** il messaggio mentre lo scrivi, così all'Invio il prefill è già fatto. E **ragiona in anticipo**: il modello comincia a pensare al tuo messaggio mentre lo stai ancora scrivendo, e conserva quel ragionamento quando cambi il testo. Su Qwen3-4B, con 24 problemi digitati in tempo reale, l'attesa media dopo l'Invio passa da **12,2 s a 3,2 s**, con le stesse 24 risposte corrette su 24; su Qwen3-14B da **108 s a 47 s**. Su un MacBook Pro M2 Pro da **18,1 s a 5,6 s** (4B, 24/24 in entrambi i casi) e da **32,7 s a 12,1 s** (14B).
 
-MAFDET è pensato per l'hardware che la maggior parte delle persone possiede davvero. La macchina di riferimento è una **RTX 2060 con 6 GB di VRAM**; funziona anche sui **Mac con Apple Silicon** (Metal, misurato su un M2 Pro con 16 GB), e tutto funziona anche **solo su CPU**. Le schede **AMD Radeon** girano con Vulkan, non ancora misurate: [cercasi aiuto](#cercasi-misure-su-una-amd-radeon).
+MAFDET è pensato per l'hardware che la maggior parte delle persone possiede davvero. La macchina di riferimento è una **RTX 2060 con 6 GB di VRAM**; funziona anche sui **Mac con Apple Silicon** (Metal, misurato su un M2 Pro con 16 GB), e tutto funziona anche **solo su CPU**. Le schede **AMD Radeon** girano con Vulkan, finora misurate su una scheda ([primi numeri](#su-una-amd-radeon), ne servono altre: [cercasi aiuto](#cercasi-misure-su-una-amd-radeon)).
 
 > Il nome viene da Mafdet, la dea felina dell'antico Egitto detta "la corritrice", che colpiva serpenti e scorpioni prima che potessero attaccare.
 
@@ -134,7 +134,7 @@ Compaiono sotto *I tuoi modelli*, con i numeri letti dall'header del file (layer
 
 ## Requisiti
 
-- **Windows**, con una **GPU NVIDIA** e driver aggiornati (obiettivo di test: RTX 2060, 6 GB), una **AMD Radeon** con Vulkan (pronta, non ancora misurata: [cercasi aiuto](#cercasi-misure-su-una-amd-radeon)), oppure solo una CPU. Per **Linux** ci sono già le build di llama.cpp e il codice, ma non è ancora stato provato
+- **Windows**, con una **GPU NVIDIA** e driver aggiornati (obiettivo di test: RTX 2060, 6 GB), una **AMD Radeon** con Vulkan (finora misurata su una scheda, una RX 5700 XT: [cercasi aiuto](#cercasi-misure-su-una-amd-radeon)), oppure solo una CPU. Per **Linux** ci sono già le build di llama.cpp e il codice, ma non è ancora stato provato
 - **macOS** su Apple Silicon (M1 o successivi): i modelli girano sulla GPU con Metal, nella memoria unificata (provato: M2 Pro, 16 GB, macOS 26.2; Qwen3-4B legge 593 token/s e ne scrive 57). I Mac Intel girano sulla CPU
 - **Python 3.10 o successivo** (provato con la 3.12)
 - Spazio su disco: circa 0,7 GB per llama.cpp con CUDA (100 MB con Vulkan, 60 MB per la CPU), più i modelli, da 0,6 GB (Qwen3-0.6B) a 2,3 GB per il 4B consigliato sulle schede da 6-8 GB
@@ -192,7 +192,7 @@ La digitazione non viene riprodotta in tempo reale. Ogni prefill viene eseguito 
 
 ## Risultati
 
-Su una RTX 2060 (6 GB) salvo dove indicato (il Mac ha [la sua tabella](#su-un-mac)), llama.cpp, modelli Q4_K_M, digitazione in tempo reale (da 5 a 8 caratteri al secondo, qualche pausa naturale, invio subito dopo l'ultimo carattere, senza rileggere).
+Su una RTX 2060 (6 GB) salvo dove indicato (il Mac e la Radeon hanno le loro tabelle: [Mac](#su-un-mac), [Radeon](#su-una-amd-radeon)), llama.cpp, modelli Q4_K_M, digitazione in tempo reale (da 5 a 8 caratteri al secondo, qualche pausa naturale, invio subito dopo l'ultimo carattere, senza rileggere).
 
 **Ragionamento in anticipo, Qwen3-4B** (sta nella VRAM, 83 tok/s): 24 problemi con una risposta numerica nota, scritti in italiano (script e dati: `research/thinking_ahead.py`).
 
@@ -241,6 +241,22 @@ MacBook Pro M2 Pro, 16 GB, macOS 26.2, llama.cpp con Metal: gli stessi script e 
 
 Sull'M2 Pro il 4B scrive a 54 tok/s (83-87 sulla RTX 2060), quindi entrambe le attese sono più lunghe che sul PC, e il ragionamento in anticipo ne toglie più o meno la stessa parte. Il 14B è dove il Mac fa la differenza: Metal può usare 12 GB dei 16 GB di memoria unificata, quindi il modello sta tutto sulla GPU e scrive a 18 tok/s (4,5-5 sulla RTX 2060, con il 62% sulla CPU). L'attesa dopo l'invio è di 12 s invece di 47 s. La colonna senza ragionamento in anticipo viene da una prova precedente dello stesso giorno; in quella prova una risposta è uscita vuota (il modello ha chiuso il turno dentro il ragionamento, vedi [Ragionamento in anticipo, nel dettaglio](#ragionamento-in-anticipo-nel-dettaglio)), cosa che ora l'app gestisce, e la colonna con il ragionamento in anticipo è la prova dopo la correzione. Durante le prove il Mac è arrivato per qualche minuto a una pressione termica *Heavy* (54 → 51 tok/s). Dati: `research/data/thinking_ahead_4b_m2pro.json`, `thinking_ahead_4b_m2pro_fixed.json`, `thinking_ahead_14b_m2pro.json`.
 
+### Su una AMD Radeon
+
+**Un primo dato, da indagare più a fondo**: una scheda, una prova, mandata da un volontario ([issue #1](https://github.com/TheLastOxygen/mafdet/issues/1)). Radeon RX 5700 XT (8 GB), Ryzen 5 3600, 16 GB, Windows 11, driver AMD 31.0.23013.1023, llama.cpp b11747 con Vulkan: lo stesso script e gli stessi problemi di sopra.
+
+| RX 5700 XT | Senza ragionamento in anticipo | `mafdet strike` |
+|---|---|---|
+| **Qwen3-4B**, 24 problemi: risposte corrette | 24/24 | 24/24 |
+| Attesa mediana per la prima parola della risposta | 10,9 s | **6,8 s** |
+| Attesa media | 14,0 s | **7,7 s** |
+| Più veloce | | in 22 problemi su 24 |
+| Ragionamento in totale / rimasto dopo l'invio | 920 / 920 token | **595 / 252 token** |
+
+Il ragionamento in anticipo funziona anche sulla Radeon: stessa accuratezza, attesa media quasi dimezzata. Però, con più o meno lo stesso ragionamento rimasto dopo l'invio della RTX 2060 (252 token contro 244), l'attesa è il doppio (7,7 s contro 3,2-4,2 s), e il motivo è la velocità di lettura. *Misura* dice che la scheda scrive a 69 token/s, vicino alla RTX 2060, ma legge a soli **93 token/s**, contro circa 2.000 sulla RTX 2060 (con CUDA o con Vulkan). Il ragionamento scritto in anticipo sta dopo il messaggio nel prompt, quindi le ultime parole che scrivi fanno rileggere al modello tutto il ragionamento dopo l'invio: qui 343 token, 0,17 s sulla RTX 2060, circa 3,7 s su questa scheda. Questo spiega tutta la differenza. Senza ragionamento in anticipo l'attesa è tutta scrittura; con il ragionamento in anticipo ogni problema aspetta 2-5 s in più, esattamente il tempo di rileggere il ragionamento a 93 token/s. Con una lettura a velocità normale l'attesa sarebbe di circa 4 s.
+
+Quello che ancora non sappiamo è da dove vengano i 93 token/s: dal Vulkan di llama.cpp su questa generazione (RDNA 1) con il driver AMD per Windows, oppure da qualcosa in MAFDET. Lo diranno un `llama-bench` sulla scheda e altre Radeon ([cercasi aiuto](#cercasi-misure-su-una-amd-radeon)). Dati: `research/data/thinking_ahead_4b_rx5700xt.json`.
+
 **Un modello piccolo che raccoglie per uno grande (`--gatherer`, sperimentale).** Per i modelli più grandi della VRAM abbiamo provato a far scrivere materiale mentre scrivi a un modello piccolo e veloce (Qwen3-0.6B, anche allenato apposta con `training/`), che il 14B legge all'invio. Sulla RTX 2060 non batte il 14B che ragiona in anticipo da solo:
 
 | 14B, attesa media dopo l'invio | |
@@ -276,12 +292,13 @@ La colonna del ragionamento in anticipo è stata rimisurata per questo confronto
 
 ## Cercasi: misure su una AMD Radeon
 
-MAFDET gira sulle schede AMD Radeon con la build Vulkan di llama.cpp, ma nessuno l'ha ancora misurato su una: le macchine qui sono una RTX 2060 e un M2 Pro. Il percorso Vulkan in sé è verificato, sulla RTX 2060 (Qwen3-4B legge 2.103 token/s e ne scrive 83, più o meno come con CUDA; 3 problemi su 3 corretti, il ragionamento in anticipo funziona). Manca una Radeon. Se ne hai una (una scheda dedicata, RX 5000 o successiva; 8 GB o più è l'ideale), una mezz'ora riempirebbe questa pagina:
+MAFDET gira sulle schede AMD Radeon con la build Vulkan di llama.cpp, e le macchine qui sono una RTX 2060 e un M2 Pro: finora è stata misurata una sola Radeon, da un volontario ([primi numeri](#su-una-amd-radeon): il ragionamento in anticipo funziona, ma quella scheda legge molto più lentamente del previsto, ancora da capire). Il percorso Vulkan in sé è verificato, sulla RTX 2060 (Qwen3-4B legge 2.103 token/s e ne scrive 83, più o meno come con CUDA; 3 problemi su 3 corretti, il ragionamento in anticipo funziona). Mancano altre Radeon, soprattutto di altre generazioni. Se ne hai una (una scheda dedicata, RX 5000 o successiva; 8 GB o più è l'ideale), una mezz'ora riempirebbe questa pagina:
 
 1. Installa MAFDET ([Avvio rapido](#avvio-rapido)) e aprilo una volta: dovrebbe trovare la scheda, installare llama.cpp *Windows · Vulkan* (o *Linux · Vulkan*) e scaricare Qwen3-4B. `mafdet doctor` mostra cosa ha trovato.
 2. Nell'app, *Modelli*, **Misura** Qwen3-4B.
 3. Dalla cartella di MAFDET, con il suo ambiente attivo: `python research/thinking_ahead.py radeon_4b.json`. Scrive 24 problemi in tempo reale, con e senza ragionamento in anticipo, e ci mette circa 20 minuti; lascia la macchina libera nel frattempo.
 4. [Apri una issue](https://github.com/TheLastOxygen/mafdet/issues/new) con l'output di `mafdet doctor`, i numeri di *Misura* e `radeon_4b.json`.
+5. Se puoi, anche l'output di `%USERPROFILE%\.mafdet\llama.cpp\llama-bench.exe -m %USERPROFILE%\.mafdet\models\Qwen3-4B-Q4_K_M.gguf -p 512 -n 128` (su Linux, gli stessi percorsi sotto `~`): le velocità di llama.cpp da solo, senza MAFDET in mezzo.
 
 Se qualcosa non funziona (la scheda non trovata, llama.cpp che non parte, il modello che gira sulla CPU), una issue con l'output di `mafdet doctor` e i file `server*.log` accanto a llama-server (in `~/.mafdet/llama.cpp`) è altrettanto utile. Le Radeon integrate (APU Ryzen) per ora non vengono usate: restano sulla build per CPU. Qualsiasi scheda con un driver Vulkan può provarla con `mafdet doctor --install --build vulkan`.
 
@@ -300,7 +317,7 @@ Se qualcosa non funziona (la scheda non trovata, llama.cpp che non parte, il mod
 - [ ] Ragionamento in anticipo per i modelli più grandi della VRAM che batta il modello grande che ragiona da solo
 - [ ] Ragionamento in anticipo oltre Qwen3, anche per i modelli di ragionamento con formati propri (DeepSeek-R1, gpt-oss): ognuno richiede di misurare la sua cornice
 - [x] macOS su Apple Silicon (Metal)
-- [x] AMD Radeon con Vulkan (pronta; la misura su una Radeon: cercasi aiuto, sopra)
+- [x] AMD Radeon con Vulkan (pronta; misurata su una scheda, una RX 5700 XT, con la lettura lenta ancora da capire; altre schede: cercasi aiuto, sopra)
 - [ ] Linux provato
 
 ## Ricerca correlata
