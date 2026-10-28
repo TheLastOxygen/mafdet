@@ -27,7 +27,8 @@ see "Done and measured".
 
 AMD Radeon (since 2026-10-26): supported through llama.cpp's Vulkan build, no Radeon here to measure on. The README
 asks for volunteers ("Help wanted: benchmarks on an AMD Radeon"): `mafdet doctor`, Measure, and
-`research/thinking_ahead.py radeon_4b.json`, sent as an issue.
+`research/thinking_ahead.py radeon_4b.json`, sent as an issue. First one in (issue #1, 2026-10-28): RX 5700 XT,
+reasoning ahead works but prefill is only 93 tok/s there, see "Done and measured".
 
 Key fact learned: on a model split between GPU and CPU, the CPU's layers *compute* every token they are
 given. Anything that processes several tokens at once (parallel branches, speculative-decoding drafts)
@@ -42,6 +43,14 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
      same two on the RTX 2060 (Turing's IQ4_XS kernel may not gain what Ada's does, and there the 14B's CPU layers
      run IQ4_XS on the CPU kernels, slower per byte than K-quants). If it holds: the IQ4_XS variant in
      `tools/build_catalog.py` (unsloth's repo) as the 14B's default.
+     **RTX 2060 done (2026-10-27, below): IQ4_XS is not a default for every GPU.** 4B: same accuracy, decode 84 vs
+     86 tok/s, wait after Enter a bit longer. 14B (split with the CPU): +11% decode, 2 more layers on the GPU, mean
+     wait 63.5 → 43.4 s. So the pick depends on the card and on the split: IQ4_XS where the model does not fit
+     (or on Ada and later, per the 4070 SUPER), Q4_K_M for a model all in VRAM on Turing.
+   - **Problem 19 on the 2060's 14B** (below): wrong with reasoning ahead in 2 of 2 runs (one per quantization),
+     right without it in 2 of 2, right with it on the 4070 SUPER and the M2 Pro. Rows keep only the answer's tail:
+     save the reasoning of that problem and read where the numbers that are not in the text (38 motorbikes,
+     84 wheels) come from, before calling it a limit of reasoning ahead on slow models.
    - `catalog.estimate`: llama.cpp's fit keeps the token embeddings on the CPU always (417 MB on the 14B, counted as
      GPU bytes today), its reserve is smaller than VRAM_RESERVE_MB (it left 800 MB free of 12.3 GB with the 14B
      loaded), and GPU_EFFICIENCY is 0.66-0.78 on Ada (0.62 on the 2060). As it is, the catalog puts the 14B at 95%
@@ -78,9 +87,12 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
    line in English ("How much does the Moon weigh compared to") and SENT unchanged, which removes the cue
    without an instruction; measure with `research/language_check.py` and the 24 Italian problems.
 
-4. **AMD Radeon results**, when someone sends them (README, help wanted): a "On an AMD Radeon" table next to
-   "On a Mac", and the catalog's estimates checked against Measure (GPU_PREFILL_FLOPS_PER_GBS and
-   GPU_EFFICIENCY are calibrated on the RTX 2060's CUDA). Integrated Radeons (Ryzen APUs) are left on the CPU
+4. **AMD Radeon results** (README, help wanted; first one: RX 5700 XT, issue #1, below): a "On an AMD Radeon"
+   table next to "On a Mac", and the catalog's estimates checked against Measure (GPU_PREFILL_FLOPS_PER_GBS and
+   GPU_EFFICIENCY are calibrated on the RTX 2060's CUDA). On the 5700 XT both are far off (prefill 93 tok/s
+   measured, ~2,850 estimated; decode 69, ~115 estimated). Before changing the catalog: is 93 tok/s llama.cpp's
+   Vulkan on RDNA1 with AMD's Windows driver, or something in the app? `llama-bench -m <4B gguf> -p 512 -n 128`
+   from ~/.mafdet/llama.cpp on that card would tell. Integrated Radeons (Ryzen APUs) are left on the CPU
    build (AMD_MIN_VRAM_MB): whether Vulkan on one beats the CPU is open.
 
 5. Other ideas discussed, not started:
@@ -92,6 +104,17 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
 
 ## Done and measured
 
+- **2026-10-28 · First Radeon: RX 5700 XT (8 GB, 448 GB/s), Qwen3-4B Q4_K_M, Vulkan, from issue #1.** Sent by
+  a volunteer: Ryzen 5 3600, 16 GB, Windows 11, driver 31.0.23013.1023, llama.cpp b11747. Measure: decode 69 tok/s,
+  prefill **93 tok/s**. `thinking_ahead.py`, 24 problems (`thinking_ahead_4b_rx5700xt.json`): no ahead 24/24,
+  mean 14.00 s, median 10.94 s, 920 reasoning tokens, 67.8 tok/s; reasoning ahead 24/24, mean **7.69 s**, median
+  **6.81 s**, 595 tokens (343 ahead), 63.6 tok/s; faster in 22 of 24. Reasoning ahead works, but the wait is
+  twice the 2060's (3.2-4.2 s) with about the same reasoning left after Enter (252 tokens against 244). Where the
+  rest goes: without reasoning ahead the wait is all decode (wait - left/tps ≈ 0); with it, 2.2-5.5 s more on
+  every problem, and the extra time over the tokens reasoned ahead is exactly 93 tok/s. The notes come after
+  the message in the prompt, so the last words typed make the model reread all of them after Enter: 343 tokens,
+  0.17 s on the 2060, 3.7 s here. Decode is ~0.37 of the bandwidth (0.62 on the 2060); prefill ~30 times below
+  the catalog's estimate. Asked next: llama-bench on that card (see Next, 4).
 - **2026-10-27 · Any GGUF: the Hugging Face search and files of your own.** The app now runs models outside
   the catalog: searched and downloaded in the app (`mafdet/core/hub.py`), put in `~/.mafdet/models`, or added
   from anywhere. Their tokenizer is the GGUF's own, through llama-server's `/tokenize`, `/detokenize` and
@@ -110,6 +133,26 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
   7441 / 7027 tok/s, decode **129.8 / 134.9 tok/s** (2376 / 2160 MiB on the GPU). The 14B's +31% does not carry
   over to the 4B: +4% clean, +9% in the chat benchmark. During the repeats the tok/s had dropped to 90-104 on both
   quantizations (the GPU after 40 minutes of runs): compare rows measured one after the other, as on the Mac.
+- **2026-10-27 · IQ4_XS against Q4_K_M on the RTX 2060: no gain on the 4B, +11% decode on the 14B.** Same files as
+  on the 4070 SUPER (Q4_K_M from Qwen's repo, IQ4_XS from unsloth's). `research/measure_gguf.py` (the app's
+  Measure on any GGUF, with the layers on the GPU from the server log; new), two alternated rounds, desktop
+  holding ~1.4 GB of VRAM:
+  - 4B, 37/37 layers on the GPU both: prefill 1861-2076 vs **2318-2347** tok/s, decode **86.0-86.3** vs 83.9-84.1.
+    IQ4_XS's 9% fewer bytes do not make Turing write faster (Ada: +31%).
+  - 14B: Q4_K_M 15/41 layers on the GPU, prefill 305-339, decode 5.2; IQ4_XS 17/41, prefill 396-406, decode
+    **5.8-5.9** (+11%, about what the bytes and the 2 extra layers explain).
+  `thinking_ahead.py`, reasoning ahead only, configs measured one after the other:
+  - 4B, 24 problems (`quant_4b_2060.json`): Q4_K_M 23/24, mean 3.43 s, median 3.15 s (correct answers), 1078
+    reasoning tokens, 74.8 tok/s; IQ4_XS 23/24, mean 3.90 s, median 3.65 s, 1120 tokens, 73.5 tok/s. The one miss
+    of each is a reasoning cut at --max-tokens 3000 with no answer (problem 16 for Q4_K_M, 8 for IQ4_XS), not a
+    wrong number.
+  - 14B, the README's 6 problems, --warm-up, --max-tokens 1800 (`quant_14b_2060.json`): Q4_K_M 5/6, mean 63.5 s,
+    median 65.3 s, 502 tokens (178 ahead), 4.9 tok/s; IQ4_XS 5/6, mean **43.4 s**, median 44.8 s, 406 tokens
+    (180 ahead), 5.6 tok/s. Single runs vary a lot on this model (the README's 47 s mean is one run).
+  - Problem 19 (30 vehicles, 100 wheels, how many motorbikes: 10) was wrong in both, with numbers that are not
+    in the text: "38" with "38 × 2 + 2 × 4 = 84" (Q4_K_M), "30" from "x + y = 60" (IQ4_XS). Rerun without
+    reasoning ahead (IQ4_XS, `--ahead 0`): right twice, 155 and 132 s. The run with it was killed for low
+    memory (the 14B takes most of the 16 GB). See Next, 0.
 - **2026-10-26 · Qwen3-14B on a 12 GB card (RTX 4070 SUPER): all on the GPU, IQ4_XS 31% faster than Q4_K_M, same
   answers.** The plan was "the largest model entirely in VRAM, with a smaller quantization, against the same model
   split with the CPU"; on this card the 14B Q4_K_M turned out to be entirely in VRAM already (`-lv 5` in the server
