@@ -316,6 +316,7 @@ If something does not work (the card not found, llama.cpp not starting, the mode
 - [x] A small model gathers while you type, a large one answers: tried and measured (no gain on the RTX 2060, see Results)
 - [ ] Reasoning ahead for models larger than the VRAM that beats the large model thinking by itself
 - [ ] Reasoning ahead beyond Qwen3, including the thinking models with their own formats (DeepSeek-R1, gpt-oss): each needs its frame measured
+- [ ] Voice: speech transcribed in streaming (whisper.cpp) feeds the same reading and reasoning ahead while the user speaks, the end of the turn plays Enter's part (a pause starts the answer, more speech cancels it), and the answer is spoken while the rest is still being written: speech goes at 3-4 tokens/s, so only the reasoning left and the first sentence are waited for. Speech is about twice as fast as typing, so less reasoning gets done ahead: to measure, as for typing, as the time to the first spoken word
 - [x] macOS on Apple Silicon (Metal)
 - [x] AMD Radeon through Vulkan (in place; measured on one card, an RX 5700 XT, with slow reading still to be understood; more cards: help wanted, above)
 - [ ] Linux tested

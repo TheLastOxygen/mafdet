@@ -316,6 +316,7 @@ Se qualcosa non funziona (la scheda non trovata, llama.cpp che non parte, il mod
 - [x] Un modello piccolo raccoglie mentre scrivi, uno grande risponde: provato e misurato (nessun guadagno sulla RTX 2060, vedi Risultati)
 - [ ] Ragionamento in anticipo per i modelli più grandi della VRAM che batta il modello grande che ragiona da solo
 - [ ] Ragionamento in anticipo oltre Qwen3, anche per i modelli di ragionamento con formati propri (DeepSeek-R1, gpt-oss): ognuno richiede di misurare la sua cornice
+- [ ] Voce: il parlato trascritto in streaming (whisper.cpp) alimenta la stessa lettura e lo stesso ragionamento in anticipo mentre l'utente parla, la fine del turno fa da Invio (una pausa avvia la risposta, se l'utente riprende a parlare viene scartata) e la risposta viene pronunciata mentre il resto è ancora in scrittura: la voce va a 3-4 token al secondo, quindi si aspettano solo il ragionamento rimasto e la prima frase. Si parla circa il doppio più in fretta di quanto si scriva, quindi si ragiona meno in anticipo: da misurare come per la scrittura, come tempo fino alla prima parola pronunciata
 - [x] macOS su Apple Silicon (Metal)
 - [x] AMD Radeon con Vulkan (pronta; misurata su una scheda, una RX 5700 XT, con la lettura lenta ancora da capire; altre schede: cercasi aiuto, sopra)
 - [ ] Linux provato
