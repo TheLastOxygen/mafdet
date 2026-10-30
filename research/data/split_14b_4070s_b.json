@@ -1,0 +1,98 @@
+[
+ {
+  "round": 0,
+  "config": "iq4xs ffn-cpu kv8",
+  "gguf": "unsloth/Qwen3-14B-GGUF:Qwen3-14B-IQ4_XS.gguf",
+  "args": "-fit off -ngl all -ncffn 32 -ctk q8_0 -ctv q8_0",
+  "gpu_mib": 3841,
+  "layers_on_gpu": "41/41",
+  "prefill_tps": 826,
+  "decode_short_tps": 11.83,
+  "long_prompt_tokens": 1607,
+  "decode_long_tps": 11.73
+ },
+ {
+  "round": 0,
+  "config": "iq4xs layers kv8",
+  "gguf": "unsloth/Qwen3-14B-GGUF:Qwen3-14B-IQ4_XS.gguf",
+  "args": "-fitt 7100 -ctk q8_0 -ctv q8_0",
+  "gpu_mib": 3948,
+  "layers_on_gpu": "18/41",
+  "prefill_tps": 729,
+  "decode_short_tps": 12.73,
+  "long_prompt_tokens": 1607,
+  "decode_long_tps": 10.98
+ },
+ {
+  "round": 0,
+  "config": "ffn-cpu kv8",
+  "gguf": "Qwen/Qwen3-14B-GGUF:Qwen3-14B-Q4_K_M.gguf",
+  "args": "-fit off -ngl all -ncffn 34 -ctk q8_0 -ctv q8_0",
+  "gpu_mib": 3822,
+  "layers_on_gpu": "41/41",
+  "prefill_tps": 704,
+  "decode_short_tps": 10.1,
+  "long_prompt_tokens": 1607,
+  "decode_long_tps": 10.01
+ },
+ {
+  "round": 0,
+  "config": "layers",
+  "gguf": "Qwen/Qwen3-14B-GGUF:Qwen3-14B-Q4_K_M.gguf",
+  "args": "-fitt 7100",
+  "gpu_mib": 3903,
+  "layers_on_gpu": "15/41",
+  "prefill_tps": 576,
+  "decode_short_tps": 10.41,
+  "long_prompt_tokens": 1607,
+  "decode_long_tps": 9.27
+ },
+ {
+  "round": 1,
+  "config": "iq4xs ffn-cpu kv8",
+  "gguf": "unsloth/Qwen3-14B-GGUF:Qwen3-14B-IQ4_XS.gguf",
+  "args": "-fit off -ngl all -ncffn 32 -ctk q8_0 -ctv q8_0",
+  "gpu_mib": 3841,
+  "layers_on_gpu": "41/41",
+  "prefill_tps": 851,
+  "decode_short_tps": 12.01,
+  "long_prompt_tokens": 1607,
+  "decode_long_tps": 11.62
+ },
+ {
+  "round": 1,
+  "config": "iq4xs layers kv8",
+  "gguf": "unsloth/Qwen3-14B-GGUF:Qwen3-14B-IQ4_XS.gguf",
+  "args": "-fitt 7100 -ctk q8_0 -ctv q8_0",
+  "gpu_mib": 3948,
+  "layers_on_gpu": "18/41",
+  "prefill_tps": 750,
+  "decode_short_tps": 11.79,
+  "long_prompt_tokens": 1607,
+  "decode_long_tps": 10.43
+ },
+ {
+  "round": 1,
+  "config": "ffn-cpu kv8",
+  "gguf": "Qwen/Qwen3-14B-GGUF:Qwen3-14B-Q4_K_M.gguf",
+  "args": "-fit off -ngl all -ncffn 34 -ctk q8_0 -ctv q8_0",
+  "gpu_mib": 3822,
+  "layers_on_gpu": "41/41",
+  "prefill_tps": 707,
+  "decode_short_tps": 9.65,
+  "long_prompt_tokens": 1607,
+  "decode_long_tps": 9.94
+ },
+ {
+  "round": 1,
+  "config": "layers",
+  "gguf": "Qwen/Qwen3-14B-GGUF:Qwen3-14B-Q4_K_M.gguf",
+  "args": "-fitt 7100",
+  "gpu_mib": 3903,
+  "layers_on_gpu": "15/41",
+  "prefill_tps": 592,
+  "decode_short_tps": 10.4,
+  "long_prompt_tokens": 1607,
+  "decode_long_tps": 9.4
+ }
+]
