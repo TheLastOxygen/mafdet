@@ -38,15 +38,12 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
 ## Next
 
 0. **IQ4_XS as the default quantization, and the estimate fixed** (from the 4070 SUPER results below).
-   - Done on the 4B: IQ4_XS is not worth it there (+4%, 26/28 against 28/28, below). For the 14B: the paired run on
-     all 24 problems (`quant_14b_4070s.json`, running) decides whether IQ4_XS becomes its `default_quant`; then the
-     same two on the RTX 2060 (Turing's IQ4_XS kernel may not gain what Ada's does, and there the 14B's CPU layers
-     run IQ4_XS on the CPU kernels, slower per byte than K-quants). If it holds: the IQ4_XS variant in
-     `tools/build_catalog.py` (unsloth's repo) as the 14B's default.
-     **RTX 2060 done (2026-10-27, below): IQ4_XS is not a default for every GPU.** 4B: same accuracy, decode 84 vs
-     86 tok/s, wait after Enter a bit longer. 14B (split with the CPU): +11% decode, 2 more layers on the GPU, mean
-     wait 63.5 → 43.4 s. So the pick depends on the card and on the split: IQ4_XS where the model does not fit
-     (or on Ada and later, per the 4070 SUPER), Q4_K_M for a model all in VRAM on Turing.
+   - **Done on both cards: Q4_K_M stays the default, IQ4_XS becomes a second variant where the model does not fit.**
+     4070 SUPER (below): not worth it on the 4B (+4%, 26/28 against 28/28); on the 14B +8% in the chat with the same
+     24/24, plus 830 MB of VRAM. RTX 2060 (2026-10-27, below): 4B same accuracy, decode 84 vs 86 tok/s, wait after
+     Enter a bit longer; 14B (split with the CPU) +11% decode, 2 more layers on the GPU, mean wait 63.5 → 43.4 s. So
+     the pick depends on the card and on the split. To do: the 14B IQ4_XS as a second variant in
+     `tools/build_catalog.py` (unsloth's repo), picked where the Q4_K_M does not fit in VRAM or leaves under 1 GB free.
    - **Problem 19 on the 2060's 14B** (below): wrong with reasoning ahead in 2 of 2 runs (one per quantization),
      right without it in 2 of 2, right with it on the 4070 SUPER and the M2 Pro. Rows keep only the answer's tail:
      save the reasoning of that problem and read where the numbers that are not in the text (38 motorbikes,
@@ -162,6 +159,18 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
     in the text: "38" with "38 × 2 + 2 × 4 = 84" (Q4_K_M), "30" from "x + y = 60" (IQ4_XS). Rerun without
     reasoning ahead (IQ4_XS, `--ahead 0`): right twice, 155 and 132 s. The run with it was killed for low
     memory (the 14B takes most of the 16 GB). See Next, 0.
+- **2026-10-27 · Qwen3-14B IQ4_XS against Q4_K_M on 24 problems (4070 SUPER): same answers, +8% in the chat, not
+  adopted as the default yet.** Reasoning ahead, --warm-up, --max-tokens 1800 (`quant_14b_4070s.json`): IQ4_XS
+  24/24, mean wait 6.03 s, median 4.98 s, 43-47 tok/s in the chat; Q4_K_M 24/24, 5.65 / 5.03 s, 40-45 tok/s. The
+  +31% of the Measure-style decode (short prompt, 128 tokens) shrinks to +8% with the chat's context (notes and
+  600-1000 reasoning tokens: the attention's share of each token grows, the weights' share falls), and the IQ4_XS
+  reasoned longer in this run (903 against 847 tokens, single runs vary that much), so the wait is the same. What it
+  does give on a 12 GB card is room: 830 MB of VRAM (the Q4_K_M leaves 800 MB free with the desktop's 1.9 GB taken).
+  Not the default, because the 4B lost an answer with it (below) and the 2060's 14B runs its CPU layers on the IQ4_XS
+  CPU kernels; a candidate as a second variant of the 14B for 12 GB cards, to decide with the 2060 numbers.
+  **The checker was wrong on trailing zeros**: problem 18's "22,50 euro" (22,5) counted as a miss; `correct()` now
+  accepts trailing zeros after the decimal separator (not after an integer: 80 is not 8). Every saved run recounted:
+  only that row changes (the README's numbers stand).
 - **2026-10-26 · Qwen3-4B IQ4_XS against Q4_K_M (4070 SUPER): 4% faster, one answer worse — not worth it on the 4B.**
   24 problems, reasoning ahead (`quant_4b_4070s.json`): Q4_K_M 24/24, mean wait 2.83 s, median 2.14 s, 106-119 tok/s;
   IQ4_XS 23/24, 2.37 / 1.73 s, 117-130 tok/s. The miss is problem 8 (Anna's age, the ambiguous "il doppio della sua
