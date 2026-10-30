@@ -271,6 +271,15 @@ def save_measurement(v: Variant, hw: Hardware, device: str, result: dict):
 
 # ---- estimate ----------------------------------------------------------------
 
+def splits_with_cpu(path: str, hw: Hardware, ctx: int = 8192) -> bool:
+    """Whether llama.cpp will put part of this GGUF on the CPU here (the same estimate as the catalog's)."""
+    info = header(Path(path))
+    if info is None or not hw.gpu or hw.gpu.unified:
+        return False
+    v = Variant(local_model(Path(path), info), gguf.quant_label(Path(path).name), "", str(path), info["bytes"])
+    return estimate(v, hw, "cuda", ctx)["placement"] == "partial"
+
+
 def kv_bytes_per_token(model: dict) -> int:
     return 2 * model["layers"] * model["kv_heads"] * model["head_dim"] * 2      # keys and values, f16
 

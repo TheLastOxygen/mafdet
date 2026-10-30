@@ -59,6 +59,17 @@ def test_read_header(tmp_path):
     assert info["params"] == 64 * 3 + 64 * 64 and info["expert_params"] == 0
 
 
+def test_embeddings_on_the_cpu_unless_shared(tmp_path):
+    """llama.cpp keeps token_embd in RAM when the model has an output layer of its own."""
+    shared = gguf.read(write_gguf(tmp_path / "tied.gguf"))
+    assert shared["embd_params"] == 64 * 3 and not shared["output"]
+    own = gguf.read(write_gguf(tmp_path / "own.gguf", tensors={"token_embd.weight": (64, 3), "output.weight": (64, 3),
+                                                                "blk.0.attn_q.weight": (64, 64)}))
+    assert own["embd_params"] == 64 * 3 and own["output"]
+    assert catalog.local_model(tmp_path / "own.gguf", {**own, "bytes": 1})["cpu_embd_b"] == 64 * 3 / 1e9
+    assert catalog.local_model(tmp_path / "tied.gguf", {**shared, "bytes": 1})["cpu_embd_b"] == 0
+
+
 def test_read_mixture_of_experts(tmp_path):
     p = write_gguf(tmp_path / "moe.gguf", "qwen3moe", tensors={"blk.0.ffn_up_exps.weight": (64, 32, 8),
                                                                  "blk.0.attn_q.weight": (64, 64)})

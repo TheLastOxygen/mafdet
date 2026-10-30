@@ -276,6 +276,12 @@ class LlamaServer:
         # auto: as many layers as fit in VRAM (llama.cpp --fit), the rest on the CPU, so models
         # larger than the GPU still run.
         args += ["-ngl", "auto"] if device == "cuda" else ["-ngl", "0", "-dev", "none"]
+        # A model split with the CPU keeps its KV cache in 8 bits: about half the VRAM, so one or two more
+        # layers on the GPU, and the same answers (Qwen3-14B on a 6 GB budget: 9.9 -> 12.2 tok/s with
+        # IQ4_XS, see research/LOG.md). Options given by hand win.
+        if device == "cuda" and not {"-ctk", "--cache-type-k", "-ctv", "--cache-type-v"} & set(extra_args):
+            if kv_in_8_bits(self.model_path, pool or ctx * n_slots):
+                args += ["-ctk", "q8_0", "-ctv", "q8_0"]
         args += list(extra_args)
         # One log per role (chat, gatherer, benchmark), overwritten at each start: the ports change every time.
         self.log_path = os.path.join(os.path.dirname(exe), f"{log_name}.log")
@@ -435,6 +441,16 @@ class LlamaPrefill:
         out = list(r["tokens"])
         self.ids = self.ids + out
         return out
+
+
+def kv_in_8_bits(model_path: str, ctx: int) -> bool:
+    """True when the model will not fit all in VRAM here (then its KV cache goes to q8_0)."""
+    try:
+        from .core import catalog, hardware
+        return catalog.splits_with_cpu(model_path, hardware.detect(refresh=True), ctx)
+    except Exception as e:                     # never a reason not to start
+        print(f"KV cache left at f16: {e}", file=sys.stderr)
+        return False
 
 
 def setup_llama(args, device: str | None = None, n_slots: int = 1, pool: int = 0):
