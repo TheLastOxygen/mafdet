@@ -4,10 +4,13 @@ The model catalog: what can be downloaded, how fast it should run here, and what
 The estimate needs no download. Generating a token reads every weight once, so
 its time is the bytes on the GPU over the GPU's bandwidth plus the bytes left
 in system RAM over the RAM's bandwidth. How much fits on the GPU follows
-llama.cpp's own split (-ngl auto): whole layers, each with its share of the KV
-cache, until the free VRAM minus a reserve is full. Calibrated on the reference
-PC (RTX 2060 6 GB, i5-10400, DDR4): Qwen3-4B 83 tokens/s all on the GPU,
-Qwen3-8B about 13 and Qwen3-14B 4.8 with part of the model on the CPU.
+llama.cpp's own split (-ngl auto, its --fit): whole layers, each with its share
+of the KV cache, until the free VRAM minus a reserve is full. The token
+embeddings stay in RAM unless the output layer shares them, and generating
+reads one row of them: they cost RAM, not time. Calibrated on the reference PC
+(RTX 2060 6 GB, i5-10400, DDR4): Qwen3-4B 83 tokens/s all on the GPU, Qwen3-8B
+about 13 and Qwen3-14B 4.8 with part of the model on the CPU; checked on an
+RTX 4070 SUPER 12 GB (the 14B all on the GPU, 41 tokens/s).
 
 From the speed comes what the user cares about: how long the answer takes
 after Enter, with MAFDET reasoning ahead while they type and without it.
@@ -22,6 +25,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 from dataclasses import dataclass
 from functools import lru_cache
 from importlib.resources import files
@@ -33,11 +37,16 @@ from . import config, gguf
 from .hardware import Hardware
 
 GPU_EFFICIENCY = 0.62          # share of the GPU's bandwidth llama.cpp reaches while generating
+                               # (K-quants: 0.60 on the 2060, 0.60-0.65 on the 4070 SUPER)
 RAM_EFFICIENCY = 0.9           # the same for system RAM, against hardware.ram_bandwidth_gbs()
-VRAM_RESERVE_MB = 900          # CUDA context, compute buffers and llama.cpp's safety margin
+# llama.cpp's --fit leaves 1024 MiB free (its default --fit-target) after the model, the KV cache and
+# the compute buffers (~180 MiB); the CUDA context takes ~100 more than nvidia-smi counts as used.
+VRAM_RESERVE_MB = 1300
 RAM_RESERVE_MB = 2500          # the system and the app itself
 PCIE_GBS = 12.0                # weights left on the CPU are streamed to the GPU for long prefills
 GPU_PREFILL_FLOPS_PER_GBS = 0.051e12   # usable prefill compute, from the card's bandwidth class (2060: 4B 2,141 tok/s)
+# Ada has about 2.5 times the tensor compute per GB/s of Turing (4070 SUPER: 4B 7,441, 14B 2,486 tok/s).
+GPU_PREFILL_FLOPS_PER_GBS_ADA = 0.125e12
 APPLE_PREFILL_FLOPS_PER_GBS = 0.025e12 # the same for Apple Silicon's GPU (no tensor cores)
 CPU_PREFILL_FLOPS_PER_CORE = 30e9
 # Typing a question takes about half a minute (measured: 30-37 s at 5 characters per second with
@@ -131,6 +140,8 @@ def header(path: Path) -> dict | None:
                 more = gguf.read(extra)
                 info["params"] += more["params"]
                 info["expert_params"] += more["expert_params"]
+                info["embd_params"] += more["embd_params"]
+                info["output"] = info["output"] or more["output"]
             info["bytes"] = sum(p.stat().st_size for p in parts)
             _headers[key] = info
         except (OSError, ValueError, KeyError, IndexError, struct_error) as e:
@@ -167,6 +178,7 @@ def local_model(path: Path, info: dict) -> dict:
     return {
         "id": model_id, "name": name, "family": LOCAL_FAMILY["id"], "tokenizer": SERVER_TOKENIZER,
         "params_b": max(info["params"], 1) / 1e9, "active_b": max(active, 1) / 1e9,
+        "cpu_embd_b": info["embd_params"] / 1e9 if info["output"] else 0.0,
         "layers": get("block_count") or 1, "kv_heads": avg(get("attention.head_count_kv")) or 0,
         "head_dim": head_dim, "tier": "custom", "default_quant": gguf.quant_label(path.name),
         "reason_ahead": arch in THINKING_ARCHS and "enable_thinking" in template,
@@ -263,21 +275,28 @@ def kv_bytes_per_token(model: dict) -> int:
     return 2 * model["layers"] * model["kv_heads"] * model["head_dim"] * 2      # keys and values, f16
 
 
+def ada(name: str) -> bool:
+    """An NVIDIA card of the RTX 40 series (Ada Lovelace), laptop ones included."""
+    return bool(re.search(r"RTX\s*40\d0", name, re.I))
+
+
 def estimate(v: Variant, hw: Hardware, device: str = "auto", ctx: int = 8192) -> dict:
     """Where the model runs here and how fast, before downloading it."""
     m = v.model
     gpu = hw.gpu if device in ("auto", "cuda") else None
     weights_mb = v.bytes / 2**20
+    embd_mb = weights_mb * m.get("cpu_embd_b", 0.0) / m["params_b"]      # in RAM, one row read per token
+    layers_mb = weights_mb - embd_mb
     kv_mb = kv_bytes_per_token(m) * ctx / 2**20
     total_mb = weights_mb + kv_mb
     if gpu:
         room = max(0.0, gpu.vram_free_mb - VRAM_RESERVE_MB)
-        share = min(1.0, room / total_mb)
+        share = min(1.0, room / (layers_mb + kv_mb))
         share = int(share * m["layers"]) / m["layers"] if share < 1 else 1.0     # whole layers, as llama.cpp
     else:
         share = 0.0
-    gpu_mb, cpu_mb = weights_mb * share, weights_mb * (1 - share)
-    cpu_total_mb = (weights_mb + kv_mb) * (1 - share)
+    gpu_mb, cpu_mb = layers_mb * share, layers_mb * (1 - share)
+    cpu_total_mb = embd_mb + (layers_mb + kv_mb) * (1 - share)
     if gpu and gpu.unified:                    # Apple Silicon: the GPU's share is in the same RAM
         cpu_total_mb = total_mb
     fits_ram = cpu_total_mb <= hw.ram_mb - RAM_RESERVE_MB
@@ -294,7 +313,9 @@ def estimate(v: Variant, hw: Hardware, device: str = "auto", ctx: int = 8192) ->
     # Reading the prompt: compute-bound, about 2 operations per active parameter and token.
     flops = 2 * m["active_b"] * 1e9
     if gpu:
-        tps = gpu.bandwidth_gbs * (APPLE_PREFILL_FLOPS_PER_GBS if gpu.unified else GPU_PREFILL_FLOPS_PER_GBS) / flops
+        per_gbs = (APPLE_PREFILL_FLOPS_PER_GBS if gpu.unified else
+                   GPU_PREFILL_FLOPS_PER_GBS_ADA if ada(gpu.name) else GPU_PREFILL_FLOPS_PER_GBS)
+        tps = gpu.bandwidth_gbs * per_gbs / flops
         if share < 1 and not gpu.unified:      # the CPU's layers cross the bus once per batch of 512 tokens
             tps = 512 / (512 / tps + cpu_mb / 1024 / PCIE_GBS)
         prefill = tps
@@ -328,6 +349,20 @@ def waits(m: dict, decode_tps: float) -> dict:
             "without_s": round(reasoning / decode_tps, 1), "ahead_tokens": round(ahead), "answer_s": answer_s}
 
 
+def preferred_quant(model: dict, hw: Hardware, device: str = "auto", ctx: int = 8192) -> str:
+    """The quantization the app offers first for a model on this machine: its default one, or its smaller
+    `fit_quant` on a GPU where the default does not fit all in VRAM (more layers on the GPU, same answers;
+    measured on the 14B, see research/LOG.md). Without a GPU the default stays: the smaller one runs on
+    slower CPU kernels."""
+    default, fit = model["default_quant"], model.get("fit_quant")
+    if not fit or not (device in ("auto", "cuda") and hw.gpu):
+        return default
+    mine = {v.quant: v for v in variants() if v.model["id"] == model["id"]}
+    if fit not in mine or estimate(mine[default], hw, device, ctx)["placement"] == "gpu":
+        return default
+    return fit
+
+
 def entry(v: Variant, hw: Hardware, device: str = "auto", ctx: int = 8192) -> dict:
     """Everything an interface shows about one variant on this machine."""
     dev = "cuda" if device in ("auto", "cuda") and hw.gpu else "cpu"
@@ -343,7 +378,7 @@ def entry(v: Variant, hw: Hardware, device: str = "auto", ctx: int = 8192) -> di
             "family": fam["id"], "family_name": fam["name"], "vendor": v.model.get("vendor", fam["vendor"]),
             "license": v.model.get("license", fam["license"]), "local": bool(v.model.get("local")),
             "file": os.path.basename(v.file), "added": bool(v.model.get("local")) and v.file in config.load()["local_models"],
-            "default": v.quant == v.model["default_quant"], "tier": v.model["tier"],
+            "default": v.quant == preferred_quant(v.model, hw, device, ctx), "tier": v.model["tier"],
             "params_b": v.model["params_b"], "active_b": v.model["active_b"],
             "reason_ahead": v.model["reason_ahead"], "bytes": v.bytes, "installed": bool(path),
             "path": path, **e}
@@ -353,12 +388,13 @@ def recommend(entries: list[dict]) -> str | None:
     """The MAFDET experience: the largest model that reasons ahead, at its default quantization,
     whose answer comes within a comfortable wait.
 
-    Preference: all on the GPU and under 8 s after Enter; then anything under 15 s; then the
-    fastest that fits at all.
+    Preference: (nearly) all on the GPU and under 8 s after Enter; then anything under 15 s; then the
+    fastest that fits at all. Nearly: a layer or two on the CPU (a busier desktop) costs a 4B on the
+    RTX 2060 about a second, less than falling back to a model half its size.
     """
     pool = [e for e in entries if e["default"] and e["reason_ahead"] and e["placement"] != "too_big"
             and e["with_mafdet_s"] is not None and not e["local"]]
-    for ok in (lambda e: e["placement"] == "gpu" and e["with_mafdet_s"] <= 8,
+    for ok in (lambda e: e["gpu_share"] >= 0.9 and e["with_mafdet_s"] <= 8,
                lambda e: e["with_mafdet_s"] <= 15):
         good = [e for e in pool if ok(e)]
         if good:

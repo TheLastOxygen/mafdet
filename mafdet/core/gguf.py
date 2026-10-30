@@ -58,8 +58,9 @@ class Reader:
 
 def read(path: str | Path) -> dict:
     """The metadata (strings and numbers; the vocabulary left out) and the tensors' parameter counts:
-    {"meta": {...}, "params": n, "expert_params": n}. Expert tensors (mixture of experts) are counted
-    apart: only some of them work for each token."""
+    {"meta": {...}, "params": n, "expert_params": n, "embd_params": n, "output": bool}. Expert tensors (mixture of
+    experts) are counted apart: only some of them work for each token. The token embeddings stay on the
+    CPU in llama.cpp, unless there is no output layer of its own (it shares them, and takes them to the GPU)."""
     with open(path, "rb") as f, mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as buf:
         r = Reader(buf)
         if bytes(buf[:4]) != MAGIC:
@@ -75,7 +76,8 @@ def read(path: str | Path) -> dict:
             v = r.value(r.scalar("I"), keep_arrays=key.startswith(meta.get("general.architecture", "\0")))
             if v is not None:
                 meta[key] = v
-        params = experts = 0
+        params = experts = embd = 0
+        output = False
         for _ in range(n_tensors):
             name = r.string()
             dims = [r.scalar("Q") for _ in range(r.scalar("I"))]
@@ -84,7 +86,10 @@ def read(path: str | Path) -> dict:
             params += n
             if "_exps" in name:
                 experts += n
-    return {"meta": meta, "params": params, "expert_params": experts}
+            if name == "token_embd.weight":
+                embd = n
+            output = output or name == "output.weight"
+    return {"meta": meta, "params": params, "expert_params": experts, "embd_params": embd, "output": output}
 
 
 def shards(path: str | Path) -> list[Path]:

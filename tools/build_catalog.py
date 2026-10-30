@@ -28,6 +28,9 @@ QUANTS = ["Q4_K_M", "Q5_K_M", "Q6_K", "Q8_0"]
 
 # id, name, family, GGUF repo, file stem ({stem}-{quant}.gguf), tokenizer repo, params (B), active (B),
 # tier, extras. reasoning_tokens: a typical reasoning on a word problem (measured: 4B ~900, 14B ~500).
+# fit: a smaller quantization (quant, repo) the app picks where the default one does not fit all in VRAM
+# (14B IQ4_XS: same answers, +8-31% on the RTX 4070 SUPER, +11% split with the CPU on the RTX 2060; see
+# research/LOG.md). Not on the 4B: there it lost an answer and gained 4%.
 MODELS = [
     ("qwen3-0.6b", "Qwen3 0.6B", "qwen3", "Qwen/Qwen3-0.6B-GGUF", "Qwen3-0.6B", "Qwen/Qwen3-0.6B", 0.6, 0.6, "tiny",
      {"reasoning_tokens": 1100}),
@@ -38,7 +41,7 @@ MODELS = [
     ("qwen3-8b", "Qwen3 8B", "qwen3", "Qwen/Qwen3-8B-GGUF", "Qwen3-8B", "Qwen/Qwen3-8B", 8.2, 8.2, "strong",
      {"reasoning_tokens": 700}),
     ("qwen3-14b", "Qwen3 14B", "qwen3", "Qwen/Qwen3-14B-GGUF", "Qwen3-14B", "Qwen/Qwen3-14B", 14.8, 14.8, "very_strong",
-     {"reasoning_tokens": 500}),
+     {"reasoning_tokens": 500, "fit": ("IQ4_XS", "unsloth/Qwen3-14B-GGUF")}),
     ("qwen3-30b-a3b", "Qwen3 30B-A3B", "qwen3", "Qwen/Qwen3-30B-A3B-GGUF", "Qwen3-30B-A3B", "Qwen/Qwen3-30B-A3B",
      30.5, 3.3, "moe", {"reasoning_tokens": 600}),
     ("qwen3-32b", "Qwen3 32B", "qwen3", "Qwen/Qwen3-32B-GGUF", "Qwen3-32B", "Qwen/Qwen3-32B", 32.8, 32.8, "best",
@@ -73,12 +76,17 @@ MODELS = [
 
 
 def shape(tokenizer_repo: str) -> dict:
-    """Layers, KV heads and head size from the model's config.json (text part of multimodal ones)."""
+    """Layers, KV heads and head size from the model's config.json (text part of multimodal ones), and the
+    token embeddings llama.cpp keeps on the CPU: all of them, unless the output layer shares them (then
+    they go to the GPU with it). Generating reads one row of them per token, so they cost RAM, not time."""
     cfg = json.loads(Path(hf_hub_download(tokenizer_repo, "config.json")).read_text(encoding="utf-8"))
     c = cfg.get("text_config", cfg)
     heads = c["num_attention_heads"]
+    # Gemma 3 and Mistral Small 3.2 leave it out: transformers' default for their class (Gemma ties them).
+    tied = c.get("tie_word_embeddings", cfg.get("tie_word_embeddings", c.get("model_type", "").startswith("gemma")))
     return {"layers": c["num_hidden_layers"], "kv_heads": c.get("num_key_value_heads", heads),
-            "head_dim": c.get("head_dim") or c["hidden_size"] // heads}
+            "head_dim": c.get("head_dim") or c["hidden_size"] // heads,
+            "cpu_embd_b": 0.0 if tied else round(c["vocab_size"] * c["hidden_size"] / 1e9, 4)}
 
 
 def main():
@@ -94,13 +102,18 @@ def main():
                 if f in files:
                     variants.append({"quant": q, "repo": repo, "file": f, "bytes": files[f]})
                     break
+        fit = extra.get("fit")
+        if fit:
+            fit_files = {x.rfilename: x.size for x in api.model_info(fit[1], files_metadata=True).siblings}
+            f = f"{stem}-{fit[0]}.gguf"
+            variants.append({"quant": fit[0], "repo": fit[1], "file": f, "bytes": fit_files[f]})
         default = "Q4_K_M" if any(v["quant"] == "Q4_K_M" for v in variants) else variants[0]["quant"]
         if mid in ("qwen3-0.6b", "qwen3-1.7b"):
             default = "Q8_0"                       # the only quantization of the official repositories
         model = {"id": mid, "name": name, "family": fam, "tokenizer": tok, "params_b": params, "active_b": active,
                  **shape(tok), "reason_ahead": fams[fam]["reason_ahead"], "tier": tier, "default_quant": default,
-                 "variants": variants}
-        model.update({k: v for k, v in extra.items()})
+                 **({"fit_quant": fit[0]} if fit else {}), "variants": variants}
+        model.update({k: v for k, v in extra.items() if k != "fit"})
         out["models"].append(model)
         print(f"{mid:20s} {len(variants)} variants, {model['layers']} layers, {model['kv_heads']} KV heads")
     path = Path(__file__).resolve().parents[1] / "mafdet" / "catalog.json"

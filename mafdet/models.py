@@ -4,7 +4,7 @@ mafdet models: the catalog in the terminal, with what each model does on this ma
     mafdet models                        # one row per model, at its recommended quantization
     mafdet models --family gemma         # one family
     mafdet models --all                  # every quantization
-    mafdet models --download qwen3-4b    # download one (its default quantization, or qwen3-4b:Q8_0)
+    mafdet models --download qwen3-4b    # download one (the quantization shown for this machine, or qwen3-4b:Q8_0)
     mafdet models --download unsloth/Qwen3-4B-GGUF:Qwen3-4B-UD-Q4_K_XL.gguf   # any GGUF on Hugging Face
 """
 from __future__ import annotations
@@ -80,6 +80,8 @@ def download(console: Console, variant_id: str) -> int:
         task = TaskManager().start("download", variant_id, lambda t: hub.download(repo, file, t))
         return 0 if follow(task, console) else 1
     v = catalog.find(variant_id)
+    if v is not None and ":" not in variant_id:    # a bare model id: the quantization the list shows here
+        v = catalog.find(f"{v.model['id']}:{catalog.preferred_quant(v.model, hardware.detect())}") or v
     if v is None:
         console.print(f"[red]Unknown model {variant_id}[/]: see `mafdet models --all`.")
         return 1

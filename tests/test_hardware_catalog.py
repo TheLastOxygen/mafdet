@@ -84,6 +84,56 @@ def test_recommendation():
     assert catalog.recommend(entries) == "qwen3-0.6b:Q8_0"
 
 
+def rtx_4070_super(used_mb: int = 1120) -> Hardware:
+    """RTX 4070 SUPER 12 GB, i5-14600KF, 32 GB DDR5: the third machine of research/LOG.md."""
+    return Hardware(os="Windows 11", system="windows", arch="amd64", cpu="Intel(R) Core(TM) i5-14600KF",
+                    cores=14, threads=20, ram_mb=32609, ram_free_mb=20000, ram_bandwidth_gbs=28,
+                    gpus=[GPU("NVIDIA GeForce RTX 4070 SUPER", 12282, used_mb, "", 504, True)])
+
+
+@pytest.mark.parametrize("variant,decode,prefill", [
+    ("qwen3-4b:Q4_K_M", 129.8, 7441),
+    ("qwen3-14b:Q4_K_M", 40.9, 2486),         # all on the GPU: the embeddings (417 MiB) stay in RAM
+])
+def test_estimates_on_ada(variant, decode, prefill):
+    e = catalog.estimate(catalog.find(variant), rtx_4070_super())
+    assert e["placement"] == "gpu"
+    assert e["decode_tps"] == pytest.approx(decode, rel=0.2)
+    assert e["prefill_tps"] == pytest.approx(prefill, rel=0.2)
+
+
+def test_split_follows_llama_fit():
+    """llama.cpp's --fit, measured on the 4070 SUPER with a larger margin standing in for a busier card:
+    36 and 24 of the 14B's 41 layers (40 and the output) on the GPU."""
+    for used, layers in ((1120 + 1476, 36), (1120 + 3976, 24)):
+        share = catalog.estimate(catalog.find("qwen3-14b"), rtx_4070_super(used))["gpu_share"]
+        assert abs(share * 40 - layers) <= 1.5
+
+
+def test_smaller_quant_where_the_default_does_not_fit():
+    m = catalog.find("qwen3-14b").model
+    assert catalog.preferred_quant(m, rtx_4070_super(1120)) == "Q4_K_M"       # fits: the default
+    assert catalog.preferred_quant(m, rtx_4070_super(1900)) == "IQ4_XS"       # a busier desktop
+    assert catalog.preferred_quant(m, reference_pc()) == "IQ4_XS"             # split with the CPU
+    assert catalog.preferred_quant(m, reference_pc(gpu=False)) == "Q4_K_M"    # CPU only
+    assert catalog.preferred_quant(catalog.find("qwen3-4b").model, reference_pc()) == "Q4_K_M"
+    entries = [catalog.entry(v, reference_pc()) for v in catalog.variants()]
+    assert [e["quant"] for e in entries if e["model_id"] == "qwen3-14b" and e["default"]] == ["IQ4_XS"]
+
+
+def test_recommendation_on_a_12_gb_card():
+    entries = [catalog.entry(v, rtx_4070_super()) for v in catalog.variants()]
+    assert catalog.recommend(entries) == "qwen3-14b:Q4_K_M"
+
+
+def test_recommendation_with_a_busier_desktop():
+    """1.4 GB taken on the 2060: a layer of the 4B on the CPU, still the 4B rather than the 1.7B."""
+    hw = reference_pc()
+    hw.gpus[0].vram_used_mb = 1400
+    entries = [catalog.entry(v, hw) for v in catalog.variants()]
+    assert catalog.recommend(entries) == "qwen3-4b:Q4_K_M"
+
+
 def test_waits_shorter_with_reasoning_ahead():
     w = catalog.waits(catalog.find("qwen3-4b").model, 87)
     assert 0 < w["with_mafdet_s"] < w["without_s"]
