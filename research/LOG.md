@@ -46,15 +46,15 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
      with ~1.4 GB taken): check `VRAM_RESERVE_MB` there with the server log's `common_params_fit_impl` lines
      (projected use against free memory) next time the 2060 runs anything.
 
-1. **Put more of the 14B on the GPU** (configuration only, ~1 hour of measurements). Measure decode tok/s
-   and wait after Enter with `research/thinking_ahead.py --gguf Qwen/Qwen3-14B-GGUF:Qwen3-14B-Q4_K_M.gguf
-   --max-tokens 1800 --warm-up --problems 0,4 --config "name=--llama-args='...'"`:
-   - KV cache quantized: `-ctk q8_0 -ctv q8_0` (frees ~0.6 GB at ctx 8192: a few more layers on the GPU)
-   - smaller quantizations of the 14B: IQ4_XS, Q3_K_M (more layers on the GPU; check accuracy)
-   - tensor placement instead of layer split: `-ot` (override-tensor) to keep attention on the GPU and
-     put part of the FFN weights on the CPU
-   - CPU threads (`-t`), batch sizes
-   Then: if one wins, make it the app's default for models larger than the VRAM (catalog / chat.py).
+1. **Put more of the 14B on the GPU: done on a simulated 6 GB budget (2026-10-31, below), in the app.** A model
+   split with the CPU now gets IQ4_XS (14B) and a q8_0 KV cache: 24/24, mean wait 34.0 → 21.1 s. Left:
+   - confirm on the RTX 2060 itself: `research/thinking_ahead.py` on the 24 problems with the app's defaults
+     (the KV choice is automatic there) against `--llama-args='-ctk f16 -ctv f16'` with the Q4_K_M; this machine's
+     CPU and RAM run the split twice as fast as the 2060's (10 against 5 tok/s), the ratios should hold. Then the
+     README's 14B row (47 s) and "Reasoning ahead for models larger than the VRAM" in the Roadmap.
+   - threads (`-t`) and batch sizes: not measured, they depend on the CPU (the 2060's i5-10400 has 6 cores, this
+     one 6+8): only on the 2060.
+   - FFNs on the CPU (`-ngl all -ncffn N`) lost in the chat (below): keep it in mind only for long contexts.
 
 2. **Activation sparsity on dense models (the "mathematical trick"), feasibility study first.**
    Idea: in a dense model most FFN neurons contribute almost nothing for a given token. Training-free
@@ -110,6 +110,29 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
 
 ## Done and measured
 
+- **2026-10-31 · Qwen3-14B on a 6 GB budget: IQ4_XS and a q8_0 KV cache, wait after Enter 34.0 → 21.1 s, 24/24.**
+  On the 4070 SUPER, `-fitt 7100` leaves the 14B Q4_K_M 15/41 layers in 3903 MiB, as on the 2060 with the
+  desktop's 1.4 GB; every configuration kept within that VRAM (`research/split_14b.py`, two alternated rounds,
+  `split_14b_4070s.json` and `_b.json`). Prefill tok/s / decode tok/s after a short prompt / after 1607 tokens,
+  mean of all rounds:
+  - layers (today's app): 583 / 10.4 / 9.2. With q8_0 KV: 16/41 layers, 626 / 10.8 / 9.4.
+  - FFNs on the CPU, attention and KV of every layer on the GPU (`-ngl all -ncffn 38`; llama.cpp's fit does not
+    do this by itself, with `-ngl all` it ignores its target): 660 / 9.1 / 9.1; with q8_0 KV (`-ncffn 34`) 718 /
+    10.0 / 9.9. Its decode does not drop with the context, the layer split's does.
+  - IQ4_XS layers: 16/41, 680 / 11.7 / 10.3; with q8_0 KV 18/41, 728 / 12.4 / 10.8.
+  - IQ4_XS, FFNs on the CPU, q8_0 KV (`-ncffn 32`): 838 / 11.9 / 11.7: best on the long prompt.
+  In the chat (`thinking_ahead.py`, 6 problems, --warm-up, --max-tokens 1800, `split_14b_4070s_chat.json`): layers
+  6/6, mean 27.5 s, median 26.0 s, 9.9 tok/s; IQ4_XS FFNs on the CPU q8_0 6/6, 21.8 / 17.0 s, 11.9 tok/s; IQ4_XS
+  layers q8_0 6/6, 17.1 / 14.7 s, 12.2 tok/s. The chat's context (~1000 tokens) is too short for the FFN split
+  to pay, and it needs the app to place tensors by hand: not adopted. All 24 problems
+  (`split_14b_4070s_chat24.json`): IQ4_XS layers q8_0 24/24, mean **21.1 s**, median 18.4 s, 519 reasoning tokens
+  (271 ahead), 12.1 tok/s; Q4_K_M layers 24/24, 34.0 / 31.5 s, 578 tokens (252 ahead), 9.8 tok/s; faster in 21
+  of 24. Problem 19 right in every run here (it was wrong with reasoning ahead on the 2060's 14B).
+  In the app: `LlamaServer` adds `-ctk q8_0 -ctv q8_0` when `catalog.splits_with_cpu` (the catalog's estimate on
+  the GGUF's header and the VRAM free at that moment) says the model will not fit all in VRAM, unless the
+  options given by hand set the cache type; checked in the server log (Qwen3-4B, 612 MiB of KV instead of 1152;
+  with `-ctk f16 -ctv f16` given, f16). IQ4_XS for the 14B came the day before (`fit_quant`). Not on Apple
+  Silicon (unified memory, unmeasured) nor the CPU build.
 - **2026-10-30 · The catalog's estimate follows llama.cpp's fit; the 14B's IQ4_XS where its Q4_K_M does not fit.**
   Measured on the 4070 SUPER with the server log (`-lv 4`): `--fit` projects model + KV cache + compute buffers
   (14B: 8162 + 1280 + 150 = 9591 MiB) and keeps 1024 MiB free (its default `--fit-target`); the CUDA context takes
