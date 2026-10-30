@@ -57,7 +57,10 @@ CONFIGS = {"no ahead": ["--ahead", "0"], "reason ahead": []}
 
 def correct(answer: str, expect: list[str]) -> bool:
     tail = answer[-250:].replace("{,}", ",")       # LaTeX decimal comma: 10{,}8
-    return any(re.search(rf"(?<![\d,.]){re.escape(e)}(?![\d])", tail) for e in expect)
+    # Trailing zeros after the decimal separator are the same number ("22,50 euro" for 22,5); after an
+    # integer they are not (80 for 8).
+    return any(re.search(rf"(?<![\d,.]){re.escape(e)}{'0*' if re.search(r'[,.]', e) else ''}(?!\d)", tail)
+               for e in expect)
 
 
 def wait(c, t=1800):
