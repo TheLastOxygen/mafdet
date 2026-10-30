@@ -22,8 +22,8 @@ It gets hot under long runs (thermal pressure Heavy after ~25 min of the 4B benc
 Third machine (since 2026-10-26): RTX 4070 SUPER 12 GB (504 GB/s, ~1.9 GB taken by the desktop), i5-14600KF (14 cores),
 32 GB DDR (~28 GB/s by `doctor`), Windows 11, llama.cpp b11747 CUDA 13. Its C: has 3 GB free: everything is on E:,
 `MAFDET_HOME=E:/mafdet-home HF_HOME=E:/hf-cache` in front of every command (the app itself would still use C:).
-Qwen3-14B Q4_K_M goes all on the GPU here (41 tok/s); the catalog says 95% and 23.8 tok/s and recommends the 8B: wrong,
-see "Done and measured".
+Qwen3-14B Q4_K_M goes all on the GPU here (41 tok/s); the catalog now says the same (39 tok/s) and recommends it
+(2026-10-30, "Done and measured").
 
 AMD Radeon (since 2026-10-26): supported through llama.cpp's Vulkan build, no Radeon here to measure on. The README
 asks for volunteers ("Help wanted: benchmarks on an AMD Radeon"): `mafdet doctor`, Measure, and
@@ -37,22 +37,14 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
 
 ## Next
 
-0. **IQ4_XS as the default quantization, and the estimate fixed** (from the 4070 SUPER results below).
-   - **Done on both cards: Q4_K_M stays the default, IQ4_XS becomes a second variant where the model does not fit.**
-     4070 SUPER (below): not worth it on the 4B (+4%, 26/28 against 28/28); on the 14B +8% in the chat with the same
-     24/24, plus 830 MB of VRAM. RTX 2060 (2026-10-27, below): 4B same accuracy, decode 84 vs 86 tok/s, wait after
-     Enter a bit longer; 14B (split with the CPU) +11% decode, 2 more layers on the GPU, mean wait 63.5 → 43.4 s. So
-     the pick depends on the card and on the split. To do: the 14B IQ4_XS as a second variant in
-     `tools/build_catalog.py` (unsloth's repo), picked where the Q4_K_M does not fit in VRAM or leaves under 1 GB free.
+0. **IQ4_XS where the 14B does not fit, and the estimate fixed: done (2026-10-30, below).** Left from it:
    - **Problem 19 on the 2060's 14B** (below): wrong with reasoning ahead in 2 of 2 runs (one per quantization),
      right without it in 2 of 2, right with it on the 4070 SUPER and the M2 Pro. Rows keep only the answer's tail:
      save the reasoning of that problem and read where the numbers that are not in the text (38 motorbikes,
      84 wheels) come from, before calling it a limit of reasoning ahead on slow models.
-   - `catalog.estimate`: llama.cpp's fit keeps the token embeddings on the CPU always (417 MB on the 14B, counted as
-     GPU bytes today), its reserve is smaller than VRAM_RESERVE_MB (it left 800 MB free of 12.3 GB with the 14B
-     loaded), and GPU_EFFICIENCY is 0.66-0.78 on Ada (0.62 on the 2060). As it is, the catalog puts the 14B at 95%
-     and 23.8 tok/s on a 12 GB card and recommends the 8B; measured 41 tok/s, 4-5 s after Enter. Fix the placement
-     first, then the efficiency per GPU generation if the measurements justify it.
+   - the 2060's numbers under the new estimate are 1-2 layers short of the measured split (14/40 against 15/41
+     with ~1.4 GB taken): check `VRAM_RESERVE_MB` there with the server log's `common_params_fit_impl` lines
+     (projected use against free memory) next time the 2060 runs anything.
 
 1. **Put more of the 14B on the GPU** (configuration only, ~1 hour of measurements). Measure decode tok/s
    and wait after Enter with `research/thinking_ahead.py --gguf Qwen/Qwen3-14B-GGUF:Qwen3-14B-Q4_K_M.gguf
@@ -118,6 +110,27 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
 
 ## Done and measured
 
+- **2026-10-30 · The catalog's estimate follows llama.cpp's fit; the 14B's IQ4_XS where its Q4_K_M does not fit.**
+  Measured on the 4070 SUPER with the server log (`-lv 4`): `--fit` projects model + KV cache + compute buffers
+  (14B: 8162 + 1280 + 150 = 9591 MiB) and keeps 1024 MiB free (its default `--fit-target`); the CUDA context takes
+  ~100 MiB more than nvidia-smi counts. Simulating a busier card with `-fitt 2500` and `-fitt 5000`: 36/41 and 24/41
+  layers, ~232 MiB per layer with its KV. The token embeddings stay in RAM (`CPU_Mapped`) unless the output layer
+  shares them (Qwen3 0.6-4B, Llama 3.2, Gemma 3, Phi-4-mini do, and keep them on the GPU); generating reads one row
+  of them, so they cost RAM, not time. Changes: `cpu_embd_b` per model (from config.json; from the tensors for files
+  of your own), not counted against VRAM nor in the decode time; `VRAM_RESERVE_MB` 900 → 1300 (it was not the
+  reserve that was too large but the embeddings counted on the GPU); `GPU_EFFICIENCY` unchanged: without the
+  embeddings, K-quants read 0.60-0.65 of the bandwidth on both the 2060 and the 4070 SUPER (the 0.66-0.78 noted
+  before was the embeddings and IQ4_XS); prefill on Ada 0.125e12 FLOPS per GB/s (Turing 0.051e12). Estimate against
+  measured: 2060 4B 89.6 / 87.1 tok/s, 8B 17.0 / 16.2, 14B 5.0 / 4.9; 4070 SUPER 4B 134 / 130 (prefill 7875 / 7441),
+  14B all on the GPU 39.3 / 40.9 (prefill 2128 / 2486); M2 Pro 4B 53 / 54, 14B 15.6 / 18. The 4070 SUPER now
+  recommends the 14B (was the 8B). The 1.9 GB of desktop noted on 2026-10-26 cannot have been taken when the 14B
+  loaded 41/41 (fit would have dropped layers): today 1.1 GB, and fit leaves 1477 MiB free.
+  `fit_quant` in the catalog (14B: IQ4_XS from unsloth's repo) is what the app offers on a GPU where the default
+  does not fit all in VRAM (`catalog.preferred_quant`; the CPU-only build keeps Q4_K_M); `mafdet models --download
+  qwen3-14b` follows it. `recommend` takes "all on the GPU" as 90% or more: on the 2060 with 1.4 GB taken the 4B
+  has one layer on the CPU (4.8 s instead of 4.0) and the pick fell to the 1.7B.
+  `tests/test_local_models.py::test_files_of_your_own` fails on Windows before and after this change (paths
+  against file names), not looked into.
 - **2026-10-28 · First Radeon: RX 5700 XT (8 GB, 448 GB/s), Qwen3-4B Q4_K_M, Vulkan, from issue #1.** Sent by
   a volunteer: Ryzen 5 3600, 16 GB, Windows 11, driver 31.0.23013.1023, llama.cpp b11747. Measure: decode 69 tok/s,
   prefill **93 tok/s**. `thinking_ahead.py`, 24 problems (`thinking_ahead_4b_rx5700xt.json`): no ahead 24/24,
