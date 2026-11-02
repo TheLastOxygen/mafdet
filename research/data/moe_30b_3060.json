@@ -1,0 +1,134 @@
+[
+ {
+  "round": 0,
+  "config": "fit",
+  "args": "",
+  "vram_used_mib": 10879,
+  "expert_layers_on_cpu": 24,
+  "prefill_tps": 508,
+  "decode_short_tps": 33.81,
+  "long_prompt_tokens": 1607,
+  "decode_long_tps": 37.21
+ },
+ {
+  "round": 0,
+  "config": "fit kv8",
+  "args": "-ctk q8_0 -ctv q8_0",
+  "vram_used_mib": 10879,
+  "expert_layers_on_cpu": 24,
+  "prefill_tps": 524,
+  "decode_short_tps": 33.9,
+  "long_prompt_tokens": 1607,
+  "decode_long_tps": 37.51
+ },
+ {
+  "round": 0,
+  "config": "fitt 256",
+  "args": "-fitt 256",
+  "vram_used_mib": 11575,
+  "expert_layers_on_cpu": 22,
+  "prefill_tps": 570,
+  "decode_short_tps": 37.15,
+  "long_prompt_tokens": 1607,
+  "decode_long_tps": 39.76
+ },
+ {
+  "round": 0,
+  "config": "fitt 256 kv8",
+  "args": "-fitt 256 -ctk q8_0 -ctv q8_0",
+  "vram_used_mib": 11574,
+  "expert_layers_on_cpu": 22,
+  "prefill_tps": 567,
+  "decode_short_tps": 37.31,
+  "long_prompt_tokens": 1607,
+  "decode_long_tps": 39.72
+ },
+ {
+  "round": 0,
+  "config": "ncmoe 21",
+  "args": "-fit off -ngl all -ncmoe 21",
+  "vram_used_mib": 11471,
+  "expert_layers_on_cpu": 21,
+  "prefill_tps": 519,
+  "decode_short_tps": 38.31,
+  "long_prompt_tokens": 1607,
+  "decode_long_tps": 39.02
+ },
+ {
+  "round": 0,
+  "config": "ncmoe 20 kv8",
+  "args": "-fit off -ngl all -ncmoe 20 -ctk q8_0 -ctv q8_0",
+  "vram_used_mib": 11763,
+  "expert_layers_on_cpu": 20,
+  "prefill_tps": 532,
+  "decode_short_tps": 39.62,
+  "long_prompt_tokens": 1607,
+  "decode_long_tps": 40.62
+ },
+ {
+  "round": 1,
+  "config": "fit",
+  "args": "",
+  "vram_used_mib": 10861,
+  "expert_layers_on_cpu": 24,
+  "prefill_tps": 527,
+  "decode_short_tps": 33.68,
+  "long_prompt_tokens": 1607,
+  "decode_long_tps": 37.66
+ },
+ {
+  "round": 1,
+  "config": "fit kv8",
+  "args": "-ctk q8_0 -ctv q8_0",
+  "vram_used_mib": 10861,
+  "expert_layers_on_cpu": 24,
+  "prefill_tps": 532,
+  "decode_short_tps": 33.7,
+  "long_prompt_tokens": 1607,
+  "decode_long_tps": 37.65
+ },
+ {
+  "round": 1,
+  "config": "fitt 256",
+  "args": "-fitt 256",
+  "vram_used_mib": 11557,
+  "expert_layers_on_cpu": 22,
+  "prefill_tps": 568,
+  "decode_short_tps": 36.83,
+  "long_prompt_tokens": 1607,
+  "decode_long_tps": 39.84
+ },
+ {
+  "round": 1,
+  "config": "fitt 256 kv8",
+  "args": "-fitt 256 -ctk q8_0 -ctv q8_0",
+  "vram_used_mib": 11553,
+  "expert_layers_on_cpu": 22,
+  "prefill_tps": 555,
+  "decode_short_tps": 36.67,
+  "long_prompt_tokens": 1607,
+  "decode_long_tps": 39.75
+ },
+ {
+  "round": 1,
+  "config": "ncmoe 21",
+  "args": "-fit off -ngl all -ncmoe 21",
+  "vram_used_mib": 11658,
+  "expert_layers_on_cpu": 21,
+  "prefill_tps": 462,
+  "decode_short_tps": 31.31,
+  "long_prompt_tokens": 1607,
+  "decode_long_tps": 34.07
+ },
+ {
+  "round": 1,
+  "config": "ncmoe 20 kv8",
+  "args": "-fit off -ngl all -ncmoe 20 -ctk q8_0 -ctv q8_0",
+  "vram_used_mib": 11960,
+  "expert_layers_on_cpu": 20,
+  "prefill_tps": 528,
+  "decode_short_tps": 39.51,
+  "long_prompt_tokens": 1607,
+  "decode_long_tps": 39.42
+ }
+]

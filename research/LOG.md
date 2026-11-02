@@ -25,6 +25,11 @@ Third machine (since 2026-10-26): RTX 4070 SUPER 12 GB (504 GB/s, ~1.9 GB taken 
 Qwen3-14B Q4_K_M goes all on the GPU here (41 tok/s); the catalog now says the same (39 tok/s) and recommends it
 (2026-10-30, "Done and measured").
 
+Fourth machine (since 2026-11-02): RTX 3060 12 GB (360 GB/s, Ampere, ~0.8 GB taken by the desktop), i5-12400F
+(6 cores, 12 threads), 16 GB DDR4 (~29 GB/s by `doctor`), Windows 11, llama.cpp b11747 CUDA 13 in ~/.mafdet/llama.cpp,
+`.venv` on Python 3.14. The whole 12 GB used: the 14B all on the GPU (35 tok/s), Qwen3-30B-A3B with its experts
+split with the CPU (39.5 tok/s, 11.8-12.0 GB in use), see "Done and measured" (2026-11-02).
+
 AMD Radeon (since 2026-10-26): supported through llama.cpp's Vulkan build, no Radeon here to measure on. The README
 asks for volunteers ("Help wanted: benchmarks on an AMD Radeon"): `mafdet doctor`, Measure, and
 `research/thinking_ahead.py radeon_4b.json`, sent as an issue. First one in (issue #1, 2026-10-28): RX 5700 XT,
@@ -108,7 +113,55 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
    - reasoning ahead beyond Qwen3 (each reasoning model's frame must be measured); MiniCPM, newer Qwen
      and Gemma were asked for on Reddit
 
+7. **RTX 3060 follow-ups (2026-11-02, above).**
+   - The catalog on Ampere: a prefill coefficient between Turing's and Ada's (~0.08e12 from the 3060's 4B and 8B),
+     and decode on the 8B/14B 20-26% low; one card only, check on a second Ampere before changing
+     GPU_EFFICIENCY.
+   - The catalog's MoE estimate: with the experts in RAM (what llama.cpp's fit does) the 30B-A3B is all-GPU except
+     the experts, ~34 tok/s here, not 27 at 54%.
+   - A MoE split with the CPU: a smaller fit target (`-fitt 256`: +9%) or `-ncmoe` sized from the free VRAM (+17%)
+     in `LlamaServer`; why the fit ignores the room freed by a q8_0 KV cache; the 30B-A3B's IQ4_XS (unsloth).
+   - The README: a "RTX 3060 12 GB" row (4B, 14B, 30B-A3B) when the user wants these numbers there.
+
 ## Done and measured
+
+- **2026-11-02 · RTX 3060 12 GB (Ampere), the whole VRAM: the 14B all on the GPU, the 30B-A3B at 39.5 tok/s with
+  its experts in RAM; reasoning ahead 20.2 → 7.0 s (14B) and 18.9 → 7.3 s (30B-A3B).** New machine (see Where we
+  are). Measure-style (`research/measure_gguf.py`, two rounds for the 14B, identical to ±2 tok/s), prefill / decode
+  tok/s, against the catalog's estimate here:
+  - 4B Q4_K_M 37/37: **3356 / 98.8** (estimate 2295 / 96.0); 8B Q4_K_M 37/37: **2010 / 62.0** (1120 / 51.6).
+  - 14B Q4_K_M 41/41: **1120 / 35.4** (620 / 28.1); IQ4_XS 41/41: **1240 / 39.4** (620 / 31.1): +11% decode on Ampere
+    (Ada +31%, Turing +0% on the 4B).
+  - So on Ampere the catalog is low: prefill 1.5-1.8 times (GPU_PREFILL_FLOPS_PER_GBS is Turing's 0.051e12; the
+    3060 measures ~0.075-0.09e12), decode by 3% on the 4B, 20-26% on the 8B and 14B (they read 0.74-0.78 of the
+    bandwidth, the 4B 0.64). It recommends the 14B here, which is right.
+  Qwen3-30B-A3B Q4_K_M (17.7 GB, 48 layers, ~3B active; `research/moe_30b.py`, new, two alternated rounds,
+  `moe_30b_3060.json`). llama.cpp's fit already does the right thing for a MoE (server log: "all MoE tensors moved
+  to system memory", then "filling dense-only layers"): attention, router and KV of all 49 layers on the GPU, the
+  experts of 24 layers on the CPU, 1 GB left free. The file does not fit in 16 GB of RAM next to the system: the
+  first prompt after loading reads the CPU's experts from disk (31-71 tok/s), so the script reads the text once
+  before measuring. VRAM in use (nvidia-smi, desktop included) / prefill / decode after a short prompt / after 1607
+  tokens, both rounds:
+  - fit (the app's default): 10.9 GB, 508-527 / **33.7** / 37.2-37.7. fit with q8_0 KV: the same VRAM and the same
+    24 expert layers on the CPU (the fit does not use the 384 MiB freed: not looked into), same speed.
+  - `-fitt 256`: 11.6 GB, 22 on the CPU, 555-570 / 36.7-37.3 / 39.7-39.8.
+  - `-fit off -ngl all -ncmoe 21`: 11.5-11.7 GB, 462-519 / 31.3-38.3 / 34.1-39.0 (one round slow: too close to full).
+  - `-fit off -ngl all -ncmoe 20 -ctk q8_0 -ctv q8_0`: 11.8-12.0 GB, 528-532 / **39.5-39.6** / 39.4-40.6: +17% over
+    the fit, the best; `-ncmoe 19` not tried (it would leave nothing for the desktop).
+  The catalog estimated 54% on the GPU, 27.3 / 611 tok/s; it counts the 30B as layers, not as experts in RAM.
+  `research/thinking_ahead.py`, 24 problems, --warm-up, --max-tokens 1800 for the 14B and the 30B (3000 for the 4B),
+  no ahead → reasoning ahead:
+  - 4B Q4_K_M (`thinking_ahead_4b_3060.json`): 24/24 both, mean **10.25 → 3.29 s**, median 8.78 → 2.26 s, 920 →
+    1102 reasoning tokens (814 ahead), 91 tok/s, faster in 24 of 24.
+  - 14B Q4_K_M, all on the GPU (`thinking_ahead_14b_3060.json`): 23/24 → 24/24, mean **20.19 → 7.03 s**, median
+    19.00 → 6.32 s, 764 → 726 tokens (500 ahead), 34.5 tok/s, faster in 23 of 24.
+  - 30B-A3B, `-ncmoe 20` and q8_0 KV (`thinking_ahead_30b_3060.json`): 23/24 → 24/24, mean **18.94 → 7.33 s**,
+    median 17.76 → 6.99 s, 791 → 602 tokens (346 ahead), 38-40 tok/s, faster in 23 of 24.
+  Both misses are problem 16 (the snail) cut at 1800 tokens with no answer, not a wrong number. Reasoning ahead
+  works on the MoE as on the dense models (first run of it on qwen3moe). Problem 19 right everywhere. The 30B-A3B
+  writes faster than the 14B and waits about the same: it reasoned less ahead (346 against 500 tokens), with less
+  room for its cache. Not adopted in the app: the hand placement (`-ncmoe`) needs the expert sizes and the free
+  VRAM, see Next, 7.
 
 - **2026-10-31 · Qwen3-14B on a 6 GB budget: IQ4_XS and a q8_0 KV cache, wait after Enter 34.0 → 21.1 s, 24/24.**
   On the 4070 SUPER, `-fitt 7100` leaves the 14B Q4_K_M 15/41 layers in 3903 MiB, as on the 2060 with the
