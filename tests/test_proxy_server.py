@@ -1,0 +1,96 @@
+"""The HTTP front door: drafts, the chat pass-through, streaming, stats, liveness."""
+import http.client
+import json
+import threading
+
+import pytest
+
+from mafdet.proxy.probe import probe
+from mafdet.proxy.server import ProxyState, make_server
+from proxy_fakes import FakeEngine
+
+MESSAGES = [{"role": "system", "content": "be brief"},
+            {"role": "user", "content": "one two three four five six seven eight nine ten"}]
+
+
+@pytest.fixture()
+def proxy():
+    engine = FakeEngine()
+    profile = probe(engine, url="http://127.0.0.1:1", model="fake-model")
+    engine.warms = 0                       # the probe's own warms don't count here
+    state = ProxyState(engine, profile, "fake-model", debounce_ms=20, min_new=4)
+    server = make_server(state, "127.0.0.1", 0)
+    port = server.server_address[1]
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield port, state, engine
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+def call(port, path, body=None, method=None):
+    conn = http.client.HTTPConnection("127.0.0.1", port, timeout=10)
+    payload = json.dumps(body).encode() if body is not None else None
+    conn.request(method or ("POST" if payload else "GET"), path, body=payload,
+                 headers={"Content-Type": "application/json"} if payload else {})
+    resp = conn.getresponse()
+    raw = resp.read()
+    conn.close()
+    return resp.status, resp.getheader("Content-Type") or "", raw
+
+
+def test_healthz(proxy):
+    port, _, _ = proxy
+    status, _, raw = call(port, "/healthz")
+    assert status == 200 and json.loads(raw)["ok"] is True
+
+
+def test_a_draft_is_accepted_and_warms_the_cache(proxy):
+    port, state, engine = proxy
+    status, _, raw = call(port, "/v1/drafts",
+                          {"conversation_id": "c1", "model": "fake-model", "messages": MESSAGES})
+    assert status == 200
+    body = json.loads(raw)
+    assert body["conversation_id"] == "c1" and body["tier"] == "T1"
+    assert body["draft_tokens"] >= 10
+    state.session("c1").flush()
+    assert engine.warms >= 1
+
+
+def test_stats_report_the_tier_and_the_audit(proxy):
+    port, state, _ = proxy
+    call(port, "/v1/drafts", {"conversation_id": "c1", "model": "fake-model", "messages": MESSAGES})
+    state.session("c1").flush()
+    status, _, raw = call(port, "/proxy/stats")
+    assert status == 200
+    stats = json.loads(raw)
+    assert stats["proxy"]["tier"] == "T1"
+    session = stats["sessions"][0]
+    assert session["conversation_id"] == "c1"
+    assert session["warms"] == 1
+    assert session["channel"] == "timings"
+
+
+def test_chat_is_passed_through(proxy):
+    port, _, engine = proxy
+    status, ctype, raw = call(port, "/v1/chat/completions",
+                              {"model": "fake-model", "messages": MESSAGES})
+    assert status == 200 and "json" in ctype
+    assert json.loads(raw)["choices"][0]["message"]["content"].startswith("echo:")
+    assert engine.chats == 1
+
+
+def test_streaming_is_relayed(proxy):
+    port, _, _ = proxy
+    status, ctype, raw = call(port, "/v1/chat/completions",
+                              {"model": "fake-model", "messages": MESSAGES, "stream": True})
+    assert status == 200 and "event-stream" in ctype
+    assert b"data: " in raw and b"[DONE]" in raw
+
+
+def test_an_unknown_route_is_a_404(proxy):
+    port, _, _ = proxy
+    status, _, _ = call(port, "/v1/nope", method="GET")
+    assert status == 404

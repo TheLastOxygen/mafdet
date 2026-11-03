@@ -5,8 +5,8 @@ thinking ahead to any front end (Open WebUI, Hermes, agents) and any engine (SGL
 others). It lives in its own module (`mafdet/proxy/`), apart from the app, and stays experimental until it
 works and is measured.
 
-Nothing is built yet. This page is the starting point: what the proxy has to do, what we already know from
-the app, and how to contribute.
+Status: reading ahead is built for llama.cpp in `mafdet/proxy/` (see its `README.md`); this
+page stays the target for the rest, and thinking ahead is not built yet.
 
 ## What it does
 
@@ -14,7 +14,9 @@ the app, and how to contribute.
    stands, debounced (a few hundred ms), to an endpoint of the proxy, e.g. `POST /v1/drafts` with
    `{conversation_id, model, messages}`. On Enter it sends the usual `POST /v1/chat/completions`.
 2. **Reading ahead (exact).** For each draft the proxy has the engine read the prompt so far, so the prefix
-   cache is warm on Enter. Any engine with prefix caching does this (a request with `max_tokens: 1`; SGLang's
+   cache is warm on Enter. Any engine with prefix caching does this (a prefill-only request:
+   `max_tokens: 0` or `n_predict: 0` where the engine accepts it, otherwise `max_tokens: 1`
+   with the token thrown away -- the proxy probes which one; SGLang's
    radix cache keeps the branches an edit leaves). The answer is the same as without the proxy.
 3. **Thinking ahead (not exact).** The proxy has the model reason on the draft, keeps that reasoning across
    edits, and on Enter tells the model the message is complete and lets it go on from there. It needs
