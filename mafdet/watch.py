@@ -7,9 +7,11 @@ slot's KV cache aligned with it: common prefix, hold-back, threshold and debounc
 rules measured by `mafdet hunt`. On Enter only the tail is left to compute,
 then the answer streams back.
 
-The whole conversation stays in the cache: after an answer the next user turn
-is appended to the tokens already there, so every turn starts where the
-previous one ended instead of rereading the history.
+The conversation stays in the cache: after an answer the next user turn is
+appended to the tokens already there, so every turn starts where the previous
+one ended instead of rereading the history. With --think the reasoning of past
+turns is dropped, as the model's chat template does: the answer is reread while
+the next message is typed, and the context lasts several times as many turns.
 
     mafdet watch                    # the window, with the model and options of these commands
     mafdet strike --no-think
@@ -299,6 +301,7 @@ class Session:
         self.ahead = getattr(args, "ahead", 0)     # mafdet strike: tokens written at a pause, before Enter
         self.think = getattr(args, "think", False)  # mafdet strike: reason ahead, keeping the notes across edits
         self.think_cap = getattr(args, "think_ahead", 0)
+        self.keep_reasoning = getattr(args, "keep_reasoning", False)   # past turns' reasoning stays in the history
         # --gatherer: a small model writes the notes (a second Session in the "gatherer" role, on
         # its own llama-server); this one, the main model, only reads them and answers.
         self.gatherer: Session | None = None
@@ -904,6 +907,25 @@ class Session:
                 gspec is None and time.perf_counter() - g.chunk_t < 0.5 and g._ahead_room()))
         return s
 
+    def _next_history(self, final: list[int], notes: list[int], answer_pre: list[int],
+                      generated: list[int]) -> list[int]:
+        """The conversation after this turn, up to the start of the next user text.
+
+        With --think the next turn starts from the message and the answer only, as Qwen3's template renders
+        past turns: their reasoning is dropped (the model is trained without it) and the context lasts many
+        more turns. The cache rereads this answer while the next message is typed.
+        """
+        written = answer_pre + generated
+        if not self.think or self.keep_reasoning:
+            sep = self.between_ids[1:] if written and written[-1] == self.end_id else self.between_ids
+            return final + generated + sep
+        out = notes + written
+        reply = out[len(out) - out[::-1].index(self.think_end):] if self.think_end in out else []
+        while reply and not self.tok.decode(reply[:1]).strip():
+            reply = reply[1:]                      # the blank lines after </think>, as the template strips them
+        reply = reply[:-1] if reply[-1:] == [self.end_id] else reply
+        return final[:len(final) - len(notes) - len(answer_pre)] + reply + self.between_ids
+
     def _split_ahead(self, tokens: list[int]) -> tuple[int, int]:
         """How many of `tokens`, written after the current prompt, are reasoning and how many answer."""
         if not self.think or self.answer_ahead:
@@ -1052,9 +1074,7 @@ class Session:
                 break
             # The answer ahead stopped at --ahead tokens: carry on from there, with the slot's cache already holding it.
             stream = Stream(self, final + generated, limit - len(generated), text)
-        written = answer_pre + generated
-        sep = self.between_ids[1:] if written and written[-1] == self.end_id else self.between_ids
-        self.history = final + generated + sep
+        self.history = self._next_history(final, notes, answer_pre, generated)
         if first is not None and "cache_n" in (first.info.get("timings") or {}):
             reused = first.info["timings"]["cache_n"]   # what the server actually reused
         reasoning = len(notes) + (self._split_ahead(generated)[0] if not answer_pre else 0)

@@ -9,6 +9,11 @@ data/thinking_ahead_4b_m2pro_fixed.json; the 14B runs use the six problems below
     python research/thinking_ahead.py out.json --config "branches 1=--branches 1" --problems 0:12
     python research/thinking_ahead.py out.json --gguf Qwen/Qwen3-14B-GGUF:Qwen3-14B-Q4_K_M.gguf         --max-tokens 1800 --warm-up --problems 0,4,6,13,19,23 --config "reason ahead="
 
+--turns N asks the problems in conversations of N turns (a new chat every N problems, or when the context
+is full), to compare the history with and without the past turns' reasoning:
+
+    python research/thinking_ahead.py out.json --turns 6 --config "drop=" --config "keep=--keep-reasoning"
+
 Runs longer than about ten minutes are better split with --problems and --append.
 """
 import argparse
@@ -83,11 +88,14 @@ def type_message(s, msg, rng):
 
 def summary(rows):
     for name in dict.fromkeys(x["config"] for x in rows):
-        r = [x for x in rows if x["config"] == name]
+        full = sum(1 for x in rows if x["config"] == name and x.get("full"))
+        r = [x for x in rows if x["config"] == name and not x.get("full")]
         line = (f"{name:12s} correct {sum(x['ok'] for x in r)}/{len(r)} | mean wait for the answer "
                 f"{sum(x['answer_ms'] for x in r) / len(r) / 1000:.2f} s, median "
                 f"{statistics.median(x['answer_ms'] for x in r) / 1000:.2f} s | reasoning "
                 f"{sum(x['think_tokens'] for x in r) / len(r):.0f} tok, {sum(x['think_ahead'] for x in r) / len(r):.0f} ahead")
+        if any(x.get("turn", 1) > 1 for x in r):
+            line += f" | context full {full} times, longest history {max(x.get('ctx', 0) for x in r)} tok"
         adopted = [x["branch"]["adopted"] for x in r if x.get("branch")]
         if adopted:
             line += f" | branch adopted: {adopted.count('exact')} exact, {adopted.count('near')} near, of {len(adopted)}"
@@ -105,6 +113,7 @@ if __name__ == "__main__":
     ap.add_argument("--max-tokens", default="3000")
     ap.add_argument("--warm-up", action="store_true", help="answer a greeting first (CUDA graphs, CPU caches)")
     ap.add_argument("--append", action="store_true")
+    ap.add_argument("--turns", type=int, default=1, help="problems per conversation (default: 1, a new chat each)")
     a = ap.parse_args()
     configs = dict(c.split("=", 1) for c in a.config) if a.config else {k: " ".join(v) for k, v in CONFIGS.items()}
     if ":" in a.problems:
@@ -121,25 +130,37 @@ if __name__ == "__main__":
         if a.warm_up:
             s.draft("Ciao")
             list(s.send("Ciao"))
-        for k in picked:
+        turn = 0
+        for i, k in enumerate(picked):
             msg, expect = PROBLEMS[k]
-            s.new_chat()
-            type_message(s, msg, random.Random(k))
-            answer, d = "", None
-            for ev in s.send(msg):
-                if ev["type"] == "token":
-                    answer += ev["text"]
-                elif ev["type"] == "done":
-                    d = ev
+            if i % a.turns == 0:
+                s.new_chat()
+                turn = 0
+            for attempt in range(2):
+                type_message(s, msg, random.Random(k))
+                answer, d = "", None
+                for ev in s.send(msg):
+                    if ev["type"] == "token":
+                        answer += ev["text"]
+                    elif ev["type"] == "done":
+                        d = ev
+                if d is not None or attempt:
+                    break
+                print(f"{name:12s} #{k:2d} context full after {turn} turns: new chat", flush=True)
+                rows.append({"config": name, "k": k, "full": True, "turn": turn})
+                s.new_chat()
+                turn = 0
+            turn += 1
             ok = correct(answer, expect)
-            rows.append({"config": name, "k": k, "ok": ok, "answer_ms": d["answer_ms"], "think_tokens": d["think_tokens"],
+            rows.append({"config": name, "k": k, "ok": ok, "turn": turn, "ctx": len(s.history),
+                         "answer_ms": d["answer_ms"], "think_tokens": d["think_tokens"],
                          "think_ahead": d["think_ahead"], "cut": d["cut"], "closed": d.get("closed", False), "tps": d["tps"],
                          "tail": answer[-160:],
                          **({"branch": d["branch"]} if "branch" in d else {})})
             b = d.get("branch")
-            print(f"{name:12s} #{k:2d} {'OK ' if ok else 'BAD'} answer after {d['answer_ms']:5d} ms | reasoning "
+            print(f"{name:12s} #{k:2d} turn {turn} {'OK ' if ok else 'BAD'} answer after {d['answer_ms']:5d} ms | reasoning "
                   f"{d['think_tokens']:4d} ({d['think_ahead']:4d} ahead){' CUT' if d['cut'] else ''}"
-                  f" | {d['tps']} tok/s"
+                  f" | {d['tps']} tok/s | history {len(s.history)} tok"
                   + (f" | branch {b['adopted'] or '-'} {b['agreement']:.2f} of {b['guesses']} guesses" if b else ""),
                   flush=True)
             json.dump(rows, open(a.out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)

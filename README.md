@@ -162,6 +162,7 @@ Reasoning ahead is **not exact**: the model reasons on intermediate versions of 
 |---|---|
 | `--no-think` | no reasoning: answer right away, and write ahead only the exact answer |
 | `--think-ahead N` | longest reasoning kept across edits (default 1024 tokens) |
+| `--keep-reasoning` | keep the reasoning of past turns in the conversation. By default only messages and answers stay, as in Qwen3's chat template: the context lasts several times as many turns (6 word problems in a row: 1,342 tokens instead of 8,015, which no longer fit in the default 8,192 by the sixth) |
 | `--ahead N` | answer tokens written ahead when the text does not change (default 512) |
 | `--branches N` | experimental: the model also guesses how you will finish the message and, on a slot of its own, reasons on the guess; if it guessed the exact message, that reasoning (and the answer, if it got that far) is ready on Enter. 1 is the measured setting, see below |
 | `--recycle` | reuse the answers written for earlier versions of the message as n-gram drafts for speculative decoding (+4% decode speed measured with natural typing, +20% on code) |

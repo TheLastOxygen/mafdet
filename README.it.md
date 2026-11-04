@@ -162,6 +162,7 @@ Il ragionamento in anticipo **non è esatto**: il modello ragiona su versioni in
 |---|---|
 | `--no-think` | niente ragionamento: risponde subito, e in anticipo scrive solo la risposta esatta |
 | `--think-ahead N` | ragionamento più lungo conservato tra una modifica e l'altra (predefinito 1024 token) |
+| `--keep-reasoning` | conserva nella conversazione il ragionamento dei turni passati. Di norma restano solo messaggi e risposte, come nel template di chat di Qwen3: il contesto dura molti più turni (6 problemi di fila: 1.342 token invece di 8.015, che al sesto non stavano più negli 8.192 predefiniti) |
 | `--ahead N` | token di risposta scritti in anticipo quando il testo non cambia (predefinito 512) |
 | `--branches N` | sperimentale: il modello prova anche a indovinare come finirai il messaggio e, su uno slot tutto suo, ragiona sulla previsione; se ha indovinato il messaggio esatto, quel ragionamento (e la risposta, se ci è arrivato) è pronto all'Invio. 1 è il valore misurato, vedi sotto |
 | `--recycle` | riusa le risposte scritte per le versioni precedenti del messaggio come bozze n-gram per la decodifica speculativa (+4% di velocità misurato con una digitazione naturale, +20% sul codice) |

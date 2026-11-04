@@ -98,15 +98,9 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
    endpoint, cancelling, and a frame measured per model family.
 
 6. Other ideas discussed, not started:
-   - **past reasoning out of the history** (2026-10-28, idea from github.com/GionaGranchelli/context-watcher, a
-     context compactor for coding agents: young repo, marketing-heavy numbers, take the idea, not the code).
-     `Session._answer` keeps notes + reasoning + answer in `self.history` (`history = final + generated + sep`),
-     so every turn starts from the cache, but the 8192-token context fills after a few problems ("no longer fits
-     in the context") and Qwen3's own template drops past reasoning (the model is trained without it). Dropping
-     the last turn's reasoning means rereading its answer and the new message, which mafdet already does while
-     the next message is typed: nearly free. To measure before adopting: conversations of 5-6 problems in a row
-     with `thinking_ahead.py`, with and without, for accuracy, wait after Enter and turns per 8192 tokens.
-     Not started on purpose (the user's call, 2026-10-28): keep it in mind.
+   - **past reasoning out of the history: done (2026-11-04, "Done and measured").** Left: the same conversations
+     on the 14B (its slower reading makes the reread answer cost more, but it happens while typing); a miss at
+     turn 6 (problem 17, 20:30 for 20:24) to watch in later multi-turn runs.
    - show the answer written ahead live under the input field (zero perceived wait; a product/UX change,
      test with people, not a benchmark)
    - harder benchmark (problems the 4B gets wrong 30-50% of the time) to see accuracy effects at all
@@ -124,6 +118,21 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
    - The README: a "RTX 3060 12 GB" row (4B, 14B, 30B-A3B) when the user wants these numbers there.
 
 ## Done and measured
+
+- **2026-11-04 · Past turns' reasoning out of the history: the context lasts, the wait does not grow.** With
+  `--think`, `Session._next_history` keeps message and answer of each turn (what follows the last </think>, its
+  leading blank lines dropped), as Qwen3's template renders past turns; the next turn's cache rereads the answer
+  while the message is typed. Checked on the 4B: the history after two turns decodes to exactly the template's
+  text. `--keep-reasoning` keeps the old behavior. `thinking_ahead.py --turns 6` (new: problems asked in
+  conversations of 6, a new chat when the context is full), Qwen3-4B on the 4070 SUPER, --warm-up, configs one
+  after the other (`history_4b_4070s.json`):
+  - drop (the new default): 23/24, mean wait **1.94 s**, median 1.41 s, 119 tok/s, longest history **1342 tokens**
+    after 6 turns, context never full.
+  - keep: 24/24, mean 2.45 s, median 2.47 s, 108 tok/s (93-91 at turns 5-6 against 121 at turn 1: attention over a
+    longer context), history 7000-8015 tokens by turn 5-6, **context full twice** at turn 6 ("Start a new chat").
+  - The miss is problem 17 at turn 6 (the clock: 20:30 for 20:24, an arithmetic slip, right in 'keep' as turn 1
+    of a new chat). One sample: not read as an effect of the shorter history.
+  On by default in the app (the setting reaches `Session` through `getattr`, False unless given).
 
 - **2026-11-02 · RTX 3060 12 GB (Ampere), the whole VRAM: the 14B all on the GPU, the 30B-A3B at 39.5 tok/s with
   its experts in RAM; reasoning ahead 20.2 → 7.0 s (14B) and 18.9 → 7.3 s (30B-A3B).** New machine (see Where we

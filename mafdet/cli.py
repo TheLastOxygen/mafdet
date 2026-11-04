@@ -298,6 +298,9 @@ def _strike_args(p):
                         "answer ahead")
     p.add_argument("--think-ahead", type=int, default=1024,
                    help="longest reasoning kept across edits of the message, in tokens (default: %(default)s)")
+    p.add_argument("--keep-reasoning", action="store_true",
+                   help="keep the reasoning of past turns in the conversation (by default only messages and "
+                        "answers stay, as in the model's chat template, and the context lasts more turns)")
     p.add_argument("--gatherer", default="",
                    help="a small model that gathers the material for the answer while you type, so the main "
                         "model only reads it: 'repo:file' or a path (e.g. Qwen/Qwen3-0.6B-GGUF:Qwen3-0.6B-Q8_0.gguf)")
