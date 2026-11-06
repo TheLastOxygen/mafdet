@@ -15,7 +15,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from .engine import Engine
 from .profile import EngineProfile
-from .session import DraftSession, SharedCache
+from .session import DraftSession, SharedCache, same_messages
 
 
 class ProxyState:
@@ -58,6 +58,50 @@ class ProxyState:
         self.side_slot = 1 if self.slots >= 2 and getattr(engine, "dialect", "") == "llama" else None
         self.counts = {"matched": 0, "unmatched": 0, "side": 0}
         self.started = 0
+        self._load_last_request()
+
+    # ---- what the last request looked like, kept across restarts --------------------------
+    def _last_request_path(self):
+        try:
+            return self.profile.path().with_suffix(".last.json")
+        except Exception:
+            return None
+
+    def _load_last_request(self) -> None:
+        """The tools, template options and system prompt of the last request, saved by an
+        earlier run: without them the first drafts after a restart miss Open WebUI's ~5.8k
+        tokens of tools, and the first message is read on Enter (4.4 s on an RTX 2060)."""
+        path = self._last_request_path()
+        try:
+            data = json.loads(path.read_text(encoding="utf-8")) if path else {}
+        except (OSError, ValueError):
+            data = {}
+        self.tools = data.get("tools")
+        self.template_kwargs = data.get("chat_template_kwargs")
+        self.system = data.get("system")
+
+    def _save_last_request(self) -> None:
+        path = self._last_request_path()
+        if path is None:
+            return
+        data = {"tools": self.tools, "chat_template_kwargs": self.template_kwargs, "system": self.system}
+        try:
+            tmp = path.with_suffix(".tmp")
+            tmp.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+            tmp.replace(path)
+        except OSError:
+            pass
+
+    def note_request(self, body: dict, messages: list[dict], matched: bool) -> None:
+        """A conversation turn went through: remember what the next drafts must carry."""
+        kwargs, tools = body.get("chat_template_kwargs"), body.get("tools")
+        system = next((m for m in messages if m.get("role") == "system"), None)
+        if system is None and not matched:
+            system = self.system                  # an unknown request without one: keep ours
+        changed = (kwargs, tools, system) != (self.template_kwargs, self.tools, self.system)
+        self.template_kwargs, self.tools, self.system = kwargs, tools, system
+        if changed:
+            self._save_last_request()
 
     def session(self, conversation_id: str) -> DraftSession:
         with self.lock:
@@ -89,6 +133,18 @@ class ProxyState:
             if sess.matches(messages):
                 return sess
         return None
+
+    def continues_unclaimed(self, messages: list[dict]) -> bool:
+        """Does this request continue the conversation no draft has named yet (a new chat
+        answered, then a follow-up suggestion clicked instead of a message typed)?"""
+        with self.lock:
+            unclaimed = self.unclaimed
+        return unclaimed is not None and same_messages(messages[:-1], unclaimed[0])
+
+    def remember_unclaimed(self, messages: list[dict], answer: str) -> None:
+        """A conversation turn no draft was for: keep it for the first id that drafts next."""
+        with self.lock:
+            self.unclaimed = (list(messages) + [{"role": "assistant", "content": answer}], time.time())
 
     def drafting(self, within: float = 600.0) -> bool:
         """Has a front end been sending drafts lately?  Only then can a request that matches
@@ -293,10 +349,12 @@ class Handler(BaseHTTPRequestHandler):
         state = self.state
         messages = body.get("messages") if isinstance(body.get("messages"), list) else []
         sess = state.match(messages)
-        # A request that matches no conversation while a front end is drafting is a side
-        # request (a title, tags, follow-ups): with a second slot it goes there and leaves
-        # the conversation's cache alone.  Anything else is a turn of the conversation.
-        side = sess is None and state.side_slot is not None and state.drafting()
+        # A side request (a title, tags, follow-ups) matches no conversation and is not
+        # streamed: Open WebUI asks for those whole, and streams every turn of the chat,
+        # including one sent by clicking a suggestion, which comes with no drafts.  With a
+        # second slot it goes there and leaves the conversation's cache alone.
+        side = (sess is None and not stream and state.side_slot is not None and state.drafting()
+                and not state.continues_unclaimed(messages))
         forward = dict(body)
         if state.exact:
             forward["cache_prompt"] = False
@@ -306,11 +364,7 @@ class Handler(BaseHTTPRequestHandler):
             state.counts["side"] += 1
         else:
             state.counts["matched" if sess is not None else "unmatched"] += 1
-            state.template_kwargs = body.get("chat_template_kwargs")
-            state.tools = body.get("tools")
-            system = next((m for m in messages if m.get("role") == "system"), None)
-            if system is not None or sess is not None:
-                state.system = system
+            state.note_request(body, messages, sess is not None)
             state.begin_generation()
         ok = False
         seen: list[bytes] = []
@@ -346,8 +400,11 @@ class Handler(BaseHTTPRequestHandler):
                 pass
         finally:
             if not side:
-                if ok and sess is not None and not state.exact:
+                if ok and not state.exact and sess is not None:
                     state.remember(sess, messages, _answer_of(seen, stream))
+                elif ok and not state.exact and stream and messages:
+                    # a turn typed nowhere the proxy saw (a suggestion clicked, another tab)
+                    state.remember_unclaimed(messages, _answer_of(seen, stream))
                 state.end_generation(body if ok else None)
 
 

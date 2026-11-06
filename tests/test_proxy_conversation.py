@@ -134,3 +134,55 @@ def test_drafts_carry_the_tools_of_the_last_request():
         assert engine.last_tools == tools
     finally:
         server.shutdown()
+
+
+def test_a_clicked_suggestion_stays_in_the_conversation_slot():
+    # Open WebUI sends a follow-up suggestion as a streamed turn with no drafts before it:
+    # it continues the conversation and must not go to the side slot.
+    server, port, state, engine = start(n_slots=2)
+    try:
+        post(port, "/v1/drafts", {"conversation_id": "new", "text": "how many apples are left"})
+        first = [SYSTEM, {"role": "user", "content": "how many apples are left"}]
+        chat(port, first, stream=True)
+        chat(port, [{"role": "user", "content": "### Task: suggest follow-ups"}])     # side, not streamed
+        assert engine.last_chat["id_slot"] == 1
+        answer = state.unclaimed[0][-1]
+        second = first + [answer, {"role": "user", "content": "And pears?"}]
+        chat(port, second, stream=True)
+        assert engine.last_chat["id_slot"] == 0
+        assert state.counts["side"] == 1
+        # and the conversation is kept for the chat's first draft
+        post(port, "/v1/drafts", {"conversation_id": "c9", "text": "and plums"})
+        assert engine.last_messages[:-1] == state.session("c9").history
+        assert engine.last_messages[-2]["role"] == "assistant"
+    finally:
+        server.shutdown()
+
+
+def test_a_streamed_request_never_goes_to_the_side_slot():
+    server, port, state, engine = start(n_slots=2)
+    try:
+        post(port, "/v1/drafts", {"conversation_id": "c1", "text": "something typed"})
+        chat(port, [{"role": "user", "content": "a turn from another tab"}], stream=True)
+        assert engine.last_chat["id_slot"] == 0
+    finally:
+        server.shutdown()
+
+
+def test_the_last_request_survives_a_restart():
+    # The first message after a restart must be read ahead with Open WebUI's tools.
+    tools = [{"type": "function", "function": {"name": "get_time", "parameters": {}}}]
+    server, port, state, engine = start()
+    try:
+        post(port, "/v1/chat/completions", {"model": "fake-model", "tools": tools,
+                                            "messages": [SYSTEM, {"role": "user", "content": "hello"}]})
+    finally:
+        server.shutdown()
+    server, port, state, engine = start()
+    try:
+        assert state.tools == tools and state.system == SYSTEM
+        post(port, "/v1/drafts", {"conversation_id": "new", "text": "what time is it"})
+        assert engine.last_tools == tools
+        assert engine.last_messages[0] == SYSTEM
+    finally:
+        server.shutdown()
