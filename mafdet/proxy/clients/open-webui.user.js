@@ -5,6 +5,8 @@
 // @description  Sends what you are typing in Open WebUI to the MAFDET proxy, so it reads ahead before Enter.
 // @match        http://localhost:8080/*
 // @match        http://127.0.0.1:8080/*
+// @match        http://localhost:3000/*
+// @match        http://127.0.0.1:3000/*
 // @grant        none
 // @run-at       document-idle
 // ==/UserScript==

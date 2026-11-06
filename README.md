@@ -150,7 +150,7 @@ Open WebUI 0.13 on an RTX 2060, Qwen3-4B, 8 conversations of 2-3 messages each w
 | first word of the answer, thinking on: `mafdet proxy` | 7.6 s | 6.3 s | 21.0 s |
 | first word of the answer, thinking on: `mafdet proxy --think-ahead` | **4.3 s** | **4.1 s** | 10.4 s |
 
-Without it, your message queues behind the title, tags and follow-ups Open WebUI asks the model for, and its 30 built-in tools (~5.8k tokens) get read again; the proxy gives those requests a slot of their own and reads your message while you type. Setup, step by step: [Open WebUI + MAFDET in 5 minutes](mafdet/proxy/clients/README.md). `http://127.0.0.1:8077/proxy` shows whether it works. Any other front end can send drafts too (`mafdet/proxy/README.md`); what is next, and how to help: [PROXY.md](PROXY.md).
+Without it, your message queues behind the title, tags and follow-ups Open WebUI asks the model for, and its 30 built-in tools (~5.8k tokens) get read again; the proxy gives those requests a slot of their own and reads your message while you type. Setup, step by step: [Open WebUI + MAFDET in 5 minutes](mafdet/proxy/clients/README.md), or all in Docker: [`docker/`](docker/README.md). `http://127.0.0.1:8077/proxy` shows whether it works. Any other front end can send drafts too (`mafdet/proxy/README.md`); what is next, and how to help: [PROXY.md](PROXY.md).
 
 ## Requirements
 

@@ -63,9 +63,19 @@ def start_engine(args):
 
 def serve(url: str, model: str, *, host: str = "127.0.0.1", port: int = PROXY_PORT, cors: str = "",
           exact: bool = False, reprobe: bool = False, no_probe: bool = False, debounce_ms: int = 300,
-          min_new: int = 8, engine_name: str = "llama", banner: str = "", think_ahead: bool = False) -> int:
+          min_new: int = 8, engine_name: str = "llama", banner: str = "", think_ahead: bool = False,
+          wait_engine: float = 1800.0) -> int:
     """Probe (or reload the profile of) the engine at `url` and serve the proxy until Ctrl+C."""
     engine = make(engine_name, url)
+    # An engine started next to the proxy (Docker) may still be loading, or downloading its model:
+    # probing it now would save a profile without reading ahead.  Wait for it.
+    if callable(getattr(engine, "ready", None)) and not engine.ready():
+        print(f"waiting for the engine at {url}...", file=sys.stderr, flush=True)
+        end = time.monotonic() + wait_engine
+        while not engine.ready():
+            if time.monotonic() > end:
+                raise SystemExit(f"The engine at {url} did not answer /health in {wait_engine:.0f} s.")
+            time.sleep(2)
     profile = None if reprobe else EngineProfile.load(url, model)
     if profile is None:
         if no_probe:

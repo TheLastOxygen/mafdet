@@ -137,6 +137,14 @@ class LlamaEngine:
 
         return resp.status, headers, chunks()
 
+    def ready(self) -> bool:
+        """llama-server answers /health with ok (not while it loads or downloads the model)."""
+        try:
+            status, data, _ = self._call("/health", method="GET")
+        except OSError:
+            return False
+        return status == 200 and data.get("status") == "ok"
+
     def slots(self) -> int | None:
         """How many slots the server has (`/props` total_slots), or None if it does not say."""
         try:

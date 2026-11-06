@@ -77,7 +77,8 @@ measured, with the numbers in `research/LOG.md`.
 **3. Easy to install.**
 - [x] One command, `mafdet proxy`, that finds or starts llama-server and starts the proxy. Starting the engine
       means sharing the app's `LlamaServer`: a pull request of its own (see Contributing).
-- [ ] A Docker image and a `docker-compose` file next to Open WebUI.
+- [x] A Docker image and a `docker-compose` file next to Open WebUI (`docker/`): written and checked
+      without Docker (the image's install, the compose file, the llama-server options), not run in Docker yet.
 - [x] A page "Open WebUI + MAFDET in 5 minutes": `mafdet/proxy/clients/README.md`.
 - [x] `/proxy/stats` as a small readable page: `/proxy`, is it working, the time to the first token, how much
       of the prompt was already read on Enter (not "time saved": part of that reuse llama-server does anyway).

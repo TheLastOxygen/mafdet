@@ -42,7 +42,7 @@ where the user script is and where to see that it works. Without `--model` it us
 in the MAFDET app. Ctrl+C stops both.
 
 Open WebUI in Docker: `mafdet proxy --host 0.0.0.0`, and use `http://host.docker.internal:8077/v1`
-below.
+below. Or all of it in Docker (llama.cpp, the proxy and Open WebUI): [`docker/`](../../../docker/README.md).
 
 With a Qwen3 and thinking on (Open WebUI's default), `--think-ahead` also lets the model reason about
 your message while you type: the first word of the answer came 7.6 → 4.3 s after Enter here. It is not
@@ -79,7 +79,7 @@ or refuses the page. The address in the bar must be one `mafdet proxy` accepts (
 
 | setting | default | what |
 |---|---|---|
-| `@match` lines | `http://localhost:8080/*`, `http://127.0.0.1:8080/*` | where Open WebUI runs; add yours |
+| `@match` lines | `localhost` and `127.0.0.1`, ports 8080 (`open-webui serve`) and 3000 (Docker) | where Open WebUI runs; add yours |
 | `PROXY` | `http://127.0.0.1:8077` | the proxy, as the browser reaches it |
 | `USE_GM` | `false` | `true` sends with `GM_xmlhttpRequest`, no CORS needed: also replace `@grant none` with `@grant GM_xmlhttpRequest` and add `@connect 127.0.0.1` (the comment under the header says how) |
 | `DEBOUNCE_MS`, `MAX_WAIT_MS` | 250, 600 | after a pause of 250 ms, and at least every 600 ms while typing |

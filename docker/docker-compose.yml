@@ -1,0 +1,66 @@
+# Open WebUI + MAFDET + llama.cpp, on an NVIDIA GPU.  From this folder:
+#
+#   docker compose up -d
+#
+# then Open WebUI at http://localhost:3000, the proxy's status at http://localhost:8077/proxy.
+# The user script (mafdet/proxy/clients/open-webui.user.js) posts the drafts from the browser:
+# it already matches http://localhost:3000 and sends them to http://127.0.0.1:8077.
+# Other GPUs and the CPU: see README.md in this folder.
+
+services:
+  llama:
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda
+    # Two slots sharing one 16k cache (-np 2 -kvu): the conversation in one, Open WebUI's titles,
+    # tags and follow-ups in the other.  --no-cache-idle-slots: otherwise llama-server clears the
+    # idle slot (the conversation) whenever the other one gets a task.
+    command: >
+      -hf Qwen/Qwen3-4B-GGUF:Q4_K_M --alias qwen3-4b
+      -ngl 99 -c 16384 -np 2 -kvu --no-cache-idle-slots
+      --host 0.0.0.0 --port 8080
+    environment:
+      LLAMA_CACHE: /models            # the model is downloaded here once
+    volumes:
+      - models:/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  mafdet:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    # Add --think-ahead to the command for a Qwen3 that reasons while you type (not exact).
+    command: >
+      --url http://llama:8080 --model qwen3-4b --host 0.0.0.0
+      --cors http://localhost:3000,http://127.0.0.1:3000
+    ports:
+      - "8077:8077"
+    volumes:
+      - mafdet:/data
+    depends_on:
+      - llama
+    restart: unless-stopped
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    ports:
+      - "3000:8080"
+    environment:
+      OPENAI_API_BASE_URL: http://mafdet:8077/v1
+      OPENAI_API_KEY: none
+      ENABLE_OLLAMA_API: "False"
+    volumes:
+      - open-webui:/app/backend/data
+    depends_on:
+      - mafdet
+    restart: unless-stopped
+
+volumes:
+  models:
+  mafdet:
+  open-webui:

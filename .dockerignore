@@ -1,0 +1,15 @@
+# Only pyproject.toml, README.md, LICENSE and mafdet/ go into the proxy's image (docker/Dockerfile).
+.git
+.venv
+venv
+**/__pycache__
+*.pyc
+*.egg-info
+llama.cpp
+research
+results
+assets
+tests
+training
+docker
+*.gguf
