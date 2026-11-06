@@ -59,6 +59,7 @@ class SharedCache:
         # only the prompt: the prediction is then a lower bound, not an exact number.
         self.tail_unknown = False
         self.warm_lock = threading.Lock()     # one read-ahead request at a time on the slot
+        self.abort = threading.Event()        # set on Enter: a chunk of reasoning ahead stops now
         self._generating = 0                  # answers being written right now
         self._gen_cond = threading.Condition(self.lock)
 
@@ -82,11 +83,14 @@ class SharedCache:
             return self._generating > 0
 
     def begin_generation(self, wait_for_warm: float = 5.0) -> None:
-        """An answer takes the slot: wait out a warm in flight (bounded), then hold it."""
-        if self.warm_lock.acquire(timeout=wait_for_warm):
-            self.warm_lock.release()
+        """An answer takes the slot: no new warm or chunk from now on, the chunk of reasoning in
+        flight stops at its next token, a warm in flight is waited out (bounded)."""
         with self.lock:
             self._generating += 1
+        self.abort.set()
+        if self.warm_lock.acquire(timeout=wait_for_warm):
+            self.warm_lock.release()
+        self.abort.clear()
 
     def end_generation(self) -> None:
         with self.lock:

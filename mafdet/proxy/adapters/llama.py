@@ -162,17 +162,31 @@ class LlamaEngine:
         return data.get("content", "") if status == 200 else ""
 
     def generate(self, ids: list[int], *, n_predict: int, sampling: dict | None = None,
-                 logit_bias: list | None = None) -> dict:
-        """Up to n_predict tokens after `ids`, in one request: {"tokens", "text", "stop_type", "timings"}."""
-        body = {"prompt": ids, "id_slot": self.slot, "cache_prompt": True, "n_predict": n_predict,
-                "return_tokens": True, **(sampling or {})}
+                 logit_bias: list | None = None, abort=None) -> dict:
+        """Up to n_predict tokens after `ids`: {"tokens", "text", "stop_type", "timings", "aborted"}.
+
+        Streamed, so that `abort` (a threading.Event) stops it between two tokens: closing the
+        connection stops llama-server too.  The tokens written until then are returned."""
+        tokens, text, last = [], "", {}
+        sampling = dict(sampling or {})
         if logit_bias:
-            body["logit_bias"] = logit_bias
-        status, data, raw = self._call("/completion", body)
-        if status != 200:
-            return {"tokens": [], "text": "", "error": raw[:200].decode(errors="replace")}
-        return {"tokens": list(data.get("tokens") or []), "text": data.get("content", ""),
-                "stop_type": data.get("stop_type"), "timings": data.get("timings") or {}}
+            sampling["logit_bias"] = logit_bias
+        aborted = False
+        events = self.stream(ids, n_predict=n_predict, sampling=sampling)
+        try:
+            for ev in events:
+                if ev.get("error"):
+                    return {"tokens": [], "text": "", "error": ev["error"]}
+                tokens += ev.get("tokens") or []
+                text += ev.get("text", "")
+                last = ev
+                if abort is not None and abort.is_set() and not ev.get("stop"):
+                    aborted = True
+                    break
+        finally:
+            events.close()
+        return {"tokens": tokens, "text": text, "stop_type": "abort" if aborted else last.get("stop_type"),
+                "timings": last.get("timings") or {}, "aborted": aborted}
 
     def stream(self, ids: list[int], *, n_predict: int, sampling: dict | None = None,
                timeout: float = 600.0) -> Iterable[dict]:

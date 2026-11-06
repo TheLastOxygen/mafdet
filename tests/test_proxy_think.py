@@ -185,3 +185,18 @@ def test_the_prompt_is_rendered_again_when_the_request_has_other_tools():
         assert engine.streamed[:len(with_tools)] == with_tools
     finally:
         server.shutdown()
+
+
+def test_enter_stops_the_chunk_in_flight():
+    # On a slow model a chunk of 32 tokens takes seconds: Enter must not wait for it.
+    server, port, state, engine = start(slow_chunks=5.0)
+    try:
+        post(port, "/v1/drafts", {"conversation_id": "c1", "text": TEXT})
+        assert wait_until(lambda: state.cache.warm_lock.locked())          # a chunk is running
+        t0 = time.perf_counter()
+        state.begin_generation()
+        took = time.perf_counter() - t0
+        state.end_generation()
+        assert took < 1.0, f"Enter waited {took:.1f} s for the chunk"
+    finally:
+        server.shutdown()

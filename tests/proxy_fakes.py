@@ -108,7 +108,11 @@ class FakeEngine:
         words = {v: k for k, v in self._vocab.items()}
         return " ".join(words.get(i, "?") for i in ids)
 
-    def generate(self, ids, *, n_predict, sampling=None, logit_bias=None):
+    slow_chunks = 0.0                     # seconds a chunk takes, unless aborted (Enter)
+
+    def generate(self, ids, *, n_predict, sampling=None, logit_bias=None, abort=None):
+        if self.slow_chunks and abort is not None:
+            abort.wait(self.slow_chunks)
         self.generated = getattr(self, "generated", 0)
         self.gen_prompts = getattr(self, "gen_prompts", [])
         self.gen_prompts.append(list(ids))

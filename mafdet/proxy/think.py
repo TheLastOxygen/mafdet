@@ -167,7 +167,7 @@ class Thinker:
             if s.cache.generating or self.stopped:
                 return False
             res = s.engine.generate(ids, n_predict=THINK_CHUNK, sampling=THINK_SAMPLING,
-                                    logit_bias=self.frame.meta_bias)
+                                    logit_bias=self.frame.meta_bias, abort=s.cache.abort)
             s.cache.set(ids + list(res.get("tokens") or []))
         finally:
             s.cache.warm_lock.release()
