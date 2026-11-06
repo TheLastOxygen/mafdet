@@ -53,6 +53,10 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
 
 1. **Put more of the 14B on the GPU: done on a simulated 6 GB budget (2026-10-31, below), in the app.** A model
    split with the CPU now gets IQ4_XS (14B) and a q8_0 KV cache: 24/24, mean wait 34.0 → 21.1 s. Left:
+   - started on 2026-11-06, stopped by the user after 4 of 24 (enough measurements for now): IQ4_XS with the app's
+     defaults (q8_0 KV chosen by itself), --warm-up, --max-tokens 1800, problems 0-3: 4/4 right, waits 27.7,
+     100.9, 46.1, 33.3 s (mean 52.0 s), 4.6-5.1 tok/s, 152-222 reasoning tokens ahead
+     (`split_14b_2060_chat24.json`). Too few to compare with the README's 47 s; the f16 Q4_K_M not run.
    - confirm on the RTX 2060 itself: `research/thinking_ahead.py` on the 24 problems with the app's defaults
      (the KV choice is automatic there) against `--llama-args='-ctk f16 -ctv f16'` with the Q4_K_M; this machine's
      CPU and RAM run the split twice as fast as the 2060's (10 against 5 tok/s), the ratios should hold. Then the

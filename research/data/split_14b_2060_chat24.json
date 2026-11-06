@@ -1,0 +1,58 @@
+[
+ {
+  "config": "iq4xs auto-kv",
+  "k": 0,
+  "ok": true,
+  "turn": 1,
+  "ctx": 167,
+  "answer_ms": 27733,
+  "think_tokens": 282,
+  "think_ahead": 154,
+  "cut": false,
+  "closed": false,
+  "tps": 4.8,
+  "tail": "ro**  \n\n**Totale speso**: 12 euro + 2 euro = **14 euro**  \n\n**Rimangono**: 25 euro - 14 euro = **11 euro**  \n\n**Risposta finale**: Luca gli restano **11 euro**."
+ },
+ {
+  "config": "iq4xs auto-kv",
+  "k": 1,
+  "ok": true,
+  "turn": 1,
+  "ctx": 364,
+  "answer_ms": 100949,
+  "think_tokens": 607,
+  "think_ahead": 152,
+  "cut": false,
+  "closed": false,
+  "tps": 4.6,
+  "tail": "L'area $ A $ del rettangolo è:  \n   $$\n   A = b \\cdot h = 10 \\cdot 5 = 50 \\, \\text{cm}^2\n   $$\n\n**Risposta finale**:  \nL'area del rettangolo è $\\boxed{50}$ cm²."
+ },
+ {
+  "config": "iq4xs auto-kv",
+  "k": 2,
+  "ok": true,
+  "turn": 1,
+  "ctx": 215,
+  "answer_ms": 46133,
+  "think_tokens": 450,
+  "think_ahead": 222,
+  "cut": false,
+  "closed": false,
+  "tps": 5.0,
+  "tail": "coloro che hanno un cane (24 studenti) ha anche un gatto:  \n   $$\n   \\frac{1}{2} \\times 24 = 12 \\text{ studenti}.\n   $$\n\n**Risposta finale:**  \n$$\n\\boxed{12}\n$$"
+ },
+ {
+  "config": "iq4xs auto-kv",
+  "k": 3,
+  "ok": true,
+  "turn": 1,
+  "ctx": 232,
+  "answer_ms": 33338,
+  "think_tokens": 371,
+  "think_ahead": 202,
+  "cut": false,
+  "closed": false,
+  "tps": 5.1,
+  "tail": "$  \n\n2. **Secondo sconto di 10 euro**:  \n   $$\n   204 - 10 = 194 \\, \\text{euro}\n   $$  \n\n**Risultato finale**: La bicicletta costa **194 euro** dopo gli sconti."
+ }
+]
