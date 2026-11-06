@@ -91,8 +91,7 @@ def serve(url: str, model: str, *, host: str = "127.0.0.1", port: int = PROXY_PO
         f"  status       http://{shown}:{port}/proxy",
     ]
     if think_ahead and state.frame is None and not exact:
-        lines.append("  warning      --think-ahead: this model's template has no reasoning block (<think>), "
-                     "reading ahead only")
+        lines.append(f"  warning      --think-ahead: {state.no_think_reason}: reading ahead only")
     if state.side_slot is None and not exact:
         lines.append("  warning      one slot: a front end's titles and follow-ups will evict the conversation "
                      "(start llama-server with -np 2 -kvu --no-cache-idle-slots)")

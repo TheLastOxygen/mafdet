@@ -132,6 +132,26 @@ Compaiono sotto *I tuoi modelli*, con i numeri letti dall'header del file (layer
   <img src="assets/screenshots/launcher.png" alt="Il launcher: finestra o terminale" width="49%">
 </p>
 
+## In Open WebUI: `mafdet proxy`
+
+La stessa lettura in anticipo, e il ragionamento in anticipo con `--think-ahead`, nella chat che usi già. `mafdet proxy` avvia llama-server come serve alla lettura in anticipo e, davanti, un proxy compatibile OpenAI su `http://127.0.0.1:8077/v1`; un piccolo script fa mandare a Open WebUI quello che scrivi.
+
+```bash
+mafdet proxy --model qwen3-4b                  # lettura in anticipo: il prompt a cui il modello risponde è lo stesso
+mafdet proxy --model qwen3-4b --think-ahead    # e il modello ragiona mentre scrivi (Qwen3, non esatto)
+```
+
+Open WebUI 0.13 su una RTX 2060, Qwen3-4B, 8 conversazioni di 2-3 messaggi per lato, scritte (`research/proxy_openwebui.py`):
+
+| Invio → | media | mediana | peggiore |
+|---|---|---|---|
+| prima parola, ragionamento spento: llama-server con le opzioni di default | 5,4 s | 3,3 s | 20,7 s |
+| prima parola, ragionamento spento: attraverso `mafdet proxy` | **0,16 s** | **0,14 s** | 0,4 s |
+| prima parola della risposta, ragionamento acceso: `mafdet proxy` | 7,6 s | 6,3 s | 21,0 s |
+| prima parola della risposta, ragionamento acceso: `mafdet proxy --think-ahead` | **4,3 s** | **4,1 s** | 10,4 s |
+
+Senza, il tuo messaggio aspetta in coda dietro il titolo, i tag e i suggerimenti che Open WebUI chiede al modello, e i suoi 30 strumenti integrati (~5,8k token) vengono riletti; il proxy dà a quelle richieste uno slot tutto loro e legge il messaggio mentre scrivi. Come configurarlo, passo per passo: [Open WebUI + MAFDET in 5 minuti](mafdet/proxy/clients/README.md) (in inglese). `http://127.0.0.1:8077/proxy` dice se funziona. Anche altre interfacce possono mandare le bozze (`mafdet/proxy/README.md`); cosa viene dopo, e come aiutare: [PROXY.md](PROXY.md) (in inglese).
+
 ## Requisiti
 
 - **Windows**, con una **GPU NVIDIA** e driver aggiornati (obiettivo di test: RTX 2060, 6 GB), una **AMD Radeon** con Vulkan (finora misurata su una scheda, una RX 5700 XT: [cercasi aiuto](#cercasi-misure-su-una-amd-radeon)), oppure solo una CPU. Per **Linux** ci sono già le build di llama.cpp e il codice, ma non è ancora stato provato

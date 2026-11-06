@@ -132,6 +132,26 @@ They appear under *Your models*, with the numbers read from the file's header (l
   <img src="https://raw.githubusercontent.com/Mafdet-AI/mafdet/main/assets/screenshots/launcher.png" alt="The launcher: window or terminal" width="49%">
 </p>
 
+## In Open WebUI: `mafdet proxy`
+
+The same reading ahead, and thinking ahead with `--think-ahead`, in the chat you already use. `mafdet proxy` starts llama-server the way reading ahead needs it and an OpenAI-compatible proxy in front of it, at `http://127.0.0.1:8077/v1`; a small user script makes Open WebUI send what you type to it.
+
+```bash
+mafdet proxy --model qwen3-4b                  # reading ahead: the prompt the model answers is the same
+mafdet proxy --model qwen3-4b --think-ahead    # and the model reasons while you type (Qwen3, not exact)
+```
+
+Open WebUI 0.13 on an RTX 2060, Qwen3-4B, 8 conversations of 2-3 messages each way, typed (`research/proxy_openwebui.py`):
+
+| Enter → | mean | median | slowest |
+|---|---|---|---|
+| first word, thinking off: on llama-server with its default options | 5.4 s | 3.3 s | 20.7 s |
+| first word, thinking off: through `mafdet proxy` | **0.16 s** | **0.14 s** | 0.4 s |
+| first word of the answer, thinking on: `mafdet proxy` | 7.6 s | 6.3 s | 21.0 s |
+| first word of the answer, thinking on: `mafdet proxy --think-ahead` | **4.3 s** | **4.1 s** | 10.4 s |
+
+Without it, your message queues behind the title, tags and follow-ups Open WebUI asks the model for, and its 30 built-in tools (~5.8k tokens) get read again; the proxy gives those requests a slot of their own and reads your message while you type. Setup, step by step: [Open WebUI + MAFDET in 5 minutes](mafdet/proxy/clients/README.md). `http://127.0.0.1:8077/proxy` shows whether it works. Any other front end can send drafts too (`mafdet/proxy/README.md`); what is next, and how to help: [PROXY.md](PROXY.md).
+
 ## Requirements
 
 - **Windows**, with an **NVIDIA GPU** and up-to-date drivers (tested target: RTX 2060, 6 GB), an **AMD Radeon** through Vulkan (measured on one card so far, an RX 5700 XT: [help wanted](#help-wanted-benchmarks-on-an-amd-radeon)), or just a CPU. **Linux** has its llama.cpp builds and code paths in place, but has not been tested yet

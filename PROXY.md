@@ -79,7 +79,8 @@ measured, with the numbers in `research/LOG.md`.
       means sharing the app's `LlamaServer`: a pull request of its own (see Contributing).
 - [ ] A Docker image and a `docker-compose` file next to Open WebUI.
 - [x] A page "Open WebUI + MAFDET in 5 minutes": `mafdet/proxy/clients/README.md`.
-- [ ] `/proxy/stats` as a small readable page: is it working, how much waiting it saved.
+- [x] `/proxy/stats` as a small readable page: `/proxy`, is it working, the time to the first token, how much
+      of the prompt was already read on Enter (not "time saved": part of that reuse llama-server does anyway).
 
 **4. More engines.**
 - [ ] Ollama and LM Studio (what most people run): check first what they expose (prefix reuse, a request that
@@ -91,15 +92,16 @@ measured, with the numbers in `research/LOG.md`.
 
 **5. Thinking ahead in the proxy.** The big gain, and the hardest part.
 - [x] llama.cpp first: raw completion, the Qwen3 frame the app uses (`--think-ahead`, `mafdet/proxy/think.py`).
-- [ ] Check the answers (an answer key, as `research/thinking_ahead.py`), and cancel a chunk in flight on Enter.
+- [x] Cancel a chunk in flight on Enter (it stops at its next token).
+- [ ] Check the answers (an answer key, as `research/thinking_ahead.py`).
 - [x] Opt-in: it changes the answer (it is not exact), and whoever turns it on must know that.
 - [ ] A frame measured per model family, the most used first.
-- [ ] Engines without a raw completion endpoint (Ignis for now) keep reading ahead only.
+- [x] Engines without a raw completion endpoint (Ignis for now) keep reading ahead only (the proxy says why).
 
 **6. Show that it works.**
 - [x] Realistic benchmarks: multi-turn chats, a pasted document followed by a question, through a real Open
       WebUI and not only `bench.py`.
-- [ ] A "Proxy" section in the README with the results.
+- [x] A "Proxy" section in the README with the results ("In Open WebUI: `mafdet proxy`").
 - [ ] Measurements from other cards and engines, asked of the community as for the Radeons.
 
 Order: 0 and 1 first (the core), then 2 and 3 on Open WebUI, so that there is something people can try.

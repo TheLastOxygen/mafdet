@@ -200,3 +200,18 @@ def test_enter_stops_the_chunk_in_flight():
         assert took < 1.0, f"Enter waited {took:.1f} s for the chunk"
     finally:
         server.shutdown()
+
+
+class OpenAIOnlyEngine(FakeEngine):
+    """An engine with a chat endpoint but no raw completion (as Ignis today)."""
+    generate = stream = detokenize = None
+
+
+def test_an_engine_without_raw_completion_keeps_reading_ahead_only():
+    engine = OpenAIOnlyEngine()
+    profile = probe(engine, url="http://127.0.0.1:1", model="fake-model")
+    state = ProxyState(engine, profile, "fake-model", think_ahead=True)
+    assert state.frame is None
+    assert "raw completion" in state.no_think_reason
+    assert state.session("c1").thinker is None
+    assert state.session("c1").tier == "T1"                 # reading ahead still on

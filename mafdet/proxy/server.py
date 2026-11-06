@@ -64,15 +64,26 @@ class ProxyState:
         self.recent: collections.deque = collections.deque(maxlen=200)
         self.started = 0
         self._load_last_request()
-        # Thinking ahead (T2, --think-ahead): only for a model whose template has a reasoning block.
+        # Thinking ahead (T2, --think-ahead): it needs an engine that generates on raw token ids and
+        # streams them (llama.cpp's /completion; an OpenAI-only engine such as Ignis has no such
+        # endpoint) and a model whose template has a reasoning block.  Otherwise: reading ahead only.
         self.frame = None
-        if think_ahead and not exact and hasattr(engine, "generate"):
-            try:
-                if engine.thinks():
-                    frame = think.Frame(engine)
-                    self.frame = frame if frame.usable else None
-            except Exception:
-                self.frame = None
+        self.no_think_reason = ""
+        if think_ahead and not exact:
+            raw = all(callable(getattr(engine, m, None)) for m in ("generate", "stream", "detokenize", "thinks"))
+            if not raw:
+                self.no_think_reason = "this engine has no raw completion endpoint"
+            else:
+                try:
+                    if not engine.thinks():
+                        self.no_think_reason = "this model's template has no reasoning block (<think>)"
+                    else:
+                        frame = think.Frame(engine)
+                        self.frame = frame if frame.usable else None
+                        if self.frame is None:
+                            self.no_think_reason = "the frame does not tokenize on this model"
+                except Exception as exc:
+                    self.no_think_reason = f"the engine did not answer ({exc})"
 
     def thinking(self) -> bool:
         """Think ahead now?  Not when the front end turned the model's thinking off."""

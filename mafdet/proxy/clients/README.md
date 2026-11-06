@@ -44,6 +44,10 @@ in the MAFDET app. Ctrl+C stops both.
 Open WebUI in Docker: `mafdet proxy --host 0.0.0.0`, and use `http://host.docker.internal:8077/v1`
 below.
 
+With a Qwen3 and thinking on (Open WebUI's default), `--think-ahead` also lets the model reason about
+your message while you type: the first word of the answer came 7.6 → 4.3 s after Enter here. It is not
+exact (the reasoning starts on an unfinished message), so it is off unless you ask for it.
+
 ## 3. Point Open WebUI at it
 
 Admin Settings > Connections > OpenAI API: add a connection with the URL `http://127.0.0.1:8077/v1`
@@ -62,9 +66,10 @@ It sends what you type to the proxy (Open WebUI itself stays untouched).
 
 ## 5. Check that it works
 
-Type a message without sending it, then open `http://127.0.0.1:8077/proxy/stats`: under `sessions`,
-a `"new"` entry with `warms` above zero. After a few messages, `requests.matched` counts your
-messages and `requests.side` the titles, tags and follow-ups sent to the other slot.
+Open `http://127.0.0.1:8077/proxy` and type a message without sending it: under *Conversations*, a
+`new` row with drafts read. After a few messages, *Last messages* lists them with the time to their
+first token and how much of the prompt was already read on Enter, and the titles, tags and follow-ups
+sent to the other slot are counted. (`/proxy/stats` has the same as JSON.)
 
 Nothing there: the browser console (F12) shows `[mafdet] proxy unreachable` when the proxy is down
 or refuses the page. The address in the bar must be one `mafdet proxy` accepts (`--cors`, by default
