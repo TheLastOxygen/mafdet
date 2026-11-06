@@ -29,11 +29,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--cors", default="",
                     help="origins allowed to call the proxy from a web page, comma-separated "
                          "(e.g. http://localhost:3000), or * for any; off by default")
+    ap.add_argument("--think-ahead", action="store_true",
+                    help="reason about the draft while the user types (Qwen3, thinking on): not exact")
     args = ap.parse_args(argv)
 
     return serve(args.url, args.model, host=args.host, port=args.port, cors=args.cors, exact=args.exact,
                  reprobe=args.reprobe, no_probe=args.no_probe, debounce_ms=args.debounce_ms,
-                 min_new=args.min_new, engine_name=args.engine)
+                 min_new=args.min_new, engine_name=args.engine, think_ahead=args.think_ahead)
 
 if __name__ == "__main__":
     raise SystemExit(main())

@@ -63,7 +63,7 @@ def start_engine(args):
 
 def serve(url: str, model: str, *, host: str = "127.0.0.1", port: int = PROXY_PORT, cors: str = "",
           exact: bool = False, reprobe: bool = False, no_probe: bool = False, debounce_ms: int = 300,
-          min_new: int = 8, engine_name: str = "llama", banner: str = "") -> int:
+          min_new: int = 8, engine_name: str = "llama", banner: str = "", think_ahead: bool = False) -> int:
     """Probe (or reload the profile of) the engine at `url` and serve the proxy until Ctrl+C."""
     engine = make(engine_name, url)
     profile = None if reprobe else EngineProfile.load(url, model)
@@ -77,18 +77,22 @@ def serve(url: str, model: str, *, host: str = "127.0.0.1", port: int = PROXY_PO
             print(f"probed in {time.perf_counter() - t0:.1f}s -> tier {profile.tier}, spelling {profile.spelling}, "
                   f"channel {profile.channel} (saved to {saved})", file=sys.stderr)
     origins = [o.strip() for o in cors.split(",") if o.strip()]
-    state = ProxyState(engine, profile, model, debounce_ms=debounce_ms, min_new=min_new, exact=exact, cors=origins)
+    state = ProxyState(engine, profile, model, debounce_ms=debounce_ms, min_new=min_new, exact=exact, cors=origins,
+                       think_ahead=think_ahead)
     server = make_server(state, host, port)
     shown = "127.0.0.1" if host in ("0.0.0.0", "") else host
     lines = [banner] if banner else []
     lines += [
-        f"MAFDET proxy on http://{shown}:{port} (tier {'T-1, exact' if exact else profile.tier})",
+        f"MAFDET proxy on http://{shown}:{port} (tier {'T-1, exact' if exact else ('T2, thinking ahead' if state.frame else profile.tier)})",
         f"  front end    OpenAI API base URL http://{shown}:{port}/v1"
         + ("   (Open WebUI in Docker: http://host.docker.internal:%d/v1)" % port if host == "0.0.0.0" else ""),
         f"  drafts       {', '.join(origins) if origins else 'no web page allowed (--cors)'}",
         f"  user script  {USER_SCRIPT}",
         f"  stats        http://{shown}:{port}/proxy/stats",
     ]
+    if think_ahead and state.frame is None and not exact:
+        lines.append("  warning      --think-ahead: this model's template has no reasoning block (<think>), "
+                     "reading ahead only")
     if state.side_slot is None and not exact:
         lines.append("  warning      one slot: a front end's titles and follow-ups will evict the conversation "
                      "(start llama-server with -np 2 -kvu --no-cache-idle-slots)")
@@ -106,10 +110,11 @@ def run(args) -> int:
     """`mafdet proxy`."""
     if args.url:
         return serve(args.url, args.model or "default", host=args.host, port=args.port, cors=args.cors,
-                     exact=args.exact, reprobe=args.reprobe)
+                     exact=args.exact, reprobe=args.reprobe, think_ahead=args.think_ahead)
     server, alias = start_engine(args)
     try:
         return serve(server.url, alias, host=args.host, port=args.port, cors=args.cors, exact=args.exact,
-                     reprobe=args.reprobe, banner=f"llama-server log: {server.log_path}")
+                     reprobe=args.reprobe, banner=f"llama-server log: {server.log_path}",
+                     think_ahead=args.think_ahead)
     finally:
         server.close()

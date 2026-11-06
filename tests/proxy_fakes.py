@@ -94,6 +94,40 @@ class FakeEngine:
     def slots(self):
         return getattr(self, "n_slots", 1)
 
+    # ---- thinking ahead ------------------------------------------------------------
+    # A model that "reasons" in words fact1 fact2 ..., closes its reasoning after `think_after`
+    # tokens (if set), and answers with `final_text` on Enter.
+    thinking = True
+    think_after: int | None = None
+    final_text = "more reasoning </think> The answer is 42"
+
+    def thinks(self) -> bool:
+        return self.thinking
+
+    def detokenize(self, ids):
+        words = {v: k for k, v in self._vocab.items()}
+        return " ".join(words.get(i, "?") for i in ids)
+
+    def generate(self, ids, *, n_predict, sampling=None, logit_bias=None):
+        self.generated = getattr(self, "generated", 0)
+        self.gen_prompts = getattr(self, "gen_prompts", [])
+        self.gen_prompts.append(list(ids))
+        words = []
+        for _ in range(min(n_predict, 4)):
+            self.generated += 1
+            if self.think_after is not None and self.generated > self.think_after:
+                words.append("</think>")
+                break
+            words.append(f"fact{self.generated}")
+        return {"tokens": self.tokenize(" ".join(words)), "text": " ".join(words), "stop_type": "limit", "timings": {}}
+
+    def stream(self, ids, *, n_predict, sampling=None):
+        self.streamed = list(ids)
+        pieces = self.final_text.replace("</think>", " </think> ").split()
+        for i, word in enumerate(pieces):
+            yield {"text": word + " ", "tokens": self.tokenize(word), "stop": False}
+        yield {"text": "", "tokens": [], "stop": True, "stop_type": "eos", "timings": {"prompt_n": 1}}
+
     def models(self):
         return 200, {"object": "list", "data": [{"id": "fake-model"}]}
 

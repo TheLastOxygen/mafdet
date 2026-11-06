@@ -15,13 +15,14 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from .engine import Engine
 from .profile import EngineProfile
-from .session import DraftSession, SharedCache, same_messages
+from . import think
+from .session import DraftSession, SharedCache, _text_of, same_messages
 
 
 class ProxyState:
     def __init__(self, engine: Engine, profile: EngineProfile, model: str, *,
                  debounce_ms: int = 300, min_new: int = 8, max_sessions: int = 32,
-                 exact: bool = False, cors: list[str] | None = None):
+                 exact: bool = False, cors: list[str] | None = None, think_ahead: bool = False):
         self.engine = engine
         self.profile = profile
         self.model = model
@@ -56,9 +57,22 @@ class ProxyState:
         except Exception:
             self.slots = 1
         self.side_slot = 1 if self.slots >= 2 and getattr(engine, "dialect", "") == "llama" else None
-        self.counts = {"matched": 0, "unmatched": 0, "side": 0}
+        self.counts = {"matched": 0, "unmatched": 0, "side": 0, "thought_ahead": 0}
         self.started = 0
         self._load_last_request()
+        # Thinking ahead (T2, --think-ahead): only for a model whose template has a reasoning block.
+        self.frame = None
+        if think_ahead and not exact and hasattr(engine, "generate"):
+            try:
+                if engine.thinks():
+                    frame = think.Frame(engine)
+                    self.frame = frame if frame.usable else None
+            except Exception:
+                self.frame = None
+
+    def thinking(self) -> bool:
+        """Think ahead now?  Not when the front end turned the model's thinking off."""
+        return self.frame is not None and think.thinking_on(self.template_kwargs)
 
     # ---- what the last request looked like, kept across restarts --------------------------
     def _last_request_path(self):
@@ -115,6 +129,8 @@ class ProxyState:
                                     cache=self.cache)
                 if self.exact:
                     sess.tier = "T-1"
+                elif self.frame is not None:
+                    sess.thinker = think.Thinker(sess, self.frame, enabled=self.thinking)
                 if conversation_id != "new" and self.unclaimed is not None:
                     # The first draft from a chat the proxy has not seen, right after a
                     # new chat was answered: that chat's id, now that the front end has one.
@@ -156,6 +172,8 @@ class ProxyState:
     def remember(self, sess: DraftSession, messages: list[dict], answer: str) -> None:
         """The conversation after this answer, for the next turn's drafts."""
         history = list(messages) + [{"role": "assistant", "content": answer}]
+        if sess.thinker is not None:
+            sess.thinker.reset()                   # a new turn: new notes
         if sess.conversation_id == "new":
             self.unclaimed = (history, time.time())
             sess.history = None
@@ -198,12 +216,22 @@ class ProxyState:
             "proxy": {"engine": self.engine.name, "model": self.model,
                       "tier": "T-1" if self.exact else self.profile.tier,
                       "spelling": self.profile.spelling,
-                      "reuse_channel": self.profile.channel, "exact": self.exact},
+                      "reuse_channel": self.profile.channel, "exact": self.exact,
+                      "think_ahead": self.frame is not None},
             "slots": {"total": self.slots, "conversation": 0, "side": self.side_slot},
             "requests": dict(self.counts),
             "profile": prof,
             "sessions": sessions,
         }
+
+
+SSE_END = bytes([10, 10])                     # the blank line after a server-sent event
+CRLF = bytes([13, 10])
+
+
+def _chunked(data: bytes) -> bytes:
+    """One HTTP/1.1 chunk (an empty one ends the body)."""
+    return b"%x" % len(data) + CRLF + data + CRLF
 
 
 def _answer_of(chunks_seen: list[bytes], stream: bool) -> str:
@@ -360,15 +388,56 @@ class Handler(BaseHTTPRequestHandler):
             forward["cache_prompt"] = False
         if state.side_slot is not None:
             forward["id_slot"] = state.side_slot if side else 0
+        thinker = None
         if side:
             state.counts["side"] += 1
         else:
             state.counts["matched" if sess is not None else "unmatched"] += 1
             state.note_request(body, messages, sess is not None)
+            thinker = sess.thinker if sess is not None and not state.exact else None
+            if thinker is not None:
+                with sess.lock:                       # the draft's prompt, before Enter drops it
+                    draft_ids, draft_text = list(sess.latest), sess.latest_text
             state.begin_generation()
+        # Thinking ahead: the notes written while the user typed, if the request leaves thinking on.
+        notes = prompt = None
+        if not side and thinker is not None and think.thinking_on(body.get("chat_template_kwargs")):
+            final_text = _text_of(messages)
+            notes = thinker.take(final_text)
+            if notes:
+                same = draft_ids and draft_text.strip() == final_text.strip()
+                prompt = draft_ids if same else state.engine.render(messages, body.get("chat_template_kwargs"),
+                                                                     body.get("tools"))
+                if not prompt:
+                    notes = None
         ok = False
         seen: list[bytes] = []
         try:
+            if notes:
+                state.counts["thought_ahead"] += 1
+                ok = True
+                events = think.answer(state.engine, prompt, notes, state.frame, body)
+                if not stream:
+                    raw = json.dumps(think.collect(events)).encode()
+                    seen.append(raw)
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Content-Length", str(len(raw)))
+                    self.end_headers()
+                    self.wfile.write(raw)
+                    return
+                self.send_response(200)
+                self.send_header("Content-Type", "text/event-stream")
+                self.send_header("Cache-Control", "no-cache")
+                self.send_header("Transfer-Encoding", "chunked")
+                self.end_headers()
+                for event in events:
+                    data = b"data: " + json.dumps(event).encode() + SSE_END
+                    seen.append(data)
+                    self.wfile.write(_chunked(data))
+                done = b"data: [DONE]" + SSE_END
+                self.wfile.write(_chunked(done) + _chunked(b""))
+                return
             status, headers, chunks = state.engine.chat(forward, stream=stream)
             ok = status < 400
             if status >= 400 or not stream:

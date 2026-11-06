@@ -350,6 +350,9 @@ def _proxy_args(p):
                         "(give it -np 2 -kvu --no-cache-idle-slots)")
     p.add_argument("--exact", action="store_true",
                    help="no reading ahead, every prompt recomputed: answers bit-identical, none of the gain")
+    p.add_argument("--think-ahead", action="store_true",
+                   help="the model reasons about the message while you type (Qwen3 with thinking on): a much "
+                        "shorter wait, but not exact, the answer can differ from one without it")
     p.add_argument("--reprobe", action="store_true", help="probe the engine again instead of the saved profile")
     p.add_argument("--llama-args", default="",
                    help='extra llama-server options, with an equals sign: --llama-args="-ub 256"')

@@ -121,6 +121,7 @@ class DraftSession:
         self.latest_text = ""
         self.drafted_at = 0.0
         self.history: list[dict] | None = None
+        self.thinker = None                    # a think.Thinker when thinking ahead is on (--think-ahead)
 
     def messages_for(self, text: str, system: dict | None = None) -> list[dict]:
         """The request the front end will send on Enter, as far as the proxy can tell: the
@@ -166,6 +167,8 @@ class DraftSession:
             self.latest = ids
             grew = len(ids) - len(self.cached)
             self._schedule(0.02 if grew >= self.min_new else self.debounce_ms / 1000.0)
+        if self.thinker is not None:
+            self.thinker.poke()
         return len(ids)
 
     def _schedule(self, delay: float) -> None:
@@ -194,6 +197,8 @@ class DraftSession:
             ids = list(self.latest)
         if not ids or self.tier == "T-1" or ids == self.cached:
             return None
+        if self.thinker is not None and self.thinker.active:
+            return None                        # its chunks read the draft; a warm would evict the notes
         if not self.cache.warm_lock.acquire(timeout=0.05):
             self.skipped += 1
             return None
@@ -241,6 +246,8 @@ class DraftSession:
         with self.lock:
             if self.latest and self.latest != self.cached:
                 self._schedule(0.02)
+        if self.thinker is not None:
+            self.thinker.poke()
 
     def begin_generation(self) -> None:
         """Commit from this session: drop its pending draft and take the slot."""
@@ -264,6 +271,9 @@ class DraftSession:
             "skipped": self.skipped,
             "history_messages": None if self.history is None else len(self.history),
         }
+        if self.thinker is not None:
+            out["thinking"] = {"active": self.thinker.active, "reasoned": self.thinker.reasoned,
+                               "finished": self.thinker.finished}
         out.update(self.auditor.stats())
         out["last_warm_age_s"] = round(time.time() - self.warmed_at, 1) if self.warmed_at else None
         return out

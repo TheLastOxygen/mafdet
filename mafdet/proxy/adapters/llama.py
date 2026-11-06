@@ -146,6 +146,64 @@ class LlamaEngine:
         n = data.get("total_slots") if status == 200 else None
         return int(n) if isinstance(n, int) and n > 0 else None
 
+    # ---- thinking ahead: raw generation on token ids -------------------------------
+    def thinks(self) -> bool:
+        """Does the model's chat template have a reasoning block (Qwen3's <think>)?"""
+        try:
+            status, data, _ = self._call("/props", method="GET")
+        except OSError:
+            return False
+        return status == 200 and "<think>" in str(data.get("chat_template") or "")
+
+    def detokenize(self, ids: list[int]) -> str:
+        if not ids:
+            return ""
+        status, data, _ = self._call("/detokenize", {"tokens": ids})
+        return data.get("content", "") if status == 200 else ""
+
+    def generate(self, ids: list[int], *, n_predict: int, sampling: dict | None = None,
+                 logit_bias: list | None = None) -> dict:
+        """Up to n_predict tokens after `ids`, in one request: {"tokens", "text", "stop_type", "timings"}."""
+        body = {"prompt": ids, "id_slot": self.slot, "cache_prompt": True, "n_predict": n_predict,
+                "return_tokens": True, **(sampling or {})}
+        if logit_bias:
+            body["logit_bias"] = logit_bias
+        status, data, raw = self._call("/completion", body)
+        if status != 200:
+            return {"tokens": [], "text": "", "error": raw[:200].decode(errors="replace")}
+        return {"tokens": list(data.get("tokens") or []), "text": data.get("content", ""),
+                "stop_type": data.get("stop_type"), "timings": data.get("timings") or {}}
+
+    def stream(self, ids: list[int], *, n_predict: int, sampling: dict | None = None,
+               timeout: float = 600.0) -> Iterable[dict]:
+        """Generate after `ids`, one event per token: {"text", "tokens", "stop", ...}.  Closing the
+        generator closes the connection, which stops llama-server."""
+        body = {"prompt": ids, "id_slot": self.slot, "cache_prompt": True, "n_predict": n_predict,
+                "stream": True, "return_tokens": True, **(sampling or {})}
+        conn = http.client.HTTPConnection(self.host, self.port, timeout=timeout)
+        try:
+            conn.request("POST", "/completion", body=json.dumps(body).encode(),
+                         headers={"Content-Type": "application/json"})
+            resp = conn.getresponse()
+            if resp.status != 200:
+                yield {"error": resp.read()[:200].decode(errors="replace"), "stop": True}
+                return
+            while True:
+                line = resp.readline()
+                if not line:
+                    break
+                line = line.strip()
+                if not line.startswith(b"data:"):
+                    continue
+                d = json.loads(line[5:].decode())
+                yield {"text": d.get("content", ""), "tokens": d.get("tokens") or [], "stop": bool(d.get("stop")),
+                       "stop_type": d.get("stop_type"), "timings": d.get("timings") or {},
+                       "tokens_evaluated": d.get("tokens_evaluated")}
+                if d.get("stop"):
+                    break
+        finally:
+            conn.close()
+
     def models(self) -> tuple[int, dict]:
         status, data, _ = self._call("/v1/models", method="GET")
         return status, data
