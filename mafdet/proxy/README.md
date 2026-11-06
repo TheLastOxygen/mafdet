@@ -10,13 +10,20 @@ It is separate from the app on purpose: nothing here imports `mafdet.watch` or
 
 ## Run it
 
-The engine (`llama-server`) must already be running.  Then:
+The engine must already be running: `llama-server`, or Ollama, vLLM, SGLang, LM Studio, any server
+with `/v1/chat/completions` (`--engine auto`, the default, asks which).  Then:
 
 ```bash
 python -m mafdet.proxy --url http://127.0.0.1:8081 --model Qwen3-4B-Q4_K_M
 # probed in 1.4s -> tier T1, spelling n_predict0, channel timings (saved to ~/.mafdet/proxy/...)
-# llama.cpp http://127.0.0.1:8081 -> proxy on http://127.0.0.1:8077 (tier T1)
+# MAFDET proxy on http://127.0.0.1:8077 (tier T1)
+#   engine       llama.cpp at http://127.0.0.1:8081: drafts as token ids, reuse seen in timings, cache one per slot
+python -m mafdet.proxy --url http://127.0.0.1:11434 --model qwen3:4b        # Ollama
+python -m mafdet.proxy --url http://127.0.0.1:8000 --model Qwen/Qwen3-4B     # vLLM (--api-key if it wants one)
 ```
+
+Without `--model` the first model the engine lists is used.  `mafdet proxy --url ...` is the same
+through the app's command.
 
 Point the front end at the proxy: `POST /v1/drafts` while the user types, the usual
 `POST /v1/chat/completions` on Enter.  `GET /proxy/stats` shows what the proxy believes
@@ -53,6 +60,37 @@ tokens of template to read then.
 The profile is cached per (url, model) in `~/.mafdet/proxy/`; `--reprobe` forces a fresh
 probe, `--no-probe` starts with read-ahead off (tier T-1).
 
+## Other engines (vLLM, SGLang, Ollama, LM Studio)
+
+llama.cpp has its own adapter (`adapters/llama.py`, the one measured); every other engine goes through
+the OpenAI-compatible one (`adapters/openai.py`), and the probe picks one of two ways to read ahead:
+
+- **by token ids**, when the engine renders the chat prompt for the proxy (vLLM's `/tokenize` takes the
+  messages, with the template options and the tools): the draft goes through `/v1/completions` with the
+  ids and one token of answer (vLLM refuses `max_tokens: 0`; SGLang takes it), and the proxy predicts and
+  audits the reuse exactly, as on llama.cpp. The exact count comes from
+  `usage.prompt_tokens_details.cached_tokens`: vLLM with `--enable-prompt-tokens-details`, SGLang with
+  `--enable-cache-report`; without, the `/metrics` prefix-cache counters are an estimate.
+- **through the chat endpoint**, when it does not (Ollama and LM Studio have no tokenizer over HTTP,
+  SGLang's `/tokenize` takes no messages): the draft is sent as a chat request with `max_tokens: 1`, the
+  engine applies its own template, and the proxy counts nothing. Reuse is then seen in the prefill time
+  the engine reports (Ollama's `prompt_eval_duration` on `/api/chat`, LM Studio's `time_to_first_token`
+  on `/api/v0/chat/completions`), or in `prompt_tokens` when the engine counts only what it computed.
+  The audit records these warms as unknown: they never demote the session.
+
+A cache shared by every request (vLLM, SGLang, Ollama with `OLLAMA_NUM_PARALLEL=2`) needs no second slot:
+a front end's titles and follow-ups do not evict the conversation, and the proxy says so
+(`cache shared` in the `engine` line, `/proxy/stats` under `cache`). On one cache (Ollama's default) it
+warns, as for a one-slot llama-server. `--exact` on these engines only stops the drafts (they have no
+per-request switch for their cache), which is already the answer the engine gives without the proxy.
+
+On the status page, "read on Enter" and "already read" are filled from llama-server's `timings`, or
+from an OpenAI `usage` block that carries `cached_tokens` (in a stream only when the front end asks for
+usage); otherwise those columns stay empty and the time to the first token is what there is.
+
+All of this is written against the engines' documented APIs and checked on fakes of vLLM and Ollama
+(`tests/proxy_fake_servers.py`); which engine has really been run through it is the table in `PROXY.md`.
+
 ## Your own front end
 
 Point its OpenAI connection at the proxy, and post the message being typed to `POST /v1/drafts`:
@@ -72,18 +110,22 @@ drafts.sent();
 The page's origin must be allowed with `--cors`. Open WebUI's user script (`clients/open-webui.user.js`)
 is the same thing, reading Open WebUI's editor.
 
-## What the probe decides (PR #1: only what llama.cpp needs)
+## What the probe decides
 
 | Question | Answer stored in `EngineProfile` |
 |---|---|
-| which request prefills without generating | `spelling`: `n_predict0`, else `max_tokens1` |
-| is prefix reuse real, and which channel reports it | `reuse_channel`: `timings` (exact), `usage` (exact), `metrics` (estimate), `none` |
+| does the engine give token ids for a text, and for a chat request | `tokenize`, `render` (without `render`, the drafts go through the chat endpoint) |
+| which request prefills without generating | `spelling`: `n_predict0` (llama.cpp), `max_tokens0`, `echo0`, `max_tokens1` (one token thrown away), `chat1` (the chat endpoint, one token) |
+| is prefix reuse real, and which channel reports it | `reuse_channel`: `timings` (exact), `usage` (exact), `computed` (the engine counts what it computed: exact), `metrics` (estimate), `time` (a faster prefill), `none` |
 | does an edit in the middle still hit the prefix | `edit_branches` |
+| by how much may a report fall short of the prediction (a block cache) | `reuse_slack`, allowed by the audit |
+| does an unrelated request in between evict the prefix | `shared_cache` (no second slot needed when true) |
+| does the rendered prompt have the count the chat endpoint computes | `tokenizer_agrees` (reading ahead is off when not) |
+| does the completion route take token ids (thinking ahead needs it) | `raw_ids` |
 | tier | `T1` exact read-ahead, `T0` whole-prompt only, `T-1` passthrough |
 
-The remaining probes (slot affinity, cancelling mid-generation, raw completions,
-tokenizer agreement) are deliberately left for the second engine: a probe checked on
-one engine cannot claim anything about the others.
+Cancelling mid-generation is not probed: nothing needs it until thinking ahead reaches the other
+engines (it is llama.cpp only, `think.py`).
 
 ## Files
 
@@ -95,7 +137,10 @@ one engine cannot claim anything about the others.
 | `session.py` | one conversation: debounce, latest draft, generation lock, "generation goes first" |
 | `audit.py` | predicted prefix reuse vs reported, mismatch counter, estimate handling |
 | `server.py` | the HTTP front door and the routes |
-| `adapters/llama.py` | llama-server: `/tokenize`, `/completion`, `/v1/chat/completions` pass-through |
+| `adapters/llama.py` | llama-server: `/tokenize`, `/apply-template`, `/completion`, `/v1/chat/completions` pass-through, raw generation for `think.py` |
+| `adapters/openai.py` | vLLM, SGLang, Ollama, LM Studio and any OpenAI-compatible server: `/tokenize`, `/v1/completions`, the chat endpoint as a warm, `/metrics`; `detect()` asks a server which it is |
+| `think.py` | thinking ahead (T2): the Qwen3 frame on the draft, the answer after the notes |
+| `launch.py` | `mafdet proxy`: llama-server started the right way, or an engine at `--url` detected, probed and served |
 | `bench.py` | Enter -> first token, drafts on vs off, with an exactness check |
 
 ## Read-ahead does not change the prompt

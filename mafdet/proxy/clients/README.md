@@ -95,6 +95,25 @@ a shared cache, and keep it from clearing an idle slot: `-np 2 -kvu --no-cache-i
 `--cache-ram 0`), with a context of at least 16k. On one slot, or with idle slots cleared (llama-server's
 default with `-kvu`), the title on the other slot empties the conversation.
 
+## Ollama, vLLM, SGLang, LM Studio
+
+`mafdet proxy --url` in front of an engine you already run, instead of llama-server:
+
+```bash
+mafdet proxy --url http://127.0.0.1:11434 --model qwen3:4b          # Ollama
+mafdet proxy --url http://127.0.0.1:8000 --model Qwen/Qwen3-4B       # vLLM, SGLang (--api-key if it wants one)
+mafdet proxy --url http://127.0.0.1:1234                             # LM Studio (the first model it lists)
+```
+
+The rest is the same: Open WebUI's connection at `http://127.0.0.1:8077/v1`, the user script, the status
+page. The `engine` line the proxy prints says what it found: how the drafts go (as token ids, or through the
+engine's chat endpoint), where it sees the reuse, and whether the engine's cache is shared (then Open WebUI's
+titles and follow-ups cannot evict the conversation; on Ollama's one cache, start it with
+`OLLAMA_NUM_PARALLEL=2`). vLLM reports the exact count with `--enable-prompt-tokens-details`, SGLang with
+`--enable-cache-report`; without, the proxy goes by its metrics or by the prefill time. These engines are
+supported on their documented APIs and have not been tried for real yet ([PROXY.md](../../../PROXY.md),
+"More engines"): if you run one, the `engine` line and `/proxy/stats` in an issue are what fills its row.
+
 ## When the read-ahead does not count
 
 The proxy ties the request on Enter to your drafts by the user message (equal to the last draft, or

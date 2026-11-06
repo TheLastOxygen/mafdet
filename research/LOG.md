@@ -109,6 +109,20 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
      instead of 12, a short prompt ~300 ms instead of ~45). The drafts keep the GPU awake, most of the gain
      on short messages. Check on another card (the 4070 SUPER, the 3060) before writing it as a result.
    - thinking ahead needs a raw completion endpoint, cancelling, and a frame measured per model family.
+   Step 4 (more engines) built on 2026-11-06, not run against any of them: `mafdet/proxy/adapters/openai.py`
+   (vLLM, SGLang, Ollama, LM Studio, any OpenAI-compatible server; `mafdet proxy --url` detects which), the
+   probe with two ways to read ahead (token ids the proxy renders, or the draft through the engine's chat
+   endpoint with one token of answer when the engine gives no ids) and four more questions (shared cache, block
+   slack, tokenizer agreement, raw ids). Checked only on fakes (`tests/proxy_fake_servers.py`, 18 tests). What
+   each engine is expected to do, and the open rows: PROXY.md, "More engines". Next there: run it against a real
+   Ollama (the cheapest to set up: `OLLAMA_NUM_PARALLEL=2 ollama serve`, `mafdet proxy --url http://127.0.0.1:11434
+   --model qwen3:4b`, then Open WebUI with the user script) and against vLLM with
+   `--enable-prompt-tokens-details`; what to check first: the `engine` line (tier, channel, cache) against the
+   table, then Enter → first token with `research/proxy_openwebui.py` if the front end is Open WebUI. Things
+   the code assumes and a real run must confirm: Ollama's `prompt_eval_count` counts the whole prompt (the
+   Go runner's `numPromptInputs`), so only `prompt_eval_duration` shows the reuse; vLLM's `/tokenize` accepts
+   `tools` and `chat_template_kwargs` with the messages; Ollama's slot choice (the slot the prompt extends,
+   else the least recently used one, with the prefix copied) keeps the conversation with two slots.
 
 6. Other ideas discussed, not started:
    - **past reasoning out of the history: done (2026-11-04, "Done and measured").** Left: the same conversations

@@ -206,7 +206,7 @@ class ProxyState:
         self.cache.begin_generation()
 
     def end_generation(self, body: dict | None = None) -> None:
-        if body is not None and not self.exact and self.profile.tier != "T-1":
+        if body is not None and not self.exact and self.profile.tier != "T-1" and not self.profile.caps.by_chat:
             # The slot now holds this prompt and its answer; the proxy knows the prompt.
             # Rendering it is off the critical path (the answer has been sent already) and
             # happens before the slot is released, so no warm can land in between.
@@ -227,13 +227,18 @@ class ProxyState:
         with self.lock:
             sessions = [s.stats() for s in self.sessions.values()]
         prof = self.profile.to_dict()
+        caps = self.profile.caps
         return {
-            "proxy": {"engine": self.engine.name, "model": self.model,
+            "proxy": {"engine": self.engine.name, "version": self.profile.version, "model": self.model,
                       "tier": "T-1" if self.exact else self.profile.tier,
                       "spelling": self.profile.spelling,
                       "reuse_channel": self.profile.channel, "exact": self.exact,
                       "think_ahead": self.frame is not None},
             "slots": {"total": self.slots, "conversation": 0, "side": self.side_slot},
+            # shared: another request does not evict the conversation (no side slot needed);
+            # drafts: "ids" rendered by the proxy, or "chat" through the engine's own template.
+            "cache": {"shared": caps.shared_cache, "drafts": "chat" if caps.by_chat else "ids",
+                      "slack": caps.reuse_slack},
             "requests": dict(self.counts),
             "summary": self.summary(),
             "recent": list(self.recent)[-20:],
@@ -286,18 +291,33 @@ def _events(raw: bytes):
             continue
 
 
+def _usage_timings(usage) -> dict:
+    """The same as llama-server's timings, from an OpenAI usage block that says how much of the
+    prompt was cached (vLLM, SGLang with their cache report on); nothing without that."""
+    details = usage.get("prompt_tokens_details") if isinstance(usage, dict) else None
+    cached = details.get("cached_tokens") if isinstance(details, dict) else None
+    total = usage.get("prompt_tokens") if isinstance(usage, dict) else None
+    if isinstance(cached, int) and isinstance(total, int) and not isinstance(cached, bool):
+        return {"prompt_n": max(0, total - cached), "cache_n": cached}
+    return {}
+
+
 def _timings_of(chunks_seen: list[bytes], stream: bool) -> dict:
-    """llama-server's timings for the request (prompt_n, cache_n, prompt_ms), if it sent them."""
+    """llama-server's timings for the request (prompt_n, cache_n, prompt_ms), if it sent them;
+    else what an OpenAI usage block says (streamed only when the client asked for usage)."""
     raw = b"".join(chunks_seen)
     if not stream:
         try:
-            return json.loads(raw.decode()).get("timings") or {}
+            data = json.loads(raw.decode())
+            return data.get("timings") or _usage_timings(data.get("usage"))
         except (ValueError, UnicodeDecodeError, AttributeError):
             return {}
     found = {}
     for event in _events(raw):
         if isinstance(event, dict) and event.get("timings"):
             found = event["timings"]
+        elif isinstance(event, dict) and not found and event.get("usage"):
+            found = _usage_timings(event["usage"])
     return found
 
 
@@ -468,8 +488,8 @@ class Handler(BaseHTTPRequestHandler):
         side = (sess is None and not stream and state.side_slot is not None and state.drafting()
                 and not state.continues_unclaimed(messages))
         forward = dict(body)
-        if state.exact:
-            forward["cache_prompt"] = False
+        if state.exact and getattr(state.engine, "dialect", "") == "llama":
+            forward["cache_prompt"] = False   # the other engines have no such switch: exact means no drafts
         if state.side_slot is not None:
             forward["id_slot"] = state.side_slot if side else 0
         thinker = None

@@ -10,12 +10,13 @@ Rules taken from the app (mafdet/watch.py):
 """
 from __future__ import annotations
 
+import json
 import threading
 import time
 
 from ..text import common_prefix_len
 from .audit import Auditor
-from .engine import Engine, WarmResult
+from .engine import Engine, WarmResult, reused
 from .profile import EngineProfile
 
 
@@ -29,6 +30,13 @@ def content_text(content) -> str:
 def _text_of(messages: list[dict]) -> str:
     parts = [content_text(m.get("content")) for m in messages or [] if m.get("role") == "user"]
     return parts[-1] if parts else ""
+
+
+def pseudo_ids(messages: list[dict], template_kwargs: dict | None = None, tools: list | None = None) -> list[int]:
+    """Stand-in token ids for a draft the engine renders itself (it gives the proxy no ids): the
+    request's text, a code point per "token", so that a draft that grew still shares its prefix
+    and the same draft is not sent twice.  Never compared with what the engine reports."""
+    return [ord(c) for c in json.dumps([template_kwargs, tools, messages], ensure_ascii=False, sort_keys=True)]
 
 
 def same_messages(a: list[dict], b: list[dict]) -> bool:
@@ -107,10 +115,13 @@ class DraftSession:
         self.model = model
         self.cache = cache or SharedCache()
         self.debounce_ms = debounce_ms
-        self.min_new = min_new
-        self.max_draft_tokens = max_draft_tokens
+        # The drafts go through the engine's chat endpoint when it gives the proxy no token ids
+        # (Ollama, LM Studio): the proxy then counts characters, four or so to a token.
+        self.by_chat = profile.caps.by_chat
+        self.min_new = min_new * 4 if self.by_chat else min_new
+        self.max_draft_tokens = max_draft_tokens * 4 if self.by_chat else max_draft_tokens
 
-        self.auditor = Auditor(profile.channel)
+        self.auditor = Auditor(profile.channel, slack=profile.caps.reuse_slack)
         self.tier = profile.tier
         self.lock = threading.Lock()          # protects the fields below
         self.latest: list[int] = []           # newest draft not yet warmed or committed, as tokens
@@ -127,6 +138,7 @@ class DraftSession:
         self.history: list[dict] | None = None
         self.thinker = None                    # a think.Thinker when thinking ahead is on (--think-ahead)
         self.rendered_with: tuple = (None, None)   # the template options and tools the draft was rendered with
+        self.chat_draft: tuple | None = None   # (messages, template options, tools) to send, when by_chat
 
     def messages_for(self, text: str, system: dict | None = None) -> list[dict]:
         """The request the front end will send on Enter, as far as the proxy can tell: the
@@ -160,17 +172,21 @@ class DraftSession:
         engine has 6-7 tokens left to read on Enter, and a batch that small costs more
         than a larger one on a GPU.  The same goes for `tools`: Open WebUI sends 30 of
         them (~5.8k tokens) with every request, and the template puts them first."""
-        ids = self.engine.render(messages, template_kwargs, tools)
         self.rendered_with = (template_kwargs, tools)
-        if ids is None:                       # engine cannot render: fall back to the user text
-            ids = self.engine.tokenize(_text_of(messages))
-        ids = (ids or [])[: self.max_draft_tokens]
+        if self.by_chat:
+            ids = pseudo_ids(messages, template_kwargs, tools)
+        else:
+            # The engine cannot render this request (an older server refusing the tools, say):
+            # warming anything else would warm nothing.
+            ids = self.engine.render(messages, template_kwargs, tools) or []
+        ids = ids[: self.max_draft_tokens]
         with self.lock:
             self.latest_text = text if text is not None else _text_of(messages)
             self.drafted_at = time.time()
             if ids == self.latest:
                 return len(ids)
             self.latest = ids
+            self.chat_draft = (messages, template_kwargs, tools) if self.by_chat else None
             grew = len(ids) - len(self.cached)
             self._schedule(0.02 if grew >= self.min_new else self.debounce_ms / 1000.0)
         if self.thinker is not None:
@@ -200,7 +216,7 @@ class DraftSession:
     def warm_now(self) -> WarmResult | None:
         """Prefill the latest draft, if no answer is being written.  Blocking."""
         with self.lock:
-            ids = list(self.latest)
+            ids, chat = list(self.latest), self.chat_draft
         if not ids or self.tier == "T-1" or ids == self.cached:
             return None
         if self.thinker is not None and self.thinker.active:
@@ -217,9 +233,17 @@ class DraftSession:
             with self.lock:
                 if self.latest != ids:         # dropped on Enter, or a newer draft: not this one
                     return None
-            predicted, at_least = self.cache.predict(ids)
-            res = self.engine.warm(ids, spelling=self.profile.spelling)
-            self.auditor.record(predicted, res, at_least=at_least)
+            if self.by_chat and chat is not None:
+                # The engine applies its own template: nothing to count, nothing to compare.
+                res = self.engine.warm_chat(*chat)
+                self.auditor.record(None, res)
+            else:
+                predicted, at_least = self.cache.predict(ids)
+                res = self.engine.warm(ids, spelling=self.profile.spelling)
+                if res.cached_tokens is None:    # an engine that counts only what it computed
+                    res.cached_tokens = reused(res, len(ids), self.profile.channel)
+                # A cache shared with other prompts may hold more than the proxy's model of it.
+                self.auditor.record(predicted, res, at_least=at_least or self.profile.caps.shared_cache)
             if self.auditor.should_demote() and self.tier != "T0":
                 self.tier = "T0"
             self.cache.set(ids)
@@ -245,6 +269,7 @@ class DraftSession:
             self._cancel_timer()
             self.latest = []
             self.latest_text = ""
+            self.chat_draft = None
             self.cached = []                   # the next draft (next turn) warms at once
 
     def catch_up(self) -> None:

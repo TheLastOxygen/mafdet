@@ -19,6 +19,8 @@ from ..engine import WarmResult
 class LlamaEngine:
     name = "llama.cpp"
     dialect = "llama"
+    flavor = "llama"
+    version = ""          # a label from detection (/props build_info), never a code branch
 
     def __init__(self, url: str, *, slot: int = 0, timeout: float = 600.0):
         if "://" in url:

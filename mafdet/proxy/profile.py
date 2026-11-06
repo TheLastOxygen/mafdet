@@ -17,8 +17,9 @@ from pathlib import Path
 from .engine import EngineCaps
 
 # Bump when the meaning of a field changes; older files are then re-probed instead
-# of silently misread.
-FORMAT = 1
+# of silently misread.  2: the probe also answers render, shared_cache, reuse_slack,
+# tokenizer_agrees and raw_ids (2026-11-06).
+FORMAT = 2
 
 
 def _home() -> Path:
@@ -88,7 +89,8 @@ class EngineProfile:
             return None
         if data.get("format") != FORMAT:
             return None
-        caps = EngineCaps(**data.get("caps", {}))
+        known = EngineCaps.__dataclass_fields__
+        caps = EngineCaps(**{k: v for k, v in (data.get("caps") or {}).items() if k in known})
         return cls(name=data.get("name", ""), url=data.get("url", url), model=data.get("model", model),
                    caps=caps, probed_at=data.get("probed_at", 0.0),
                    latencies=data.get("latencies", {}), version=data.get("version", ""))

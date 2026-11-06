@@ -5,8 +5,9 @@ thinking ahead to any front end (Open WebUI, Hermes, agents) and any engine (SGL
 others). It lives in its own module (`mafdet/proxy/`), apart from the app, and stays experimental until it
 works and is measured.
 
-Status: reading ahead is built for llama.cpp in `mafdet/proxy/` (see its `README.md`); thinking ahead is
-not built yet. Where it stands and what is left: "Where we are" and "Roadmap" below.
+Status: reading ahead is built and measured on llama.cpp, thinking ahead is built on llama.cpp (opt-in), and
+an adapter for the other engines (vLLM, SGLang, Ollama, LM Studio, any OpenAI-compatible server) is written
+but not yet run against one of them. Where it stands and what is left: "Where we are" and "Roadmap" below.
 
 ## Where we are (2026-11-06)
 
@@ -42,6 +43,17 @@ The goal is thinking ahead in the front end people already use: in the app, the 
   tokens left to read on Enter: **7158 (4.7 s) without the proxy, 1 with it**; the first message of a new
   chat 7065 (4.3 s) → 23. Installed through Tampermonkey and tried by hand (llama-server with
   `-np 2 -kvu --no-cache-idle-slots`, see `mafdet/proxy/clients/README.md`).
+- **Step 4, more engines: built, not run against them yet** (2026-11-06). An OpenAI-compatible adapter
+  (`mafdet/proxy/adapters/openai.py`) for vLLM, SGLang, Ollama, LM Studio and anything with
+  `/v1/chat/completions`; `mafdet proxy --url <engine>` asks the server which it is. The probe now reads ahead
+  in one of two ways, whichever the engine allows: token ids the proxy renders itself (llama.cpp, vLLM: the
+  reuse predicted and audited exactly), or the draft through the engine's own chat endpoint with one token of
+  answer (Ollama, LM Studio, SGLang: nothing to count, the engine's own prefill time or token counts as the
+  evidence). It also answers four more questions: a cache shared by every request (then no second slot is
+  needed), by how much a block cache under-reports (vLLM's 16-token blocks, allowed by the audit), whether
+  the tokenizer agrees with the chat endpoint, whether the completion route takes token ids. Written against
+  the engines' documented APIs and checked on fakes of vLLM and Ollama (`tests/proxy_fake_servers.py`, 18
+  tests); the table under "More engines" says what is expected of each, and what nobody has run yet.
 
 ## Roadmap
 
@@ -84,12 +96,33 @@ measured, with the numbers in `research/LOG.md`.
       of the prompt was already read on Enter (not "time saved": part of that reuse llama-server does anyway).
 
 **4. More engines.**
-- [ ] Ollama and LM Studio (what most people run): check first what they expose (prefix reuse, a request that
-      only reads).
-- [ ] vLLM and SGLang (long prompts, shared servers: where reading ahead gains most).
-- [ ] The rest of the probe (slot affinity, cancelling, raw completions, tokenizer agreement), checked against
-      the second engine.
-- [ ] A table "engine, version, what works", measured and dated.
+- [x] Ollama and LM Studio (what most people run): built on what they expose. Neither tokenizes over HTTP, so
+      the drafts go through their chat endpoint with one token of answer (Ollama's `/api/chat`, LM Studio's
+      `/api/v0/chat/completions`) and the engine applies its own template; the evidence of reuse is the prefill
+      time they report (`prompt_eval_duration`, `time_to_first_token`). Not run against a real one yet.
+- [x] vLLM and SGLang: built. vLLM's `/tokenize` renders the chat request to ids, the drafts go through
+      `/v1/completions` (one token: it refuses `max_tokens: 0`), the reuse from
+      `usage.prompt_tokens_details.cached_tokens` (`--enable-prompt-tokens-details`), else the `/metrics`
+      counters as an estimate; SGLang's `/tokenize` takes no messages, so it goes through the chat endpoint,
+      with `--enable-cache-report` for the exact count. Not run against a real one yet.
+- [x] The rest of the probe: a shared cache (an unrelated prompt in between, then the prefix again), the block
+      slack, tokenizer agreement, token ids on the completion route. Cancelling mid-generation is still not
+      probed: nothing needs it until thinking ahead reaches these engines.
+- [ ] A table "engine, version, what works", measured and dated: the table below has what the code expects
+      of each engine; a row is done when someone runs `mafdet proxy --url` against it (help wanted).
+
+| engine | the drafts go | reuse seen in | the engine needs | status |
+|---|---|---|---|---|
+| llama.cpp (`llama-server`) | as token ids: `/apply-template`, `/tokenize`, `/completion` with `n_predict: 0` | `timings.cache_n`, exact | `-np 2 -kvu --no-cache-idle-slots` | measured (RTX 2060, b11747, `research/LOG.md` 2026-11-06) |
+| vLLM | as token ids: `/tokenize` with the messages, `/v1/completions` with one token | `usage.prompt_tokens_details.cached_tokens` with `--enable-prompt-tokens-details`; else `/metrics` (estimate) | prefix caching (on by default in V1) | written, not run |
+| SGLang | through the chat endpoint | `cached_tokens` with `--enable-cache-report`; else the time | the radix cache (default) | written, not run |
+| Ollama | through `/api/chat`, `num_predict: 1` | the prefill time (`prompt_eval_duration`) | `OLLAMA_NUM_PARALLEL=2` with a front end that sends titles and follow-ups | written, not run |
+| LM Studio | through `/api/v0/chat/completions`, `max_tokens: 1` | the prefill time (`time_to_first_token`) | — | written, not run |
+| any other OpenAI-compatible server | through `/v1/chat/completions`, `max_tokens: 1` | `cached_tokens` if it reports it, else the time | prefix caching | written, not run |
+
+To fill a row: `mafdet proxy --url http://<engine> --model <its model id>`, then the `engine` line it prints
+and the `profile` in `http://127.0.0.1:8077/proxy/stats` into an issue, with the engine's version; and a few
+messages through Open WebUI with the user script, to say whether the first token came sooner.
 
 **5. Thinking ahead in the proxy.** The big gain, and the hardest part.
 - [x] llama.cpp first: raw completion, the Qwen3 frame the app uses (`--think-ahead`, `mafdet/proxy/think.py`).
@@ -106,7 +139,7 @@ measured, with the numbers in `research/LOG.md`.
 - [ ] Measurements from other cards and engines, asked of the community as for the Radeons.
 
 Order: 0 and 1 first (the core), then 2 and 3 on Open WebUI, so that there is something people can try.
-4 and 5 can go in parallel when someone works on them.
+4 and 5 can go in parallel when someone works on them; 4 is now waiting for the engines to be run.
 
 Still to decide (by the maintainer): whether the proxy may start llama-server itself, and whether to aim at
 support inside Open WebUI or stay with the user script.
@@ -120,7 +153,9 @@ support inside Open WebUI or stay with the user script.
    cache is warm on Enter. Any engine with prefix caching does this (a prefill-only request:
    `max_tokens: 0` or `n_predict: 0` where the engine accepts it, otherwise `max_tokens: 1`
    with the token thrown away -- the proxy probes which one; SGLang's
-   radix cache keeps the branches an edit leaves). The answer is the same as without the proxy.
+   radix cache keeps the branches an edit leaves). Where the engine gives the proxy no token ids, the
+   draft goes through the engine's own chat endpoint with one token of answer, and the engine applies
+   its template itself. The answer is the same as without the proxy.
 3. **Thinking ahead (not exact).** The proxy has the model reason on the draft, keeps that reasoning across
    edits, and on Enter tells the model the message is complete and lets it go on from there. It needs
    more of the engine (below) and a frame measured for each model family.
@@ -131,7 +166,9 @@ support inside Open WebUI or stay with the user script.
 - For thinking ahead: a raw completion endpoint where the proxy controls the exact prompt (the reasoning
   goes after the partial message, inside the assistant turn, so a chat API is not enough), streaming, and
   cancelling a generation in the middle.
-- Tokenization that matches the model's (the app uses llama-server's `/tokenize` and `/apply-template`).
+- Tokenization that matches the model's (the app uses llama-server's `/tokenize` and `/apply-template`),
+  for reading ahead by token ids; without it the drafts go through the chat endpoint, and the proxy can
+  only see that the prefill got faster.
 
 ## What we know from the app
 

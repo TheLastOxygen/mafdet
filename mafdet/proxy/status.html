@@ -66,14 +66,17 @@
     try {
       const s = await (await fetch('/proxy/stats', { cache: 'no-store' })).json();
       const p = s.proxy, m = s.summary || {}, r = s.requests || {};
-      $('what').textContent = `${p.engine} · ${p.model} · ${p.think_ahead ? 'reading and thinking ahead' : p.exact ? 'exact (no reading ahead)' : 'reading ahead'} · ${s.slots.total} slot${s.slots.total > 1 ? 's' : ''}`;
+      const c = s.cache || {};
+      const where = c.shared ? 'shared cache' : `${s.slots.total} slot${s.slots.total > 1 ? 's' : ''}`;
+      const how = p.think_ahead ? 'reading and thinking ahead' : p.exact ? 'exact (no reading ahead)' : p.tier === 'T-1' ? 'no reading ahead on this engine' : c.drafts === 'chat' ? 'reading ahead through the chat endpoint' : 'reading ahead';
+      $('what').textContent = `${p.engine}${p.version ? ' ' + p.version : ''} · ${p.model} · ${how} · ${where}`;
       $('state').textContent = 'running'; $('state').className = 'state on';
       $('n').textContent = m.requests ?? 0;
       $('kinds').textContent = `${r.matched || 0} with drafts${r.thought_ahead ? ', ' + r.thought_ahead + ' thought ahead' : ''}, ${r.unmatched || 0} without`;
       $('first').textContent = ms(m.first_token_median_ms);
       $('pct').textContent = m.prompt_already_read_pct == null ? '–' : m.prompt_already_read_pct + ' %';
       $('left').textContent = m.read_on_enter_median == null ? '' : `median ${m.read_on_enter_median} tokens left to read`;
-      $('side').textContent = s.slots.side == null ? 'off' : (r.side || 0);
+      $('side').textContent = s.slots.side == null ? (c.shared ? 'not needed' : 'off') : (r.side || 0);
       rows($('recent'), (s.recent || []).slice().reverse(), (x) => [cell(x.at), cell(x.kind), cell(ms(x.first_token_ms), 1),
         cell(x.read_on_enter ?? '–', 1), cell(x.already_read ?? '–', 1)]);
       rows($('sessions'), s.sessions || [], (x) => [cell(x.conversation_id), cell(x.warms, 1), cell(x.mismatches, 1),

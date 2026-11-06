@@ -12,7 +12,7 @@ __all__ = ["ENGINE_NAME", "TIERS"]
 #: What the proxy calls itself in logs and in /proxy/stats.
 ENGINE_NAME = "mafdet-proxy"
 
-#: Capability tiers, best first.  T2 (thinking ahead) is not implemented yet.
+#: Capability tiers, best first.  T2 is thinking ahead (--think-ahead, llama.cpp only so far).
 TIERS = ("T2", "T1", "T0", "T-1")
 
 

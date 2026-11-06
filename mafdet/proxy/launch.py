@@ -1,4 +1,6 @@
-"""`mafdet proxy`: llama-server started the right way, and the proxy in front of it.
+"""`mafdet proxy`: llama-server started the right way, and the proxy in front of it; or the proxy
+alone in front of an engine already running (`--url`: llama-server, Ollama, vLLM, SGLang, LM Studio or
+any OpenAI-compatible server, `--engine auto` asks which).
 
 Three llama-server options decide whether reading ahead is worth anything with a front end like
 Open WebUI, and nobody would guess them (research/LOG.md, 2026-11-06):
@@ -17,6 +19,7 @@ import time
 from pathlib import Path
 
 from .adapters import make
+from .adapters.openai import detect
 from .engine import EngineCaps
 from .probe import probe
 from .profile import EngineProfile
@@ -61,21 +64,51 @@ def start_engine(args):
     return server, alias
 
 
+# Where a front end's side requests go when the engine has one cache and no second slot.
+ONE_CACHE_HINT = {
+    "llama": "start llama-server with -np 2 -kvu --no-cache-idle-slots",
+    "ollama": "start Ollama with OLLAMA_NUM_PARALLEL=2",
+    "lmstudio": "give the model 2 parallel requests in LM Studio's server settings, if the version has it",
+}
+
+
+def _wait_until(what: str, check, url: str, wait: float) -> None:
+    """Wait for an engine started next to the proxy (Docker) that is still loading, or
+    downloading its model: probing it now would save a profile without reading ahead."""
+    if check():
+        return
+    print(f"waiting for the engine at {url}...", file=sys.stderr, flush=True)
+    end = time.monotonic() + wait
+    while not check():
+        if time.monotonic() > end:
+            raise SystemExit(f"The engine at {url} did not {what} in {wait:.0f} s.")
+        time.sleep(2)
+
+
+def _first_model(engine, url: str) -> str:
+    """The first model the engine lists, for an OpenAI-style engine started without --model."""
+    status, data = engine.models()
+    ids = [m.get("id") for m in (data.get("data") or []) if isinstance(m, dict) and m.get("id")]
+    if status != 200 or not ids:
+        raise SystemExit(f"{engine.name} at {url} lists no model (GET /v1/models): pass --model.")
+    print(f"model: {ids[0]} (the first {engine.name} lists; --model picks another)", file=sys.stderr, flush=True)
+    return str(ids[0])
+
+
 def serve(url: str, model: str, *, host: str = "127.0.0.1", port: int = PROXY_PORT, cors: str = "",
           exact: bool = False, reprobe: bool = False, no_probe: bool = False, debounce_ms: int = 300,
           min_new: int = 8, engine_name: str = "llama", banner: str = "", think_ahead: bool = False,
-          wait_engine: float = 1800.0) -> int:
+          wait_engine: float = 1800.0, api_key: str = "") -> int:
     """Probe (or reload the profile of) the engine at `url` and serve the proxy until Ctrl+C."""
-    engine = make(engine_name, url)
-    # An engine started next to the proxy (Docker) may still be loading, or downloading its model:
-    # probing it now would save a profile without reading ahead.  Wait for it.
-    if callable(getattr(engine, "ready", None)) and not engine.ready():
-        print(f"waiting for the engine at {url}...", file=sys.stderr, flush=True)
-        end = time.monotonic() + wait_engine
-        while not engine.ready():
-            if time.monotonic() > end:
-                raise SystemExit(f"The engine at {url} did not answer /health in {wait_engine:.0f} s.")
-            time.sleep(2)
+    if engine_name == "auto":
+        _wait_until("answer", lambda: detect(url, api_key=api_key) is not None, url, wait_engine)
+    engine = make(engine_name, url, model=model, api_key=api_key)
+    if callable(getattr(engine, "ready", None)):
+        _wait_until("answer its health check", engine.ready, url, wait_engine)
+    if engine.dialect == "llama":
+        model = model or "default"
+    elif not model or model == "default":
+        model = engine.model = _first_model(engine, url)
     profile = None if reprobe else EngineProfile.load(url, model)
     if profile is None:
         if no_probe:
@@ -92,19 +125,28 @@ def serve(url: str, model: str, *, host: str = "127.0.0.1", port: int = PROXY_PO
     server = make_server(state, host, port)
     shown = "127.0.0.1" if host in ("0.0.0.0", "") else host
     lines = [banner] if banner else []
+    caps = profile.caps
+    how = ("no reading ahead" if profile.tier == "T-1" else
+           "drafts through its chat endpoint" if caps.by_chat else "drafts as token ids")
+    label = f"{engine.name} {profile.version}".strip()
     lines += [
         f"MAFDET proxy on http://{shown}:{port} (tier {'T-1, exact' if exact else ('T2, thinking ahead' if state.frame else profile.tier)})",
+        f"  engine       {label} at {url}: {how}, reuse seen in {profile.channel}, "
+        f"cache {'shared' if caps.shared_cache else 'one per slot'}",
         f"  front end    OpenAI API base URL http://{shown}:{port}/v1"
         + ("   (Open WebUI in Docker: http://host.docker.internal:%d/v1)" % port if host == "0.0.0.0" else ""),
         f"  drafts       {', '.join(origins) if origins else 'no web page allowed (--cors)'}",
         f"  user script  {USER_SCRIPT}",
         f"  status       http://{shown}:{port}/proxy",
     ]
+    if profile.tier == "T-1" and not exact:
+        why = profile.latencies.get("why") or ("no reuse seen" if caps.spelling != "none" else "no request to read ahead with")
+        lines.append(f"  warning      reading ahead is off on this engine ({why}): the requests pass through")
     if think_ahead and state.frame is None and not exact:
         lines.append(f"  warning      --think-ahead: {state.no_think_reason}: reading ahead only")
-    if state.side_slot is None and not exact:
-        lines.append("  warning      one slot: a front end's titles and follow-ups will evict the conversation "
-                     "(start llama-server with -np 2 -kvu --no-cache-idle-slots)")
+    if state.side_slot is None and not exact and not caps.shared_cache and profile.tier != "T-1":
+        hint = ONE_CACHE_HINT.get(getattr(engine, "flavor", ""), "give the engine a second slot, if it has the option")
+        lines.append(f"  warning      one cache: a front end's titles and follow-ups will evict the conversation ({hint})")
     print("\n".join(lines), file=sys.stderr, flush=True)
     try:
         server.serve_forever()
@@ -118,8 +160,9 @@ def serve(url: str, model: str, *, host: str = "127.0.0.1", port: int = PROXY_PO
 def run(args) -> int:
     """`mafdet proxy`."""
     if args.url:
-        return serve(args.url, args.model or "default", host=args.host, port=args.port, cors=args.cors,
-                     exact=args.exact, reprobe=args.reprobe, think_ahead=args.think_ahead)
+        return serve(args.url, args.model, host=args.host, port=args.port, cors=args.cors, exact=args.exact,
+                     reprobe=args.reprobe, think_ahead=args.think_ahead, engine_name=getattr(args, "engine", "auto"),
+                     api_key=getattr(args, "api_key", ""))
     server, alias = start_engine(args)
     try:
         return serve(server.url, alias, host=args.host, port=args.port, cors=args.cors, exact=args.exact,

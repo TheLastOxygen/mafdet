@@ -76,9 +76,11 @@ COMMANDS = [
             "of it: an OpenAI-compatible server at http://127.0.0.1:8077/v1 that reads the message while you "
             "type, when the front end sends drafts (for Open WebUI: the user script in "
             "mafdet/proxy/clients). llama-server gets two slots, so the front end's titles and follow-ups do "
-            "not evict the conversation. With --url it uses a llama-server already running instead.",
+            "not evict the conversation. With --url it uses an engine already running instead: llama-server, "
+            "Ollama, vLLM, SGLang, LM Studio or any OpenAI-compatible server.",
             ("mafdet proxy", "mafdet proxy --model qwen3-8b", "mafdet proxy --host 0.0.0.0",
-             "mafdet proxy --url http://127.0.0.1:8081"), "use", common=False),
+             "mafdet proxy --url http://127.0.0.1:8081", "mafdet proxy --url http://127.0.0.1:11434 --model qwen3:4b"),
+            "use", common=False),
     Command("hunt", "the hunt", "simulate people typing and measure the wait after sending",
             "Simulates a person typing a message (clean: start to finish; messy: typos, backspaces and an "
             "edit in the middle; paste: a long document followed by a question) and measures the wait from "
@@ -328,6 +330,7 @@ def _strike_args(p):
 
 
 def _proxy_args(p):
+    from .proxy.adapters import NAMES
     from .proxy.launch import ENGINE_PORT, OPEN_WEBUI, PROXY_PORT
     p.add_argument("--model", default="",
                    help="the model: an id from `mafdet models` (qwen3-4b, qwen3-4b:Q8_0), a GGUF file, or "
@@ -346,8 +349,14 @@ def _proxy_args(p):
                    help="web pages allowed to send drafts, comma-separated; \"\" for none "
                         "(default: Open WebUI on this machine, %(default)s)")
     p.add_argument("--url", default="",
-                   help="use a llama-server already running at this address instead of starting one "
-                        "(give it -np 2 -kvu --no-cache-idle-slots)")
+                   help="use an engine already running at this address instead of starting llama-server: "
+                        "llama-server (give it -np 2 -kvu --no-cache-idle-slots), Ollama, vLLM, SGLang, LM Studio "
+                        "or any OpenAI-compatible server; with it, --model is the model the engine serves "
+                        "(default: the first it lists)")
+    p.add_argument("--engine", default="auto", choices=list(NAMES),
+                   help="which engine is at --url (default: %(default)s, asks the server)")
+    p.add_argument("--api-key", default="",
+                   help="sent as a Bearer token to an engine at --url that wants one (vLLM's --api-key)")
     p.add_argument("--exact", action="store_true",
                    help="no reading ahead, every prompt recomputed: answers bit-identical, none of the gain")
     p.add_argument("--think-ahead", action="store_true",
