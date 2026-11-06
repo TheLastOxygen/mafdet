@@ -122,6 +122,7 @@ class DraftSession:
         self.drafted_at = 0.0
         self.history: list[dict] | None = None
         self.thinker = None                    # a think.Thinker when thinking ahead is on (--think-ahead)
+        self.rendered_with: tuple = (None, None)   # the template options and tools the draft was rendered with
 
     def messages_for(self, text: str, system: dict | None = None) -> list[dict]:
         """The request the front end will send on Enter, as far as the proxy can tell: the
@@ -156,6 +157,7 @@ class DraftSession:
         than a larger one on a GPU.  The same goes for `tools`: Open WebUI sends 30 of
         them (~5.8k tokens) with every request, and the template puts them first."""
         ids = self.engine.render(messages, template_kwargs, tools)
+        self.rendered_with = (template_kwargs, tools)
         if ids is None:                       # engine cannot render: fall back to the user text
             ids = self.engine.tokenize(_text_of(messages))
         ids = (ids or [])[: self.max_draft_tokens]

@@ -398,6 +398,7 @@ class Handler(BaseHTTPRequestHandler):
             if thinker is not None:
                 with sess.lock:                       # the draft's prompt, before Enter drops it
                     draft_ids, draft_text = list(sess.latest), sess.latest_text
+                    draft_with = sess.rendered_with
             state.begin_generation()
         # Thinking ahead: the notes written while the user typed, if the request leaves thinking on.
         notes = prompt = None
@@ -405,7 +406,10 @@ class Handler(BaseHTTPRequestHandler):
             final_text = _text_of(messages)
             notes = thinker.take(final_text)
             if notes:
-                same = draft_ids and draft_text.strip() == final_text.strip()
+                # The draft's prompt only if it was rendered as this request is: same text, same template
+                # options, same tools (the drafts of a first request after a restart may have none).
+                same = (draft_ids and draft_text.strip() == final_text.strip()
+                        and draft_with == (body.get("chat_template_kwargs"), body.get("tools")))
                 prompt = draft_ids if same else state.engine.render(messages, body.get("chat_template_kwargs"),
                                                                      body.get("tools"))
                 if not prompt:

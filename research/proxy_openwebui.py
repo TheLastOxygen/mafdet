@@ -87,9 +87,14 @@ class OpenWebUI:
             if rec is None:
                 return
             kind, payload = (data.get("data") or {}).get("type"), (data.get("data") or {}).get("data")
-            if kind == "response:completion" and isinstance(payload, dict) and "delta" in str(payload.get("type", "")) \
-                    and payload.get("delta") and rec["first"] is None:
-                rec["first"] = time.perf_counter()
+            delta = kind == "response:completion" and isinstance(payload, dict) and payload.get("delta") \
+                and "delta" in str(payload.get("type", ""))
+            if delta:
+                now = time.perf_counter()
+                if rec["first"] is None:
+                    rec["first"] = now                 # the first token shown, reasoning included
+                if payload.get("type") == "response.output_text.delta" and rec["answer"] is None:
+                    rec["answer"] = now                # the first word of the answer itself
             if kind == "chat:completion" and isinstance(payload, dict):
                 if payload.get("usage"):
                     rec["usage"] = payload["usage"]
@@ -122,7 +127,7 @@ class OpenWebUI:
                                  "follow_up_generation": True},
             **({"chat_id": chat_id} if chat_id else {"chat_variables": {}}),
         }
-        rec = {"first": None, "usage": None, "done": asyncio.Event()}
+        rec = {"first": None, "answer": None, "usage": None, "done": asyncio.Event()}
         self.waiting[rid] = rec
         t0 = time.perf_counter()
         res = await (await self.http.post(f"{BASE}/api/chat/completions", json=body, headers=self.h)).json()
@@ -133,6 +138,8 @@ class OpenWebUI:
         u = rec["usage"] or {}
         return (chat_id or res.get("chat_id"), rid,
                 {"ttft_ms": round((rec["first"] - t0) * 1000, 1) if rec["first"] else None,
+                 "answer_ms": round((rec["answer"] - t0) * 1000, 1) if rec["answer"] else None,
+                 "total_ms": round((time.perf_counter() - t0) * 1000, 1),
                  "read_on_enter": u.get("prompt_n"), "reused": u.get("cache_n"),
                  "prompt_ms": round(u["prompt_ms"], 1) if u.get("prompt_ms") is not None else None,
                  "answer_tokens": u.get("predicted_n")})
@@ -191,7 +198,7 @@ async def run(args):
                         continue
                     await asyncio.sleep(args.settle)
                     chat_id, parent, m = await c.send(model[arm], box, chat_id, parent, params, first_turn=parent is None)
-                    row = {"conversation": i % len(CONVERSATIONS), "arm": arm, "warmup": warmup,
+                    row = {"conversation": i % len(CONVERSATIONS), "arm": args.label or arm, "warmup": warmup,
                            "turn": sum(1 for t, p in conv[:turn + 1] if not p), "chars": len(box), **m}
                     rows.append(row)
                     print(json.dumps(row), flush=True)
@@ -204,14 +211,16 @@ async def run(args):
 
 def summary(rows):
     out = {}
-    for arm in ("direct", "mafdet"):
+    for arm in sorted({r["arm"] for r in rows}):
         for turn in sorted({r["turn"] for r in rows}):
             sel = [r for r in rows if r["arm"] == arm and r["turn"] == turn and r["ttft_ms"] is not None
                    and not r.get("warmup")]
             if not sel:
                 continue
             t = [r["ttft_ms"] for r in sel]
+            a = [r["answer_ms"] for r in sel if r.get("answer_ms") is not None]
             out[f"{arm} turn {turn}"] = {
+                **({"answer_mean_ms": round(statistics.mean(a)), "answer_median_ms": round(statistics.median(a))} if a else {}),
                 "n": len(sel), "ttft_mean_ms": round(statistics.mean(t)), "ttft_median_ms": round(statistics.median(t)),
                 "read_on_enter_mean": round(statistics.mean(r["read_on_enter"] or 0 for r in sel)),
                 "prompt_ms_mean": round(statistics.mean(r["prompt_ms"] or 0 for r in sel))}
@@ -233,6 +242,7 @@ def main():
     ap.add_argument("--read", type=float, default=3.0, help="pause after an answer before typing again")
     ap.add_argument("--max-tokens", type=int, default=200)
     ap.add_argument("--think", action="store_true", help="leave Qwen3's thinking on (default off: shorter runs)")
+    ap.add_argument("--label", default="", help="a name for this run's arm in the rows (e.g. t2), kept with --append")
     ap.add_argument("--out", required=True)
     ap.add_argument("--append", action="store_true")
     args = ap.parse_args()

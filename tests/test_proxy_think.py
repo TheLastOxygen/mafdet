@@ -169,3 +169,19 @@ def test_a_tool_call_ends_the_answer_with_tool_calls():
         assert events[-1]["choices"][0]["finish_reason"] == "tool_calls"
     finally:
         server.shutdown()
+
+
+def test_the_prompt_is_rendered_again_when_the_request_has_other_tools():
+    # Drafts rendered before the proxy knew the front end's tools (first request after a restart):
+    # the answer must follow the prompt the request asks for, tools included.
+    server, port, state, engine = start(think_after=4)
+    tools = [{"type": "function", "function": {"name": "get_time", "parameters": {}}}]
+    try:
+        post(port, "/v1/drafts", {"conversation_id": "c1", "text": TEXT})
+        assert wait_until(lambda: state.session("c1").thinker.finished)
+        post(port, "/v1/chat/completions", {"model": "fake-model", "stream": True, "tools": tools,
+                                            "messages": [SYSTEM, {"role": "user", "content": TEXT}]})
+        with_tools = engine.render([SYSTEM, {"role": "user", "content": TEXT}], None, tools)
+        assert engine.streamed[:len(with_tools)] == with_tools
+    finally:
+        server.shutdown()
