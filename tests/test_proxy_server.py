@@ -201,3 +201,16 @@ def wait_until(predicate, timeout=2.0):
             return True
         time.sleep(0.01)
     return False
+
+
+def test_the_status_page_and_the_request_log(proxy):
+    port, state, _ = proxy
+    status, ctype, raw = call(port, "/proxy", method="GET")
+    assert status == 200 and "html" in ctype and b"MAFDET" in raw
+    call(port, "/v1/drafts", {"conversation_id": "c1", "messages": MESSAGES})
+    call(port, "/v1/chat/completions", {"model": "fake-model", "messages": MESSAGES, "stream": True})
+    assert wait_until(lambda: len(state.recent) == 1)
+    stats = json.loads(call(port, "/proxy/stats")[2])
+    assert stats["recent"][0]["kind"] == "matched"
+    assert stats["recent"][0]["first_token_ms"] is not None
+    assert stats["summary"]["requests"] == 1

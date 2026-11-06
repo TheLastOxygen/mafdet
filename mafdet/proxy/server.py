@@ -8,10 +8,13 @@ were not there.
 """
 from __future__ import annotations
 
+import collections
 import json
+import re
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 
 from .engine import Engine
 from .profile import EngineProfile
@@ -58,6 +61,7 @@ class ProxyState:
             self.slots = 1
         self.side_slot = 1 if self.slots >= 2 and getattr(engine, "dialect", "") == "llama" else None
         self.counts = {"matched": 0, "unmatched": 0, "side": 0, "thought_ahead": 0}
+        self.recent: collections.deque = collections.deque(maxlen=200)
         self.started = 0
         self._load_last_request()
         # Thinking ahead (T2, --think-ahead): only for a model whose template has a reasoning block.
@@ -220,11 +224,33 @@ class ProxyState:
                       "think_ahead": self.frame is not None},
             "slots": {"total": self.slots, "conversation": 0, "side": self.side_slot},
             "requests": dict(self.counts),
+            "summary": self.summary(),
+            "recent": list(self.recent)[-20:],
             "profile": prof,
             "sessions": sessions,
         }
 
+    # ---- what the last requests looked like, for /proxy -------------------------------------
+    def record(self, kind: str, first_ms: float | None, timings: dict) -> None:
+        """One request on Enter: how long to its first token, and what the engine still read."""
+        read, reused = timings.get("prompt_n"), timings.get("cache_n")
+        self.recent.append({"at": time.strftime("%H:%M:%S"), "kind": kind,
+                            "first_token_ms": None if first_ms is None else round(first_ms),
+                            "read_on_enter": read, "already_read": reused,
+                            "read_ms": None if timings.get("prompt_ms") is None else round(timings["prompt_ms"])})
 
+    def summary(self) -> dict:
+        rows = [r for r in self.recent if r["kind"] != "side"]
+        firsts = sorted(r["first_token_ms"] for r in rows if r["first_token_ms"] is not None)
+        known = [r for r in rows if r["read_on_enter"] is not None and r["already_read"] is not None]
+        total = sum(r["read_on_enter"] + r["already_read"] for r in known)
+        return {"requests": len(rows),
+                "first_token_median_ms": firsts[len(firsts) // 2] if firsts else None,
+                "read_on_enter_median": sorted(r["read_on_enter"] for r in known)[len(known) // 2] if known else None,
+                "prompt_already_read_pct": round(100 * sum(r["already_read"] for r in known) / total, 1) if total else None}
+
+
+STATUS_PAGE = Path(__file__).with_name("status.html")   # GET /proxy: is it working, at a glance
 SSE_END = bytes([10, 10])                     # the blank line after a server-sent event
 CRLF = bytes([13, 10])
 
@@ -232,6 +258,44 @@ CRLF = bytes([13, 10])
 def _chunked(data: bytes) -> bytes:
     """One HTTP/1.1 chunk (an empty one ends the body)."""
     return b"%x" % len(data) + CRLF + data + CRLF
+
+
+def _events(raw: bytes):
+    """The JSON objects of a server-sent event stream."""
+    for line in raw.split(SSE_END[:1]):
+        line = line.strip()
+        if not line.startswith(b"data:"):
+            continue
+        data = line[5:].strip()
+        if not data or data == b"[DONE]":
+            continue
+        try:
+            yield json.loads(data.decode())
+        except (ValueError, UnicodeDecodeError):
+            continue
+
+
+def _timings_of(chunks_seen: list[bytes], stream: bool) -> dict:
+    """llama-server's timings for the request (prompt_n, cache_n, prompt_ms), if it sent them."""
+    raw = b"".join(chunks_seen)
+    if not stream:
+        try:
+            return json.loads(raw.decode()).get("timings") or {}
+        except (ValueError, UnicodeDecodeError, AttributeError):
+            return {}
+    found = {}
+    for event in _events(raw):
+        if isinstance(event, dict) and event.get("timings"):
+            found = event["timings"]
+    return found
+
+
+_TEXT = re.compile(rb'"(?:reasoning_)?content"\s*:\s*"(?!")')   # a non-empty string, with or without spaces
+
+
+def _has_text(chunk: bytes) -> bool:
+    """Does this piece of the stream carry text (answer or reasoning), not only a role or a stop?"""
+    return _TEXT.search(chunk) is not None
 
 
 def _answer_of(chunks_seen: list[bytes], stream: bool) -> str:
@@ -326,6 +390,13 @@ class Handler(BaseHTTPRequestHandler):
             self._json(200, {"ok": True, "tier": self.state.profile.tier})
         elif self.path == "/proxy/stats":
             self._json(200, self.state.stats())
+        elif self.path in ("/proxy", "/proxy/"):
+            raw = STATUS_PAGE.read_bytes()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(raw)))
+            self.end_headers()
+            self.wfile.write(raw)
         elif self.path.startswith("/v1/models"):
             status, data = self.state.engine.models()
             self._json(status if status else 502, data or {})
@@ -373,6 +444,8 @@ class Handler(BaseHTTPRequestHandler):
             body = self._body()
         except ValueError as exc:
             return self._bad(400, str(exc))
+        t0 = time.perf_counter()
+        first: list[float] = []                   # when the first text went out
         stream = bool(body.get("stream"))
         state = self.state
         messages = body.get("messages") if isinstance(body.get("messages"), list) else []
@@ -439,6 +512,8 @@ class Handler(BaseHTTPRequestHandler):
                     data = b"data: " + json.dumps(event).encode() + SSE_END
                     seen.append(data)
                     self.wfile.write(_chunked(data))
+                    if not first and _has_text(data):
+                        first.append(time.perf_counter())
                 done = b"data: [DONE]" + SSE_END
                 self.wfile.write(_chunked(done) + _chunked(b""))
                 return
@@ -462,6 +537,8 @@ class Handler(BaseHTTPRequestHandler):
                 if not chunk:
                     continue
                 seen.append(chunk)
+                if not first and _has_text(chunk):
+                    first.append(time.perf_counter())
                 # One write per chunk: three small writes can wait on each other in TCP.
                 self.wfile.write(b"%x\r\n%s\r\n" % (len(chunk), chunk))
             self.wfile.write(b"0\r\n\r\n")
@@ -472,6 +549,11 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:
                 pass
         finally:
+            if ok:
+                if not stream and not first:
+                    first.append(time.perf_counter())   # a whole answer: its first text is all of it
+                kind = "side" if side else ("thought ahead" if notes else ("matched" if sess else "unmatched"))
+                state.record(kind, (first[0] - t0) * 1000 if first else None, _timings_of(seen, stream))
             if not side:
                 if ok and not state.exact and sess is not None:
                     state.remember(sess, messages, _answer_of(seen, stream))

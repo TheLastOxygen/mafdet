@@ -88,7 +88,7 @@ def serve(url: str, model: str, *, host: str = "127.0.0.1", port: int = PROXY_PO
         + ("   (Open WebUI in Docker: http://host.docker.internal:%d/v1)" % port if host == "0.0.0.0" else ""),
         f"  drafts       {', '.join(origins) if origins else 'no web page allowed (--cors)'}",
         f"  user script  {USER_SCRIPT}",
-        f"  stats        http://{shown}:{port}/proxy/stats",
+        f"  status       http://{shown}:{port}/proxy",
     ]
     if think_ahead and state.frame is None and not exact:
         lines.append("  warning      --think-ahead: this model's template has no reasoning block (<think>), "

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MAFDET proxy</title>
+<style>
+  :root { --bg: #f7f5f1; --fg: #1d1b18; --muted: #6e685f; --line: #e2ddd4; --accent: #b86e14; --ok: #2e7d4f; --warn: #b3261e; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0e0d0c; --fg: #eeeae2; --muted: #9b958b; --line: #2a2723; --accent: #d4892a; --ok: #5fbf86; --warn: #ef8a7d; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 20px; margin: 0 0 4px; } h1 span { color: var(--accent); }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  .state { display: inline-block; padding: 2px 10px; border-radius: 999px; font-weight: 600; font-size: 13px; }
+  .state.on { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
+  .state.off { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 16px 0 24px; }
+  .tile { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .tile b { display: block; font-size: 24px; font-variant-numeric: tabular-nums; }
+  .tile small { color: var(--muted); }
+  h2 { font-size: 15px; margin: 24px 0 8px; }
+  .table { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 14px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { color: var(--muted); font-weight: 500; }
+  td.num, th.num { text-align: right; }
+  .muted { color: var(--muted); }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1><span>MAFDET</span> proxy</h1>
+  <p class="sub" id="what">connecting…</p>
+  <span class="state off" id="state">no answer from the proxy</span>
+  <div class="tiles">
+    <div class="tile"><small>messages on Enter</small><b id="n">–</b><small id="kinds"></small></div>
+    <div class="tile"><small>first token after Enter, median</small><b id="first">–</b><small>reasoning included, last 200 messages</small></div>
+    <div class="tile"><small>prompt already read on Enter</small><b id="pct">–</b><small id="left"></small></div>
+    <div class="tile"><small>side requests on their own slot</small><b id="side">–</b><small>titles, tags, follow-ups</small></div>
+  </div>
+  <h2>Last messages</h2>
+  <div class="table"><table>
+    <thead><tr><th>time</th><th>how</th><th class="num">first token</th><th class="num">read on Enter</th><th class="num">already read</th></tr></thead>
+    <tbody id="recent"><tr><td colspan="5" class="muted">nothing yet: send a message through the proxy</td></tr></tbody>
+  </table></div>
+  <h2>Conversations</h2>
+  <div class="table"><table>
+    <thead><tr><th>conversation</th><th class="num">drafts read</th><th class="num">audit mismatches</th><th class="num">reasoned ahead</th></tr></thead>
+    <tbody id="sessions"><tr><td colspan="4" class="muted">no drafts yet: is the user script installed?</td></tr></tbody>
+  </table></div>
+  <p class="muted" style="margin-top:24px">Updated every 2 s from <a href="/proxy/stats">/proxy/stats</a>.</p>
+</main>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const cell = (text, num) => { const td = document.createElement('td'); td.textContent = text; if (num) td.className = 'num'; return td; };
+  const ms = (v) => v == null ? '–' : v < 1000 ? v + ' ms' : (v / 1000).toFixed(1) + ' s';
+  function rows(tbody, items, make) {
+    if (!items.length) return;
+    tbody.replaceChildren(...items.map((it) => { const tr = document.createElement('tr'); tr.append(...make(it)); return tr; }));
+  }
+  async function refresh() {
+    try {
+      const s = await (await fetch('/proxy/stats', { cache: 'no-store' })).json();
+      const p = s.proxy, m = s.summary || {}, r = s.requests || {};
+      $('what').textContent = `${p.engine} · ${p.model} · ${p.think_ahead ? 'reading and thinking ahead' : p.exact ? 'exact (no reading ahead)' : 'reading ahead'} · ${s.slots.total} slot${s.slots.total > 1 ? 's' : ''}`;
+      $('state').textContent = 'running'; $('state').className = 'state on';
+      $('n').textContent = m.requests ?? 0;
+      $('kinds').textContent = `${r.matched || 0} with drafts${r.thought_ahead ? ', ' + r.thought_ahead + ' thought ahead' : ''}, ${r.unmatched || 0} without`;
+      $('first').textContent = ms(m.first_token_median_ms);
+      $('pct').textContent = m.prompt_already_read_pct == null ? '–' : m.prompt_already_read_pct + ' %';
+      $('left').textContent = m.read_on_enter_median == null ? '' : `median ${m.read_on_enter_median} tokens left to read`;
+      $('side').textContent = s.slots.side == null ? 'off' : (r.side || 0);
+      rows($('recent'), (s.recent || []).slice().reverse(), (x) => [cell(x.at), cell(x.kind), cell(ms(x.first_token_ms), 1),
+        cell(x.read_on_enter ?? '–', 1), cell(x.already_read ?? '–', 1)]);
+      rows($('sessions'), s.sessions || [], (x) => [cell(x.conversation_id), cell(x.warms, 1), cell(x.mismatches, 1),
+        cell(x.thinking ? x.thinking.reasoned + ' tokens' : '–', 1)]);
+    } catch (e) {
+      $('state').textContent = 'no answer from the proxy'; $('state').className = 'state off';
+    }
+  }
+  refresh(); setInterval(refresh, 2000);
+</script>
+</body>
+</html>
