@@ -346,11 +346,30 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
   several slots use `-kvu` (4 slots: 139 tok/s in all with it, 103 without).
 - **2026-10-22 · Gatherer (small model writes notes for the 14B)** — closed, no gain on the RTX 2060
   (README). Do not reopen unless asked. Old data in `research/data/14b/`.
+- **2026-11-03 · Proxy read-ahead, first measurement (`mafdet/proxy/`)** — one V620 (gfx1030,
+  ROCm 7.2.4, `llama.cpp-rdna2` e194cbd), Qwen3-4B-Q4_K_M, greedy, thinking off, 8192 ctx,
+  `-np 1 --cache-ram 0 --cache-reuse 0`; the proxy on another machine, over the LAN. Probe:
+  tier T1 in 0.4 s (`n_predict: 0`, `timings.cache_n`, an edited tail still hits the prefix).
+  Enter → first token, drafts on vs off: 24 typed problems at 12 chars/s **33 → 25 ms mean**
+  (median 33 → 19); pasted prompts of ~2k and ~4k tokens **492 → 23 ms mean** (median 633 → 23).
+  Audit: 493 warms, 5 prediction mismatches (1%); it was 28/493 when the cache was modelled per
+  conversation instead of per engine slot (`SharedCache` in `proxy/session.py`). Answers: 20/28
+  byte-identical, 27 of 28 complete enough to compare, 26 agree on the final number. The one
+  that differs (133 → 132, the printer problem) is the model reading the question differently,
+  and the proxy's run is the correct reading. A warm prefix is computed in different batches,
+  so greedy decoding is not bit-reproducible against a cold run — same class as the 8
+  wording-only rows. Control, no proxy involved (`engine_stability` in the data): cold vs cold
+  and cold vs warm of the same prompt are identical, so the divergence needs a *partial* prefix
+  (a draft) and belongs to the engine, not to the proxy. Data:
+  `research/data/proxy_read_ahead_4b.json`.
 - **Terminal app restyle (2026-10-23)**: amber CRT, boot sequence, decrypting text (`mafdet/tui/fx.py`).
 
 ## How to work here
 
 - Python: `.venv/Scripts/python` (Windows), `.venv/bin/python` (Mac). Tests: `<python> -m pytest -q`.
+- Proxy: `python -m mafdet.proxy --url <engine> --model <id>` (front end posts drafts to
+  `/v1/drafts`, stats at `/proxy/stats`); bench as `python -m mafdet.proxy.bench --url <engine>
+  --model <id> --prompts 24 --long 4` (add `--append-log research/LOG.md` to write the block).
 - Benchmark: `research/thinking_ahead.py` (24 Italian word problems typed in real time; `--problems`,
   `--config "name=strike options"`, `--gguf`, `--append`). The README's 4B table is `thinking_ahead_4b.json`.
 - Runs longer than ~10 minutes get killed: split them with `--problems` and `--append`. A 4B run is

@@ -1,0 +1,139 @@
+"""The llama.cpp adapter: one `http.client` connection to a llama-server the user already runs.
+
+This talks to llama-server's native routes, the same ones the app's `LlamaPrefill` uses:
+`/tokenize` for exact ids, `/completion` with `n_predict: 0` for a prefill-only request
+(the cache is warm when it returns), and `timings.cache_n` for the exact number of
+tokens reused.  `/v1/chat/completions` is passed through untouched, so the answer to a
+real request is whatever the engine would have said anyway.
+"""
+from __future__ import annotations
+
+import http.client
+import json
+import time
+from typing import Iterable
+
+from ..engine import WarmResult
+
+
+class LlamaEngine:
+    name = "llama.cpp"
+    dialect = "llama"
+
+    def __init__(self, url: str, *, slot: int = 0, timeout: float = 600.0):
+        if "://" in url:
+            url = url.split("://", 1)[1]
+        host, _, port = url.partition(":")
+        self.host = host or "127.0.0.1"
+        self.port = int(port or 8080)
+        self.slot = slot
+        self.timeout = timeout
+
+    def __repr__(self) -> str:
+        return f"LlamaEngine({self.host}:{self.port}, slot {self.slot})"
+
+    # ---- plumbing ---------------------------------------------------------------
+    def _conn(self) -> http.client.HTTPConnection:
+        return http.client.HTTPConnection(self.host, self.port, timeout=self.timeout)
+
+    def _call(self, path: str, body: dict | None = None, method: str = "POST") -> tuple[int, dict, bytes]:
+        conn = self._conn()
+        try:
+            data = json.dumps(body).encode() if body is not None else None
+            headers = {"Content-Type": "application/json"} if data else {}
+            conn.request(method, path, body=data, headers=headers)
+            resp = conn.getresponse()
+            raw = resp.read()
+            try:
+                parsed = json.loads(raw.decode())
+            except (ValueError, UnicodeDecodeError):
+                parsed = {}
+            return resp.status, parsed, raw
+        finally:
+            conn.close()
+
+    # ---- Engine -------------------------------------------------------------
+    def tokenize(self, text: str) -> list[int] | None:
+        status, data, _ = self._call("/tokenize", {"content": text, "add_special": False})
+        if status != 200:
+            return None
+        tokens = data.get("tokens")
+        return list(tokens) if isinstance(tokens, list) else None
+
+    def render(self, messages: list[dict]) -> list[int] | None:
+        """The prompt llama-server builds for a chat request: its own template, then tokens."""
+        status, data, _ = self._call("/apply-template",
+                                     {"messages": messages, "add_generation_prompt": True})
+        if status != 200 or not data.get("prompt"):
+            return None
+        # The template's text is already in the model's vocabulary; no BOS is added twice.
+        return self.tokenize(data["prompt"])
+
+    def warm(self, ids: list[int], *, spelling: str = "auto") -> WarmResult:
+        """One prefill request.  `n_predict: 0` is exact (no token is generated);
+        `max_tokens1` asks for one token and throws it away -- the universal fallback."""
+        if not ids:
+            return WarmResult(channel="none", detail={"ok": False, "why": "empty prompt"})
+        body = {"prompt": ids, "id_slot": self.slot, "cache_prompt": True, "temperature": 0.0}
+        if spelling in ("auto", "n_predict0"):
+            body["n_predict"] = 0
+            t0 = time.perf_counter()
+            status, data, raw = self._call("/completion", body)
+            ms = (time.perf_counter() - t0) * 1000
+            if status == 200:
+                timings = data.get("timings") or {}
+                return WarmResult(cached_tokens=timings.get("cache_n"),
+                                  computed_tokens=timings.get("prompt_n"),
+                                  ms=ms, channel="timings",
+                                  detail={"ok": True, "spelling": "n_predict0"})
+            if spelling == "n_predict0":
+                return WarmResult(ms=ms, channel="none",
+                                  detail={"ok": False, "status": status, "why": raw[:200].decode(errors="replace")})
+        # Fallback: one token, discarded.
+        body["n_predict"] = 1
+        t0 = time.perf_counter()
+        status, data, raw = self._call("/completion", body)
+        ms = (time.perf_counter() - t0) * 1000
+        if status != 200:
+            return WarmResult(ms=ms, channel="none",
+                              detail={"ok": False, "status": status, "why": raw[:200].decode(errors="replace")})
+        timings = data.get("timings") or {}
+        return WarmResult(cached_tokens=timings.get("cache_n"), computed_tokens=timings.get("prompt_n"),
+                          ms=ms, channel="timings", detail={"ok": True, "spelling": "max_tokens1"})
+
+    def chat(self, body: dict, *, stream: bool = False,
+             timeout: float = 600.0) -> tuple[int, dict[str, str], Iterable[bytes]]:
+        payload = dict(body)
+        payload["stream"] = bool(stream)
+        data = json.dumps(payload).encode()
+        conn = http.client.HTTPConnection(self.host, self.port, timeout=timeout)
+        conn.request("POST", "/v1/chat/completions", body=data,
+                     headers={"Content-Type": "application/json"})
+        resp = conn.getresponse()
+        headers = {k.lower(): v for k, v in resp.getheaders()}
+        if not stream:
+            raw = resp.read()
+            conn.close()
+            return resp.status, headers, [raw]
+
+        def chunks() -> Iterable[bytes]:
+            try:
+                while True:
+                    # Line at a time: a 1024-byte read() blocks until the buffer fills,
+                    # which would add latency to every streamed answer.
+                    line = resp.readline()
+                    if not line:
+                        break
+                    yield line
+            finally:
+                conn.close()
+
+        return resp.status, headers, chunks()
+
+    def models(self) -> tuple[int, dict]:
+        status, data, _ = self._call("/v1/models", method="GET")
+        return status, data
+
+    def metrics_text(self) -> str | None:
+        status, _, raw = self._call("/metrics", method="GET")
+        return raw.decode(errors="replace") if status == 200 else None
