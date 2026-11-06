@@ -16,10 +16,13 @@ If the proxy is down it prints one warning in the console and retries quietly.
 1. Install Tampermonkey (or Violentmonkey) in the browser.
 2. Its dashboard: "Create a new script", paste the whole content of `open-webui.user.js`,
    save. Or drag the file onto the dashboard.
-3. Start llama-server with two slots, `-np 2 -kvu`. Open WebUI asks the model for a title, tags
+3. Start llama-server with two slots, `-np 2 -kvu --no-cache-idle-slots`. Open WebUI asks the model for a title, tags
    and follow-up suggestions around every answer; on one slot they evict the conversation, and
    the next turn rereads it all (with Open WebUI's 30 built-in tools, ~7k tokens: 4.7 s on an RTX
    2060). With two, the proxy keeps the conversation in slot 0 and sends those to slot 1.
+   `--no-cache-idle-slots` matters: by default, with a unified KV cache, llama-server saves an
+   idle slot to RAM and clears it when another slot gets a task, so a title on slot 1 empties
+   the conversation in slot 0.
    Then start the proxy with CORS for the page's origin, and point Open WebUI at it:
 
    ```bash
@@ -57,9 +60,15 @@ are two origins).
 
 ### What it gains (RTX 2060, Qwen3-4B, Open WebUI 0.13.0, 2026-11-06)
 
-Second turn of a chat, tokens llama-server still had to read on Enter: **7158 (4.7 s) without
-the proxy, 1 with it**. Tried in Chrome with the script's code run in the page, not yet installed
-through Tampermonkey. Details in `research/LOG.md`.
+Tokens llama-server still had to read on Enter, typed messages:
+
+| | without the proxy | with it |
+|---|---|---|
+| first message of a new chat | 7065 (4.3 s) | 23 (37 ms) |
+| second message | 7158 (4.7 s) | 1 |
+| a follow-up suggestion clicked | | 63 |
+
+Installed through Tampermonkey in Chrome and tried by hand. Details in `research/LOG.md`.
 
 ### When the read-ahead does not count
 

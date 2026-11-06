@@ -30,8 +30,9 @@ The goal is thinking ahead in the front end people already use: in the app, the 
 - **Steps 1 and 2 on Open WebUI** (2026-11-06): a front end sends only the text being typed and the proxy
   rebuilds the rest; a user script makes Open WebUI do that (`mafdet/proxy/clients/`); Open WebUI's titles,
   tags and follow-ups go to a second slot. On the RTX 2060, second turn of a chat in Open WebUI 0.13.0,
-  tokens left to read on Enter: **7158 (4.7 s) without the proxy, 1 with it**. The script was run in the
-  page from Chrome, not yet installed through Tampermonkey by a user.
+  tokens left to read on Enter: **7158 (4.7 s) without the proxy, 1 with it**; the first message of a new
+  chat 7065 (4.3 s) → 23. Installed through Tampermonkey and tried by hand (llama-server with
+  `-np 2 -kvu --no-cache-idle-slots`, see `mafdet/proxy/clients/README.md`).
 
 ## Roadmap
 

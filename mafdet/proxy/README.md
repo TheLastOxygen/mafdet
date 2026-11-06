@@ -32,7 +32,11 @@ that drafts after the answer. On Enter the request is matched to the session by 
 With two or more slots (`/props` total_slots), the conversation stays in slot 0 and a request that
 matches no conversation, while a front end is drafting, goes to slot 1 (`id_slot`): Open WebUI's
 titles, tags and follow-ups, which would otherwise evict the conversation. `/proxy/stats` counts
-them under `requests`.
+them under `requests`. A request that matches no conversation but is streamed (a suggestion
+clicked, which comes with no drafts) stays in slot 0. Start llama-server with
+`--no-cache-idle-slots`: with `-kvu` it otherwise clears an idle slot whenever another one gets a
+task. The tools, template options and system prompt of the last request are saved next to the
+profile (`*.last.json`), so the first drafts after a restart carry them.
 
 A draft may carry the request's `chat_template_kwargs` (e.g. `{"enable_thinking": false}` for
 Qwen3) and `tools`; without them the proxy uses those of the last chat request it passed

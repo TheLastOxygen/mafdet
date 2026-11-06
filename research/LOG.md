@@ -128,6 +128,23 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
 
 ## Done and measured
 
+- **2026-11-06 · Proxy on Open WebUI tried by hand, with Tampermonkey: two fixes, then a new chat's first
+  message 23 tokens to read on Enter and the second 1 (RTX 2060, Qwen3-4B).** The user installed the script
+  in Chrome through Tampermonkey: drafts arrived (97 warms, no mismatch). Two problems showed up:
+  - A follow-up suggestion clicked is sent with no drafts: the proxy took it for a side request (it matched
+    no draft) and sent it to slot 1. Now a side request must also be not streamed (Open WebUI streams every
+    turn and asks for titles, tags and follow-ups whole), and a streamed turn that continues the conversation
+    no draft has named yet is kept for the next id. The last request's tools, template options and system
+    prompt are saved (`*.last.json` next to the profile), so the first drafts after a restart carry them.
+  - Without `--cache-ram 0` (the first run had it), the second turn's drafts found slot 0 empty (audit:
+    predicted 7087, reported 0) and reread 7117 tokens in 4.9 s while typing. llama-server's
+    `--cache-idle-slots` (on by default with a unified KV cache) saves an idle slot to RAM and clears it when
+    another slot gets a task: the title on slot 1 emptied the conversation. `--no-cache-idle-slots` fixes it.
+  Then, `-np 2 -kvu --no-cache-idle-slots`, a new chat typed in three bursts: the drafts read 7068 tokens
+  (tools included, from the saved request) while typing, **23 tokens on Enter (37 ms)**; second message,
+  drafts reused 7185, **1 token on Enter**; a suggestion clicked: slot 0, 63 tokens. Side requests: 9 on
+  slot 1.
+
 - **2026-11-06 · Proxy steps 1-2 on Open WebUI: second turn of a chat, 7158 tokens (4.7 s) to read on Enter
   without the proxy, 1 with it (RTX 2060, Qwen3-4B Q4_K_M).** Open WebUI 0.13.0 in its own venv
   (`E:\openwebui`, Python 3.12), llama-server `-np 2 -kvu -c 16384`.
