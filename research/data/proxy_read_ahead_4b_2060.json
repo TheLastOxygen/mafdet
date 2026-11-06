@@ -1,0 +1,356 @@
+{
+ "summary": {
+  "typed": {
+   "n": 24,
+   "off_mean_ms": 36.0,
+   "on_mean_ms": 59.0,
+   "off_median_ms": 32.0,
+   "on_median_ms": 62.0,
+   "identical": 21,
+   "same_answer": 24,
+   "on_slower": 23
+  },
+  "long": {
+   "n": 4,
+   "off_mean_ms": 1160.0,
+   "on_mean_ms": 873.0,
+   "off_median_ms": 1160.0,
+   "on_median_ms": 876.0,
+   "identical": 4,
+   "same_answer": 4,
+   "on_slower": 0
+  },
+  "engine_stability": [
+   {
+    "cold_vs_cold_identical": true,
+    "cold_vs_warm_identical": true,
+    "cold_vs_warm_same_answer": true
+   },
+   {
+    "cold_vs_cold_identical": true,
+    "cold_vs_warm_identical": true,
+    "cold_vs_warm_same_answer": true
+   }
+  ],
+  "audit": {
+   "warms": 493,
+   "mismatches": 4,
+   "estimates": 0,
+   "unknown": 0
+  },
+  "profile": {
+   "name": "llama.cpp",
+   "url": "http://127.0.0.1:8081",
+   "model": "Qwen3-4B-Q4_K_M",
+   "caps": {
+    "prefix_caching": true,
+    "spelling": "n_predict0",
+    "reuse_channel": "timings",
+    "edit_branches": true,
+    "tokenize": true
+   },
+   "probed_at": 1793957891.044843,
+   "latencies": {
+    "base_ms": 20.848099840804935,
+    "branch_ms": 23.790499893948436,
+    "probe_ms": 354.85779982991517
+   },
+   "version": "",
+   "format": 1,
+   "tier": "T1"
+  },
+  "typing_cps": 12.0,
+  "thinking": false,
+  "max_tokens": 96,
+  "model": "Qwen3-4B-Q4_K_M",
+  "url": "http://127.0.0.1:8081",
+  "when": "2026-11-06 10:45:38"
+ },
+ "rows": {
+  "typed": [
+   {
+    "off_ttft": 0.05770999984815717,
+    "on_ttft": 0.07086650002747774,
+    "identical": true,
+    "same_answer": true,
+    "off_finish": "stop",
+    "on_finish": "stop",
+    "off_text": "Luca starts with 25 euros.  \nHe buys 3 notebooks at 4 euros each: $3 \\times 4 = 12$ euros.  \nHe also buys a pen for 2 euros.  \nTotal spent: $12 + 2 = 14$ euros.  \nRemaining: $25 - 14 = 11$ euros.  \n\n11",
+    "on_text": "Luca starts with 25 euros.  \nHe buys 3 notebooks at 4 euros each: $3 \\times 4 = 12$ euros.  \nHe also buys a pen for 2 euros.  \nTotal spent: $12 + 2 = 14$ euros.  \nRemaining: $25 - 14 = 11$ euros.  \n\n11"
+   },
+   {
+    "off_ttft": 0.032068399945273995,
+    "on_ttft": 0.06138570001348853,
+    "identical": true,
+    "same_answer": true,
+    "off_finish": "stop",
+    "on_finish": "stop",
+    "off_text": "11:15",
+    "on_text": "11:15"
+   },
+   {
+    "off_ttft": 0.04450579988770187,
+    "on_ttft": 0.06867299997247756,
+    "identical": true,
+    "same_answer": true,
+    "off_finish": "stop",
+    "on_finish": "stop",
+    "off_text": "7 \u00d7 12 = 84  \n84 - 15 = 69  \n\n69",
+    "on_text": "7 \u00d7 12 = 84  \n84 - 15 = 69  \n\n69"
+   },
+   {
+    "off_ttft": 0.029989299830049276,
+    "on_ttft": 0.06711589987389743,
+    "identical": true,
+    "same_answer": true,
+    "off_finish": "stop",
+    "on_finish": "stop",
+    "off_text": "The perimeter of a rectangle is calculated as $2 \\times (\\text{length} + \\text{width})$.\n\n$$\n2 \\times (14 + 9) = 2 \\times 23 = 46\n$$\n\n46",
+    "on_text": "The perimeter of a rectangle is calculated as $2 \\times (\\text{length} + \\text{width})$.\n\n$$\n2 \\times (14 + 9) = 2 \\times 23 = 46\n$$\n\n46"
+   },
+   {
+    "off_ttft": 0.032206400064751506,
+    "on_ttft": 0.03651400003582239,
+    "identical": false,
+    "same_answer": true,
+    "off_finish": "stop",
+    "on_finish": "stop",
+    "off_text": "Marta reads 18 pages a day for 6 days:  \n18 \u00d7 6 = 108 pages.  \n\nThen she reads 12 more pages:  \n108 + 12 = 120 pages.  \n\nTotal: 120.",
+    "on_text": "Marta reads 18 pages a day for 6 days:  \n$ 18 \\times 6 = 108 $ pages.  \n\nThen she reads 12 more pages:  \n$ 108 + 12 = 120 $ pages.  \n\nTotal: **120**."
+   },
+   {
+    "off_ttft": 0.035238999873399734,
+    "on_ttft": 0.03594179986976087,
+    "identical": true,
+    "same_answer": true,
+    "off_finish": "stop",
+    "on_finish": "stop",
+    "off_text": "45 + 38 = 83  \n83 - 17 = 66  \n\n66",
+    "on_text": "45 + 38 = 83  \n83 - 17 = 66  \n\n66"
+   },
+   {
+    "off_ttft": 0.03040150017477572,
+    "on_ttft": 0.06525159999728203,
+    "identical": true,
+    "same_answer": true,
+    "off_finish": "stop",
+    "on_finish": "stop",
+    "off_text": "72 + 9 = 81  \n81 \u00f7 3 = 27  \n\n27",
+    "on_text": "72 + 9 = 81  \n81 \u00f7 3 = 27  \n\n27"
+   },
+   {
+    "off_ttft": 0.03209299989975989,
+    "on_ttft": 0.07206910010427237,
+    "identical": true,
+    "same_answer": true,
+    "off_finish": "stop",
+    "on_finish": "stop",
+    "off_text": "120 - (15 \u00d7 4) = 120 - 60 = 60\n\n60",
+    "on_text": "120 - (15 \u00d7 4) = 120 - 60 = 60\n\n60"
+   },
+   {
+    "off_ttft": 0.044635700061917305,
+    "on_ttft": 0.05317729990929365,
+    "identical": true,
+    "same_answer": true,
+    "off_finish": "stop",
+    "on_finish": "stop",
+    "off_text": "42 km",
+    "on_text": "42 km"
+   },
+   {
+    "off_ttft": 0.05978180002421141,
+    "on_ttft": 0.03649169998243451,
+    "identical": true,
+    "same_answer": true,
+    "off_finish": "stop",
+    "on_finish": "stop",
+    "off_text": "A box has 8 rows of 9 tiles:  \n$ 8 \\times 9 = 72 $ tiles.  \n\n14 tiles are broken.  \n\nUsable tiles:  \n$ 72 - 14 = 58 $.  \n\n58.",
+    "on_text": "A box has 8 rows of 9 tiles:  \n$ 8 \\times 9 = 72 $ tiles.  \n\n14 tiles are broken.  \n\nUsable tiles:  \n$ 72 - 14 = 58 $.  \n\n58."
+   },
+   {
+    "off_ttft": 0.03207219997420907,
+    "on_ttft": 0.06185229984112084,
+    "identical": true,
+    "same_answer": true,
+    "off_finish": "stop",
+    "on_finish": "stop",
+    "off_text": "14 \u00d7 7 = 98  \n98 - 30 = 68  \n\n68",
+    "on_text": "14 \u00d7 7 = 98  \n98 - 30 = 68  \n\n68"
+   },
+   {
+    "off_ttft": 0.031890599988400936,
+    "on_ttft": 0.04880110011436045,
+    "identical": true,
+    "same_answer": true,
+    "off_finish": "stop",
+    "on_finish": "stop",
+    "off_text": "The perimeter of the garden is $2 \\times (6 + 11) = 2 \\times 17 = 34$ meters.  \nFencing costs 5 euros per meter, so the total cost is $34 \\times 5 = 170$ euros.\n\n170",
+    "on_text": "The perimeter of the garden is $2 \\times (6 + 11) = 2 \\times 17 = 34$ meters.  \nFencing costs 5 euros per meter, so the total cost is $34 \\times 5 = 170$ euros.\n\n170"
+   },
+   {
+    "off_ttft": 0.03221730003133416,
+    "on_ttft": 0.06483699986711144,
+    "identical": true,
+    "same_answer": true,
+    "off_finish": "stop",
+    "on_finish": "stop",
+    "off_text": "94 - 27 = 67  \n67 + 12 = 79  \n\n79",
+    "on_text": "94 - 27 = 67  \n67 + 12 = 79  \n\n79"
+   },
+   {
+    "off_ttft": 0.03499799990095198,
+    "on_ttft": 0.04367640009149909,
+    "identical": true,
+    "same_answer": true,
+    "off_finish": "stop",
+    "on_finish": "stop",
+    "off_text": "8 + 5 = 13 litres per minute  \n13 \u00d7 9 = 117 litres",
+    "on_text": "8 + 5 = 13 litres per minute  \n13 \u00d7 9 = 117 litres"
+   },
+   {
+    "off_ttft": 0.032483400078490376,
+    "on_ttft": 0.07476840005256236,
+    "identical": true,
+    "same_answer": true,
+    "off_finish": "stop",
+    "on_finish": "stop",
+    "off_text": "260 - 74 = 186\n\n186",
+    "on_text": "260 - 74 = 186\n\n186"
+   },
+   {
+    "off_ttft": 0.03200230002403259,
+    "on_ttft": 0.06597300013527274,
+    "identical": true,
+    "same_answer": true,
+    "off_finish": "stop",
+    "on_finish": "stop",
+    "off_text": "52 - 19 = 33  \n33 + 24 = 57  \n\n57",
+    "on_text": "52 - 19 = 33  \n33 + 24 = 57  \n\n57"
+   },
+   {
+    "off_ttft": 0.030031000031158328,
+    "on_ttft": 0.07281639985740185,
+    "identical": true,
+    "same_answer": true,
+    "off_finish": "stop",
+    "on_finish": "stop",
+    "off_text": "17 \u00d7 5 = 85  \n85 - 6 = 79  \n\n79",
+    "on_text": "17 \u00d7 5 = 85  \n85 - 6 = 79  \n\n79"
+   },
+   {
+    "off_ttft": 0.03387399995699525,
+    "on_ttft": 0.06096330005675554,
+    "identical": false,
+    "same_answer": true,
+    "off_finish": "stop",
+    "on_finish": "stop",
+    "off_text": "To find the new price after a 25% discount:\n\n1. Calculate 25% of 68:  \n   $ 68 \\times 0.25 = 17 $\n\n2. Subtract the discount from the original price:  \n   $ 68 - 17 = 51 $\n\nThe new price is **51** euros.",
+    "on_text": "68 \u00d7 (1 - 0.25) = 68 \u00d7 0.75 = 51\n\n51"
+   },
+   {
+    "off_ttft": 0.02910619997419417,
+    "on_ttft": 0.0744182001799345,
+    "identical": true,
+    "same_answer": true,
+    "off_finish": "stop",
+    "on_finish": "stop",
+    "off_text": "4 * 450 = 1800\n\n1800",
+    "on_text": "4 * 450 = 1800\n\n1800"
+   },
+   {
+    "off_ttft": 0.03197190002538264,
+    "on_ttft": 0.033196100033819675,
+    "identical": true,
+    "same_answer": true,
+    "off_finish": "length",
+    "on_finish": "length",
+    "off_text": "Total sweets = 64  \nLeftover sweets = 3  \nSweets given to children = 64 - 3 = 61  \nNumber of children = 8  \nSweets per child = 61 \u00f7 8 = 7.625  \n\nSince the question asks for how many each, and the answer must be a whole number, the correct interpretation is that 61 sweets are split among 8 children, so each child gets",
+    "on_text": "Total sweets = 64  \nLeftover sweets = 3  \nSweets given to children = 64 - 3 = 61  \nNumber of children = 8  \nSweets per child = 61 \u00f7 8 = 7.625  \n\nSince the question asks for how many each, and the answer must be a whole number, the correct interpretation is that 61 sweets are split among 8 children, so each child gets"
+   },
+   {
+    "off_ttft": 0.046918499981984496,
+    "on_ttft": 0.05115070007741451,
+    "identical": true,
+    "same_answer": true,
+    "off_finish": "stop",
+    "on_finish": "stop",
+    "off_text": "22 pages/minute \u00d7 6 minutes = 132 pages.  \nThen add the 1 page that jammed.  \nTotal = 132 + 1 = 133.  \n\n133",
+    "on_text": "22 pages/minute \u00d7 6 minutes = 132 pages.  \nThen add the 1 page that jammed.  \nTotal = 132 + 1 = 133.  \n\n133"
+   },
+   {
+    "off_ttft": 0.033007799880579114,
+    "on_ttft": 0.06033750018104911,
+    "identical": false,
+    "same_answer": true,
+    "off_finish": "stop",
+    "on_finish": "stop",
+    "off_text": "First, calculate the total number of rooms:  \n9 floors \u00d7 14 rooms = 126 rooms  \n\nThen subtract the number of empty rooms:  \n126 - 21 = 105  \n\nSo, 105 rooms are occupied.",
+    "on_text": "First, calculate the total number of rooms:  \n9 floors \u00d7 14 rooms = 126 rooms  \n\nThen subtract the number of empty rooms:  \n126 - 21 = 105  \n\nAnswer: 105"
+   },
+   {
+    "off_ttft": 0.02959990012459457,
+    "on_ttft": 0.06743299984373152,
+    "identical": true,
+    "same_answer": true,
+    "off_finish": "stop",
+    "on_finish": "stop",
+    "off_text": "To find the monthly payment, divide the total cost by the number of months:\n\n$$\n\\frac{240}{8} = 30\n$$\n\nThe monthly payment is **30** euros.",
+    "on_text": "To find the monthly payment, divide the total cost by the number of months:\n\n$$\n\\frac{240}{8} = 30\n$$\n\nThe monthly payment is **30** euros."
+   },
+   {
+    "off_ttft": 0.032404599944129586,
+    "on_ttft": 0.05979309999383986,
+    "identical": true,
+    "same_answer": true,
+    "off_finish": "stop",
+    "on_finish": "stop",
+    "off_text": "36 + 15 = 51  \n51 - 27 = 24  \n\n24",
+    "on_text": "36 + 15 = 51  \n51 - 27 = 24  \n\n24"
+   }
+  ],
+  "long": [
+   {
+    "off_ttft": 0.7708319001831114,
+    "on_ttft": 0.46556949988007545,
+    "identical": true,
+    "same_answer": true,
+    "off_finish": "stop",
+    "on_finish": "stop",
+    "off_text": "25 - (3*4) - 2 = 25 - 12 - 2 = 11",
+    "on_text": "25 - (3*4) - 2 = 25 - 12 - 2 = 11"
+   },
+   {
+    "off_ttft": 1.5528198999818414,
+    "on_ttft": 1.2740370999090374,
+    "identical": true,
+    "same_answer": true,
+    "off_finish": "stop",
+    "on_finish": "stop",
+    "off_text": "11:15",
+    "on_text": "11:15"
+   },
+   {
+    "off_ttft": 0.7672609000001103,
+    "on_ttft": 0.4796545000281185,
+    "identical": true,
+    "same_answer": true,
+    "off_finish": "stop",
+    "on_finish": "stop",
+    "off_text": "12 * 7 = 84  \n84 - 15 = 69  \n69",
+    "on_text": "12 * 7 = 84  \n84 - 15 = 69  \n69"
+   },
+   {
+    "off_ttft": 1.5491833998821676,
+    "on_ttft": 1.271370599977672,
+    "identical": true,
+    "same_answer": true,
+    "off_finish": "stop",
+    "on_finish": "stop",
+    "off_text": "140",
+    "on_text": "140"
+   }
+  ],
+  "exactness": []
+ }
+}

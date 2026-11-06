@@ -93,9 +93,20 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
 
 5. **Proxy** (2026-10-28, proposed on Reddit by a user of SGLang, llama.cpp and other engines, with Open WebUI and Hermes):
    an OpenAI-compatible server in front of any engine, fed debounced drafts by the front end. `PROXY.md` has
-   the scope and the contract; contributions as pull requests to `main`, code in `mafdet/proxy/`. Nothing
-   built yet. Reading ahead ports to any engine with prefix caching; thinking ahead needs a raw completion
-   endpoint, cancelling, and a frame measured per model family.
+   the scope and the contract; contributions as pull requests to `main`, code in `mafdet/proxy/`. Reading
+   ahead for llama.cpp merged (PR #4, That80-20, 2026-11-06), measured again here with a fixed bench
+   ("Done and measured", 2026-11-06). Left:
+   - ~25 ms added on short typed messages (36 → 59 ms): find where (a debounced warm still running at
+     Enter, or the extra hop) before more measuring.
+   - the generation lock is per conversation, but a plain OpenAI client sends no `conversation_id`: its
+     answer lands in the "default" session and does not stop the drafts' warms on the engine's one slot.
+   - on Enter the pending debounce timer is not cancelled: a stale draft can be warmed after the answer
+     and evict it from the slot (the next turn's prefix).
+   - the audit cannot see requests that bypass the proxy (the bench's own OFF runs): its mismatches there
+     are the bench's, not the proxy's.
+   - answers not bit-identical with a warm partial prefix (engine side); an `exact` flag (commit with
+     `cache_prompt: false`) was offered by the author.
+   - thinking ahead needs a raw completion endpoint, cancelling, and a frame measured per model family.
 
 6. Other ideas discussed, not started:
    - **past reasoning out of the history: done (2026-11-04, "Done and measured").** Left: the same conversations
@@ -118,6 +129,29 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
    - The README: a "RTX 3060 12 GB" row (4B, 14B, 30B-A3B) when the user wants these numbers there.
 
 ## Done and measured
+
+- **2026-11-06 · Proxy read-ahead on the RTX 2060, with the bench fixed: a pasted prompt is read while the user
+  waits to press Enter (1181 → 49 ms with 2 s before Enter), nothing to gain on short typed messages.** PR #4
+  (2026-11-03 entry below) measured the proxy right after the same prompt sent without it, cache on: with one
+  slot the ON run found its prompt already cached by the OFF run, drafts or not. And the clock started when
+  the response headers arrived: llama-server sends them before reading the prompt, the proxy only after the
+  warm still running is done, so that wait was not counted. `mafdet/proxy/bench.py` now leaves the slot
+  holding the system prompt and an unrelated message before each run (the state after a previous turn) and
+  starts the clock before the request goes out. RTX 2060, llama.cpp b11747, Qwen3-4B Q4_K_M all on the GPU,
+  greedy, thinking off, 8192 ctx, `-np 1 --cache-ram 0 --cache-reuse 0`, proxy and engine on the same PC.
+  Probe: T1 (`n_predict: 0`, `timings.cache_n`, edits hit the prefix), as on the V620. Enter → first token,
+  without → with the proxy:
+  - 24 typed problems, 12 chars/s, Enter 0.35 s after the last key: **36 → 59 ms** mean (median 32 → 62),
+    slower in 23/24: the message is ~30 tokens, there is nothing to read ahead, the proxy adds ~25 ms
+    (not looked into, see Next 5).
+  - 4 pasted prompts (~2k and ~4k tokens), Enter 0.35 s after the paste: **1160 → 873 ms** (771 → 466,
+    1553 → 1274): the gain is the 0.35 s, the rest of the reading is still running at Enter.
+  - The same with Enter 2 s after the paste: **1181 → 49 ms** (760 → 39, 1661 → 56).
+  - First run, clock at the headers (the PR's clock, cache reset fixed): typed 31 → 32 ms, pasted 1213 →
+    22 ms, so the PR's 492 → 23 was mostly the cache left by the OFF run plus the uncounted wait.
+  Answers: 21/24 typed and 4/4 pasted byte-identical, all 27 comparable agree on the number (one hit
+  max_tokens); engine_stability identical. Audit 493 warms, 4 mismatches. Data:
+  `proxy_read_ahead_4b_2060.json`, `proxy_read_ahead_4b_2060_settle2.json`.
 
 - **2026-11-04 · Past turns' reasoning out of the history: the context lasts, the wait does not grow.** With
   `--think`, `Session._next_history` keeps message and answer of each turn (what follows the last </think>, its
@@ -361,7 +395,8 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
   wording-only rows. Control, no proxy involved (`engine_stability` in the data): cold vs cold
   and cold vs warm of the same prompt are identical, so the divergence needs a *partial* prefix
   (a draft) and belongs to the engine, not to the proxy. Data:
-  `research/data/proxy_read_ahead_4b.json`.
+  `research/data/proxy_read_ahead_4b.json`. **The timings are not valid** (the OFF run cached the
+  prompt for the ON run, and the proxy's wait before its headers was not counted): see 2026-11-06 above.
 - **Terminal app restyle (2026-10-23)**: amber CRT, boot sequence, decrypting text (`mafdet/tui/fx.py`).
 
 ## How to work here

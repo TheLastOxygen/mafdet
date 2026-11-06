@@ -5,8 +5,12 @@ Two runs per prompt, same engine, same sampling, same model:
   ON   -- the message is posted to /v1/drafts as the user types it, then committed
           through /v1/chat/completions.
 
-Read-ahead is exact, so the answers must be identical token for token.  Any difference
-is a bug in the proxy, not noise in the measurement -- the run fails loudly.
+Before each run the engine is left holding the system prompt and an unrelated message
+(the state after a previous turn), so OFF and ON start from the same cache.
+
+Read-ahead never changes the prompt, so the final answers must agree; the wording can
+differ when llama.cpp computes a warm prefix in other batches (see engine_stability).
+A different final number makes the run fail loudly.
 
 Example:
     python -m mafdet.proxy.bench --url http://127.0.0.1:8081 --model Qwen3-4B-Q4_K_M \\
@@ -61,6 +65,9 @@ PROBLEMS = [
 
 LONG = "The following notes describe every sandbar and channel of the delta in detail. "
 
+# Sent before each run so that OFF and ON start from the same cache (see reset() in main).
+RESET = "Reply with OK."
+
 
 # --------------------------------------------------------------------------------------
 # HTTP helpers (http.client, like the rest of the project)
@@ -71,6 +78,9 @@ def _chat_ttft(host: str, port: int, body: dict, *, max_tokens: int, timeout: fl
     payload = dict(body, stream=True, max_tokens=max_tokens, temperature=0.0, top_p=1.0,
                    cache_prompt=cache_prompt)
     conn = http.client.HTTPConnection(host, port, timeout=timeout)
+    # The clock starts at Enter, before the request goes out: a proxy that holds the
+    # request back (a warm still running) sends its headers late, and that wait counts.
+    t0 = time.perf_counter()
     conn.request("POST", "/v1/chat/completions", body=json.dumps(payload).encode(),
                  headers={"Content-Type": "application/json"})
     resp = conn.getresponse()
@@ -78,7 +88,6 @@ def _chat_ttft(host: str, port: int, body: dict, *, max_tokens: int, timeout: fl
         raw = resp.read().decode(errors="replace")
         conn.close()
         raise RuntimeError(f"engine answered {resp.status}: {raw[:400]}")
-    t0 = time.perf_counter()
     first = None
     finish = ""
     text: list[str] = []
@@ -182,14 +191,28 @@ def main(argv: list[str] | None = None) -> int:
     typed = PROBLEMS[: max(1, min(args.prompts, len(PROBLEMS)))]
     results = {"typed": [], "long": [], "exactness": []}
 
+    def reset() -> None:
+        """Leave the engine's one slot holding the system prompt and an unrelated message."""
+        body = {"model": args.model,
+                "messages": [{"role": "system", "content": SYSTEM},
+                             {"role": "user", "content": RESET}]}
+        if not args.thinking:
+            body["chat_template_kwargs"] = {"enable_thinking": False}
+        _chat_ttft(engine_host, engine_port, body, max_tokens=1)
+
     def run_one(prompt: str, conversation_id: str, typed_mode: bool) -> dict:
         body = {"model": args.model,
                 "messages": [{"role": "system", "content": SYSTEM},
                              {"role": "user", "content": prompt}]}
         if not args.thinking:
             body["chat_template_kwargs"] = {"enable_thinking": False}
+        # Both runs start from the same cache: the system prompt held, the message not, as
+        # after the previous turn of a chat.  Without this the ON run would find the whole
+        # prompt cached by the OFF run just before it, drafts or no drafts.
+        reset()
         # OFF: straight at the engine.
         off_ttft, off_text, off_finish = _chat_ttft(engine_host, engine_port, body, max_tokens=args.max_tokens)
+        reset()
         # ON: drafts first (typed, or one paste), then commit through the proxy.
         if typed_mode:
             _type("127.0.0.1", args.proxy_port, conversation_id, args.model, prompt, args.typing_cps)

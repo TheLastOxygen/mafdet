@@ -1,0 +1,126 @@
+{
+ "summary": {
+  "typed": {
+   "n": 1,
+   "off_mean_ms": 49.0,
+   "on_mean_ms": 71.0,
+   "off_median_ms": 49.0,
+   "on_median_ms": 71.0,
+   "identical": 1,
+   "same_answer": 1,
+   "on_slower": 1
+  },
+  "long": {
+   "n": 4,
+   "off_mean_ms": 1181.0,
+   "on_mean_ms": 49.0,
+   "off_median_ms": 1154.0,
+   "on_median_ms": 48.0,
+   "identical": 4,
+   "same_answer": 4,
+   "on_slower": 0
+  },
+  "engine_stability": [
+   {
+    "cold_vs_cold_identical": true,
+    "cold_vs_warm_identical": true,
+    "cold_vs_warm_same_answer": true
+   },
+   {
+    "cold_vs_cold_identical": true,
+    "cold_vs_warm_identical": true,
+    "cold_vs_warm_same_answer": true
+   }
+  ],
+  "audit": {
+   "warms": 27,
+   "mismatches": 4,
+   "estimates": 0,
+   "unknown": 0
+  },
+  "profile": {
+   "name": "llama.cpp",
+   "url": "http://127.0.0.1:8081",
+   "model": "Qwen3-4B-Q4_K_M",
+   "caps": {
+    "prefix_caching": true,
+    "spelling": "n_predict0",
+    "reuse_channel": "timings",
+    "edit_branches": true,
+    "tokenize": true
+   },
+   "probed_at": 1793957891.044843,
+   "latencies": {
+    "base_ms": 20.848099840804935,
+    "branch_ms": 23.790499893948436,
+    "probe_ms": 354.85779982991517
+   },
+   "version": "",
+   "format": 1,
+   "tier": "T1"
+  },
+  "typing_cps": 12.0,
+  "thinking": false,
+  "max_tokens": 96,
+  "model": "Qwen3-4B-Q4_K_M",
+  "url": "http://127.0.0.1:8081",
+  "when": "2026-11-06 10:46:20"
+ },
+ "rows": {
+  "typed": [
+   {
+    "off_ttft": 0.04876859998330474,
+    "on_ttft": 0.07119460008107126,
+    "identical": true,
+    "same_answer": true,
+    "off_finish": "stop",
+    "on_finish": "stop",
+    "off_text": "Luca starts with 25 euros.  \nHe buys 3 notebooks at 4 euros each: $3 \\times 4 = 12$ euros.  \nHe also buys a pen for 2 euros.  \nTotal spent: $12 + 2 = 14$ euros.  \nRemaining: $25 - 14 = 11$ euros.  \n\n11",
+    "on_text": "Luca starts with 25 euros.  \nHe buys 3 notebooks at 4 euros each: $3 \\times 4 = 12$ euros.  \nHe also buys a pen for 2 euros.  \nTotal spent: $12 + 2 = 14$ euros.  \nRemaining: $25 - 14 = 11$ euros.  \n\n11"
+   }
+  ],
+  "long": [
+   {
+    "off_ttft": 0.7598518000449985,
+    "on_ttft": 0.03916470007970929,
+    "identical": true,
+    "same_answer": true,
+    "off_finish": "stop",
+    "on_finish": "stop",
+    "off_text": "25 - (3*4) - 2 = 25 - 12 - 2 = 11",
+    "on_text": "25 - (3*4) - 2 = 25 - 12 - 2 = 11"
+   },
+   {
+    "off_ttft": 1.6612736000679433,
+    "on_ttft": 0.05638270010240376,
+    "identical": true,
+    "same_answer": true,
+    "off_finish": "stop",
+    "on_finish": "stop",
+    "off_text": "11:15",
+    "on_text": "11:15"
+   },
+   {
+    "off_ttft": 0.7557381000369787,
+    "on_ttft": 0.0382965998724103,
+    "identical": true,
+    "same_answer": true,
+    "off_finish": "stop",
+    "on_finish": "stop",
+    "off_text": "12 * 7 = 84  \n84 - 15 = 69  \n69",
+    "on_text": "12 * 7 = 84  \n84 - 15 = 69  \n69"
+   },
+   {
+    "off_ttft": 1.5487009000498801,
+    "on_ttft": 0.06096079992130399,
+    "identical": true,
+    "same_answer": true,
+    "off_finish": "stop",
+    "on_finish": "stop",
+    "off_text": "140",
+    "on_text": "140"
+   }
+  ],
+  "exactness": []
+ }
+}
