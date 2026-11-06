@@ -35,11 +35,16 @@ class FakeEngine:
     def tokenize(self, text: str) -> list[int] | None:
         return [self._vocab.setdefault(word, len(self._vocab) + 1) for word in text.split()]
 
-    def render(self, messages: list[dict], template_kwargs: dict | None = None) -> list[int] | None:
+    def render(self, messages: list[dict], template_kwargs: dict | None = None,
+               tools: list | None = None) -> list[int] | None:
         """Stand-in for a chat template: role names and contents, deterministically, and
         an empty think block when asked not to think (as Qwen3's template does)."""
         self.last_template_kwargs = template_kwargs
+        self.last_messages = list(messages or [])
+        self.last_tools = tools
         text = " ".join(f"{m.get('role')}:{m.get('content')}" for m in messages or [])
+        if tools:
+            text = "tools:" + ",".join(t.get("function", {}).get("name", "") for t in tools) + " " + text
         if (template_kwargs or {}).get("enable_thinking") is False:
             text += " <think></think>"
         return self.tokenize(text)
@@ -72,6 +77,7 @@ class FakeEngine:
 
     def chat(self, body: dict, *, stream: bool = False, timeout: float = 600.0):
         self.chats += 1
+        self.last_chat = dict(body)
         text = ((body.get("messages") or [{}])[-1].get("content") or "")
         if stream:
             events = [
@@ -84,6 +90,9 @@ class FakeEngine:
                               "finish_reason": "stop"}],
                  "usage": {"prompt_tokens": len(text.split()), "completion_tokens": 2}}
         return 200, {"content-type": "application/json"}, [json.dumps(reply).encode()]
+
+    def slots(self):
+        return getattr(self, "n_slots", 1)
 
     def models(self):
         return 200, {"object": "list", "data": [{"id": "fake-model"}]}

@@ -60,12 +60,16 @@ class LlamaEngine:
         tokens = data.get("tokens")
         return list(tokens) if isinstance(tokens, list) else None
 
-    def render(self, messages: list[dict], template_kwargs: dict | None = None) -> list[int] | None:
+    def render(self, messages: list[dict], template_kwargs: dict | None = None,
+               tools: list | None = None) -> list[int] | None:
         """The prompt llama-server builds for a chat request: its own template, with the
-        request's `chat_template_kwargs` (e.g. Qwen3's enable_thinking), then tokens."""
+        request's `chat_template_kwargs` (e.g. Qwen3's enable_thinking) and `tools` (the
+        template writes them into the system turn, at the start), then tokens."""
         body = {"messages": messages, "add_generation_prompt": True}
         if template_kwargs:
             body["chat_template_kwargs"] = template_kwargs
+        if tools:
+            body["tools"] = tools
         status, data, _ = self._call("/apply-template", body)
         if status != 200 or not data.get("prompt"):
             return None
@@ -132,6 +136,15 @@ class LlamaEngine:
                 conn.close()
 
         return resp.status, headers, chunks()
+
+    def slots(self) -> int | None:
+        """How many slots the server has (`/props` total_slots), or None if it does not say."""
+        try:
+            status, data, _ = self._call("/props", method="GET")
+        except OSError:
+            return None
+        n = data.get("total_slots") if status == 200 else None
+        return int(n) if isinstance(n, int) and n > 0 else None
 
     def models(self) -> tuple[int, dict]:
         status, data, _ = self._call("/v1/models", method="GET")

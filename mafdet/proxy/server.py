@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from .engine import Engine
@@ -41,6 +42,21 @@ class ProxyState:
         # used for a draft that does not send its own, since the draft must be rendered
         # exactly as the request on Enter will be.
         self.template_kwargs: dict | None = None
+        self.tools: list | None = None             # and its tool definitions, for the same reason
+        # For drafts that carry only the text: the system prompt of the last request (a
+        # new conversation starts with it), and the conversation a "new" chat became, until
+        # the front end's next draft names the chat's real id.
+        self.system: dict | None = None
+        self.unclaimed: tuple[list[dict], float] | None = None
+        # Slots: the conversation lives in the adapter's slot (0); with two or more, a
+        # request that matches no conversation (a front end's title, tags, follow-ups...)
+        # goes to the next one, so it does not evict the conversation from the cache.
+        try:
+            self.slots = engine.slots() or 1
+        except Exception:
+            self.slots = 1
+        self.side_slot = 1 if self.slots >= 2 and getattr(engine, "dialect", "") == "llama" else None
+        self.counts = {"matched": 0, "unmatched": 0, "side": 0}
         self.started = 0
 
     def session(self, conversation_id: str) -> DraftSession:
@@ -55,8 +71,40 @@ class ProxyState:
                                     cache=self.cache)
                 if self.exact:
                     sess.tier = "T-1"
+                if conversation_id != "new" and self.unclaimed is not None:
+                    # The first draft from a chat the proxy has not seen, right after a
+                    # new chat was answered: that chat's id, now that the front end has one.
+                    history, at = self.unclaimed
+                    self.unclaimed = None
+                    if time.time() - at < 600:
+                        sess.history = history
                 self.sessions[conversation_id] = sess
             return sess
+
+    # ---- which conversation a request on Enter belongs to ------------------------------
+    def match(self, messages: list[dict]) -> DraftSession | None:
+        with self.lock:
+            sessions = sorted(self.sessions.values(), key=lambda s: s.drafted_at, reverse=True)
+        for sess in sessions:
+            if sess.matches(messages):
+                return sess
+        return None
+
+    def drafting(self, within: float = 600.0) -> bool:
+        """Has a front end been sending drafts lately?  Only then can a request that matches
+        no conversation be told apart as a side request."""
+        now = time.time()
+        with self.lock:
+            return any(now - s.drafted_at < within for s in self.sessions.values())
+
+    def remember(self, sess: DraftSession, messages: list[dict], answer: str) -> None:
+        """The conversation after this answer, for the next turn's drafts."""
+        history = list(messages) + [{"role": "assistant", "content": answer}]
+        if sess.conversation_id == "new":
+            self.unclaimed = (history, time.time())
+            sess.history = None
+        else:
+            sess.history = history
 
     # ---- an answer holds the slot for every conversation -----------------------------
     def begin_generation(self) -> None:
@@ -74,7 +122,8 @@ class ProxyState:
             # Rendering it is off the critical path (the answer has been sent already) and
             # happens before the slot is released, so no warm can land in between.
             try:
-                ids = self.engine.render(body.get("messages") or [], body.get("chat_template_kwargs"))
+                ids = self.engine.render(body.get("messages") or [], body.get("chat_template_kwargs"),
+                                         body.get("tools"))
             except Exception:
                 ids = None
             if ids:
@@ -94,9 +143,36 @@ class ProxyState:
                       "tier": "T-1" if self.exact else self.profile.tier,
                       "spelling": self.profile.spelling,
                       "reuse_channel": self.profile.channel, "exact": self.exact},
+            "slots": {"total": self.slots, "conversation": 0, "side": self.side_slot},
+            "requests": dict(self.counts),
             "profile": prof,
             "sessions": sessions,
         }
+
+
+def _answer_of(chunks_seen: list[bytes], stream: bool) -> str:
+    """The assistant's visible answer, from the bytes relayed to the client."""
+    raw = b"".join(chunks_seen)
+    if not stream:
+        try:
+            msg = (json.loads(raw.decode()).get("choices") or [{}])[0].get("message") or {}
+        except (ValueError, UnicodeDecodeError, AttributeError):
+            return ""
+        return msg.get("content") or ""
+    parts = []
+    for line in raw.split(b"\n"):
+        line = line.strip()
+        if not line.startswith(b"data:"):
+            continue
+        data = line[5:].strip()
+        if not data or data == b"[DONE]":
+            continue
+        try:
+            delta = ((json.loads(data.decode()).get("choices") or [{}])[0].get("delta") or {})
+        except (ValueError, UnicodeDecodeError, AttributeError):
+            continue
+        parts.append(delta.get("content") or "")
+    return "".join(parts)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -186,17 +262,25 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError as exc:
             return self._bad(400, str(exc))
         conversation_id = str(body.get("conversation_id") or "default")
-        messages = body.get("messages") or []
-        if not isinstance(messages, list):
+        messages = body.get("messages")
+        text = body.get("text")
+        if messages is None and not isinstance(text, str):
+            return self._bad(400, "a draft needs messages (the whole request) or text (the message being typed)")
+        if messages is not None and not isinstance(messages, list):
             return self._bad(400, "messages must be a list")
         sess = self.state.session(conversation_id)
-        if self.state.exact:
-            return self._json(200, {"conversation_id": conversation_id, "tier": "T-1",
+        if self.state.exact or (messages is None and not text.strip()):
+            return self._json(200, {"conversation_id": conversation_id, "tier": sess.tier,
                                     "draft_tokens": 0, "cached_tokens": 0})
+        if messages is None:
+            # Only the text: the proxy puts it where the front end will, after the
+            # conversation it saw pass through (or the last system prompt, for a new chat).
+            messages = sess.messages_for(text, self.state.system)
         kwargs = body.get("chat_template_kwargs")
         if kwargs is None:
             kwargs = self.state.template_kwargs
-        tokens = sess.submit(messages, kwargs)
+        tools = body["tools"] if "tools" in body else self.state.tools
+        tokens = sess.submit(messages, kwargs, text=text, tools=tools)
         self._json(200, {"conversation_id": conversation_id, "tier": sess.tier,
                          "draft_tokens": tokens, "cached_tokens": len(sess.cached)})
 
@@ -206,16 +290,36 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError as exc:
             return self._bad(400, str(exc))
         stream = bool(body.get("stream"))
-        if "chat_template_kwargs" in body:
-            self.state.template_kwargs = body.get("chat_template_kwargs")
-        forward = dict(body, cache_prompt=False) if self.state.exact else body
-        self.state.begin_generation()
+        state = self.state
+        messages = body.get("messages") if isinstance(body.get("messages"), list) else []
+        sess = state.match(messages)
+        # A request that matches no conversation while a front end is drafting is a side
+        # request (a title, tags, follow-ups): with a second slot it goes there and leaves
+        # the conversation's cache alone.  Anything else is a turn of the conversation.
+        side = sess is None and state.side_slot is not None and state.drafting()
+        forward = dict(body)
+        if state.exact:
+            forward["cache_prompt"] = False
+        if state.side_slot is not None:
+            forward["id_slot"] = state.side_slot if side else 0
+        if side:
+            state.counts["side"] += 1
+        else:
+            state.counts["matched" if sess is not None else "unmatched"] += 1
+            state.template_kwargs = body.get("chat_template_kwargs")
+            state.tools = body.get("tools")
+            system = next((m for m in messages if m.get("role") == "system"), None)
+            if system is not None or sess is not None:
+                state.system = system
+            state.begin_generation()
         ok = False
+        seen: list[bytes] = []
         try:
-            status, headers, chunks = self.state.engine.chat(forward, stream=stream)
+            status, headers, chunks = state.engine.chat(forward, stream=stream)
             ok = status < 400
             if status >= 400 or not stream:
                 raw = b"".join(chunks)
+                seen.append(raw)
                 self.send_response(status)
                 self.send_header("Content-Type", headers.get("content-type", "application/json"))
                 self.send_header("Content-Length", str(len(raw)))
@@ -230,16 +334,21 @@ class Handler(BaseHTTPRequestHandler):
             for chunk in chunks:
                 if not chunk:
                     continue
+                seen.append(chunk)
                 # One write per chunk: three small writes can wait on each other in TCP.
                 self.wfile.write(b"%x\r\n%s\r\n" % (len(chunk), chunk))
             self.wfile.write(b"0\r\n\r\n")
         except (ConnectionError, OSError) as exc:
+            ok = False
             try:
                 self._bad(502, f"engine unreachable: {exc}")
             except Exception:
                 pass
         finally:
-            self.state.end_generation(body if ok else None)
+            if not side:
+                if ok and sess is not None and not state.exact:
+                    state.remember(sess, messages, _answer_of(seen, stream))
+                state.end_generation(body if ok else None)
 
 
 def make_server(state: ProxyState, host: str = "127.0.0.1", port: int = 8077) -> ThreadingHTTPServer:

@@ -19,15 +19,25 @@ from .engine import Engine, WarmResult
 from .profile import EngineProfile
 
 
+def content_text(content) -> str:
+    """A message's content as plain text (a string, or OpenAI's list of parts)."""
+    if isinstance(content, list):
+        return "".join(part.get("text", "") for part in content if isinstance(part, dict))
+    return content or ""
+
+
 def _text_of(messages: list[dict]) -> str:
-    parts = []
-    for msg in messages or []:
-        if msg.get("role") == "user":
-            content = msg.get("content")
-            if isinstance(content, list):
-                content = "".join(part.get("text", "") for part in content if isinstance(part, dict))
-            parts.append(content or "")
+    parts = [content_text(m.get("content")) for m in messages or [] if m.get("role") == "user"]
     return parts[-1] if parts else ""
+
+
+def same_messages(a: list[dict], b: list[dict]) -> bool:
+    """Same roles and texts, whatever else the front end attaches to each message."""
+    if len(a) != len(b):
+        return False
+    return all(x.get("role") == y.get("role") and
+               content_text(x.get("content")).strip() == content_text(y.get("content")).strip()
+               for x, y in zip(a, b))
 
 
 class SharedCache:
@@ -85,7 +95,7 @@ class SharedCache:
 
 class DraftSession:
     def __init__(self, conversation_id: str, engine: Engine, profile: EngineProfile, model: str,
-                 *, debounce_ms: int = 300, min_new: int = 8, max_draft_tokens: int = 4096,
+                 *, debounce_ms: int = 300, min_new: int = 8, max_draft_tokens: int = 65536,
                  cache: "SharedCache | None" = None):
         self.conversation_id = conversation_id
         self.engine = engine
@@ -105,9 +115,36 @@ class DraftSession:
         self.warms = 0
         self.skipped = 0                      # drafts skipped because a generation was running
         self._timer: threading.Timer | None = None
+        # For a front end that sends only the text being typed: the text of the newest
+        # draft (to recognise the request on Enter) and the conversation so far (the last
+        # request's messages and the answer), which the draft is appended to.
+        self.latest_text = ""
+        self.drafted_at = 0.0
+        self.history: list[dict] | None = None
+
+    def messages_for(self, text: str, system: dict | None = None) -> list[dict]:
+        """The request the front end will send on Enter, as far as the proxy can tell: the
+        conversation so far and the text as the next user message.  A new conversation
+        starts with the system prompt the front end sent last."""
+        head = list(self.history) if self.history is not None else ([system] if system else [])
+        return head + [{"role": "user", "content": text}]
+
+    def matches(self, messages: list[dict]) -> bool:
+        """Is this request the one this session's drafts were for?  The user message is the
+        newest draft (or it, plus what was typed after the last draft was posted), or the
+        request continues the conversation this session holds."""
+        last = _text_of(messages).strip()
+        draft = self.latest_text.strip()
+        if draft and last:
+            if last == draft:
+                return True
+            if len(draft) >= 8 and (last.startswith(draft) or draft.startswith(last)):
+                return True
+        return self.history is not None and same_messages(messages[:-1], self.history)
 
     # ---- draft submission -------------------------------------------------------
-    def submit(self, messages: list[dict], template_kwargs: dict | None = None) -> int:
+    def submit(self, messages: list[dict], template_kwargs: dict | None = None,
+               text: str | None = None, tools: list | None = None) -> int:
         """Record a draft and schedule its warm.  Returns the token count kept.
 
         The draft is rendered through the engine's own chat template, with the same
@@ -115,12 +152,15 @@ class DraftSession:
         starts with those tokens, so only they are worth warming.  A Qwen3 asked not to
         think gets an empty think block after the generation prompt; without it the
         engine has 6-7 tokens left to read on Enter, and a batch that small costs more
-        than a larger one on a GPU."""
-        ids = self.engine.render(messages, template_kwargs)
+        than a larger one on a GPU.  The same goes for `tools`: Open WebUI sends 30 of
+        them (~5.8k tokens) with every request, and the template puts them first."""
+        ids = self.engine.render(messages, template_kwargs, tools)
         if ids is None:                       # engine cannot render: fall back to the user text
             ids = self.engine.tokenize(_text_of(messages))
         ids = (ids or [])[: self.max_draft_tokens]
         with self.lock:
+            self.latest_text = text if text is not None else _text_of(messages)
+            self.drafted_at = time.time()
             if ids == self.latest:
                 return len(ids)
             self.latest = ids
@@ -193,6 +233,7 @@ class DraftSession:
         with self.lock:
             self._cancel_timer()
             self.latest = []
+            self.latest_text = ""
             self.cached = []                   # the next draft (next turn) warms at once
 
     def catch_up(self) -> None:
@@ -221,6 +262,7 @@ class DraftSession:
             "cached_tokens": len(self.cached),
             "warms": self.warms,
             "skipped": self.skipped,
+            "history_messages": None if self.history is None else len(self.history),
         }
         out.update(self.auditor.stats())
         out["last_warm_age_s"] = round(time.time() - self.warmed_at, 1) if self.warmed_at else None

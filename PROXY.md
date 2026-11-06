@@ -27,8 +27,11 @@ The goal is thinking ahead in the front end people already use: in the app, the 
     it clocks down, and the drafts keep it awake. To check on other cards.
   - The final answers agree but one in 27 (the same problem on two cards): the wording, rarely the number,
     can differ when llama.cpp computes a prefix read ahead in other batches. `--exact` for bit-identical.
-- **Not yet usable from a real front end:** no front end sends drafts today (step 2), and the front end has
-  to send the whole conversation with each draft (step 1).
+- **Steps 1 and 2 on Open WebUI** (2026-11-06): a front end sends only the text being typed and the proxy
+  rebuilds the rest; a user script makes Open WebUI do that (`mafdet/proxy/clients/`); Open WebUI's titles,
+  tags and follow-ups go to a second slot. On the RTX 2060, second turn of a chat in Open WebUI 0.13.0,
+  tokens left to read on Enter: **7158 (4.7 s) without the proxy, 1 with it**. The script was run in the
+  page from Chrome, not yet installed through Tampermonkey by a user.
 
 ## Roadmap
 
@@ -47,14 +50,15 @@ measured, with the numbers in `research/LOG.md`.
 - [x] CORS headers, so that a web page can post drafts (`--cors`, off by default).
 
 **1. Drafts without knowing the conversation.** What makes the proxy work with front ends not written for it.
-- [ ] The front end sends only the text being typed; the proxy rebuilds the rest (system prompt, history,
+- [x] The front end sends only the text being typed; the proxy rebuilds the rest (system prompt, history,
       last answer) from the last request it passed through.
-- [ ] Tell conversations apart without `conversation_id`, by the start of the message list.
-- [ ] Handle the front ends' side requests (titles, tags, follow-up suggestions), which today evict the
-      conversation from a one-slot engine.
+- [x] Tell conversations apart without `conversation_id`: by the user message (the last draft) or
+      the history.
+- [x] Handle the front ends' side requests (titles, tags, follow-up suggestions), which today evict the
+      conversation from a one-slot engine (sent to a second slot; one slot still loses the conversation).
 
 **2. Front ends.**
-- [ ] Open WebUI first: a browser user script (Tampermonkey) that posts the drafts, with Open WebUI untouched.
+- [x] Open WebUI first: a browser user script (Tampermonkey) that posts the drafts, with Open WebUI untouched.
 - [ ] `mafdet-drafts.js`: a few dozen lines for anyone writing a front end ("call this while the user types").
 - [ ] Support inside Open WebUI itself (a pull request or an option there), so that no script is needed.
 - [ ] A guide per front end, each one tried for real.

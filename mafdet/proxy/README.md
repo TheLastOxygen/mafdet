@@ -22,8 +22,21 @@ Point the front end at the proxy: `POST /v1/drafts` while the user types, the us
 `POST /v1/chat/completions` on Enter.  `GET /proxy/stats` shows what the proxy believes
 (it is the "is it working" line), `GET /healthz` is liveness.
 
+A draft can carry the whole request (`messages`) or only the message being typed (`text`,
+with the `conversation_id` the front end uses). With `text`, the proxy puts it after the
+conversation it saw pass through for that id (the last request's messages and the answer);
+for `"new"` it starts from the last system prompt, and hands the conversation to the first id
+that drafts after the answer. On Enter the request is matched to the session by its user message
+(equal to the last draft, or extending it) or by its history.
+
+With two or more slots (`/props` total_slots), the conversation stays in slot 0 and a request that
+matches no conversation, while a front end is drafting, goes to slot 1 (`id_slot`): Open WebUI's
+titles, tags and follow-ups, which would otherwise evict the conversation. `/proxy/stats` counts
+them under `requests`.
+
 A draft may carry the request's `chat_template_kwargs` (e.g. `{"enable_thinking": false}` for
-Qwen3); without them the proxy uses those of the last chat request it passed through. The
+Qwen3) and `tools`; without them the proxy uses those of the last chat request it passed
+through (Open WebUI sends 30 tools, ~5.8k tokens, that the template puts first). The
 draft must render exactly as the request on Enter will, or the engine still has a few
 tokens of template to read then.
 

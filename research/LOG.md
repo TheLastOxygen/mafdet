@@ -96,8 +96,9 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
    the scope and the contract; contributions as pull requests to `main`, code in `mafdet/proxy/`. Reading
    ahead for llama.cpp merged (PR #4, That80-20, 2026-11-06); roadmap step 0 (a solid core) done and measured
    the same day (issue #5, "Done and measured" 2026-11-06, both entries). The roadmap is in `PROXY.md`.
-   Next for us: step 1 (drafts without knowing the conversation) and step 2 on Open WebUI (a user script),
-   unless the contributor takes them. Left from step 0:
+   Steps 1-2 on Open WebUI done the same day ("Done and measured"). Next: a timed multi-turn benchmark through
+   Open WebUI, the Tampermonkey install tried by a person, then step 3 (one command, a 5-minute guide).
+   Left from step 0:
    - the audit cannot see requests that bypass the proxy (the bench's own OFF and reset runs): its
      mismatches there are the bench's, not the proxy's.
    - the GPU's clocks: on the 2060 the first request after seconds of idle is slow (one token 45 ms
@@ -126,6 +127,37 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
    - The README: a "RTX 3060 12 GB" row (4B, 14B, 30B-A3B) when the user wants these numbers there.
 
 ## Done and measured
+
+- **2026-11-06 · Proxy steps 1-2 on Open WebUI: second turn of a chat, 7158 tokens (4.7 s) to read on Enter
+  without the proxy, 1 with it (RTX 2060, Qwen3-4B Q4_K_M).** Open WebUI 0.13.0 in its own venv
+  (`E:\openwebui`, Python 3.12), llama-server `-np 2 -kvu -c 16384`.
+  - What Open WebUI sends (captured through a logging pass-through, 10 conversations): `stream, model,
+    messages, tools`. The history is rebuilt on its server; the previous answer comes back as its content,
+    byte-identical to the stream, reasoning stripped. **30 built-in tools on every request, ~5.8k tokens,
+    which Qwen3's template writes first**: a draft rendered without them shares nothing with the request.
+    Side requests, all to the chat's model, `stream: false`, no tools: a title 60 ms *before* the answer on a
+    new chat, follow-ups after every answer, tags after the first. On one slot they evict the conversation.
+    Long pastes become a file only with "Paste Large Text as File" (off by default); a file changes the
+    prompt from the first user message every turn (RAG template), so it is not read ahead.
+  - Proxy (step 1): a draft may carry only `{conversation_id, text}`; the proxy appends it to the
+    conversation it saw for that id (or the last system prompt for "new", handed to the chat's real id on
+    its next draft), renders it with the last request's `tools` and `chat_template_kwargs`, and matches
+    the request on Enter by its user message or its history. With 2+ slots the conversation is pinned to
+    slot 0 (`id_slot`) and a request matching no conversation while drafting goes to slot 1. 41 tests.
+    The draft cap went from 4096 to 65536 tokens (with the tools, 4096 never reached the message).
+  - `mafdet/proxy/clients/open-webui.user.js` (step 2): reads Open WebUI's TipTap box (`#chat-input`) as
+    its turndown does, posts drafts debounced 250 ms (at most 600 ms apart, at once on a paste). Tried by
+    running its code in the page from Chrome, not installed through Tampermonkey.
+  - In Chrome, a new chat and a second turn typed in three bursts. With the proxy: turn 1 read 7065 tokens
+    (the proxy did not know the tools yet: first request since it started); turn 2 drafts of 7176 tokens
+    (predicted 7161, reported 7162 reused), on Enter `n_past = 7176`, 1 token read; title, follow-ups and
+    tags (3) on slot 1. Without the proxy (Open WebUI straight to llama-server, same 2 slots): llama-server
+    picks slots by LRU, the follow-ups landed on the conversation's slot, turn 1 read 7065 tokens (4.3 s)
+    and turn 2 **7158 tokens in 4692 ms** before the first token. One conversation each way: the size of the
+    gain is the tools reread, not a statistic.
+  - Not done: a timed multi-turn benchmark through Open WebUI; Tampermonkey install by a person; rich text
+    (lists, code) in the box; what one slot gives with the proxy (it still loses the conversation to the
+    side requests).
 
 - **2026-11-06 · Proxy step 0, a solid core: short typed messages 302 → 102 ms, a paste 2 s before Enter
   1365 → 54 ms (RTX 2060, Qwen3-4B Q4_K_M).** Same setup as the entry below. What changed in `mafdet/proxy/`:

@@ -73,9 +73,10 @@ class Engine(Protocol):
         """Token ids for `text`, or None when the engine cannot tokenize."""
         ...
 
-    def render(self, messages: list[dict], template_kwargs: dict | None = None) -> list[int] | None:
+    def render(self, messages: list[dict], template_kwargs: dict | None = None,
+               tools: list | None = None) -> list[int] | None:
         """The ids of the prompt the engine would build for these messages, with the
-        request's template options (`chat_template_kwargs`).
+        request's template options (`chat_template_kwargs`) and tool definitions.
 
         Warming anything else warms nothing: the chat template's own tokens are the
         prefix of the real request, so the draft must go through the same template."""
@@ -92,6 +93,12 @@ class Engine(Protocol):
 
     def models(self) -> tuple[int, dict]:
         """GET /v1/models, as (status, parsed-json-or-{})."""
+        ...
+
+    def slots(self) -> int | None:
+        """How many requests the engine runs side by side, each with its own cache (llama-server's
+        slots), or None when it does not say.  With two or more, the proxy keeps the
+        conversation in one and sends a front end's side requests (titles, tags) to another."""
         ...
 
     def metrics_text(self) -> str | None:
