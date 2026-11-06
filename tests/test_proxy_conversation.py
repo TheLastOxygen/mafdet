@@ -32,6 +32,13 @@ def post(port, path, body):
     return resp.status, raw
 
 
+def settled(state, timeout=2.0):
+    """The proxy updates its cache model after the answer has been sent: wait for it."""
+    end = time.time() + timeout
+    while state.cache.generating and time.time() < end:
+        time.sleep(0.005)
+
+
 def chat(port, messages, stream=False):
     return post(port, "/v1/chat/completions", {"model": "fake-model", "messages": messages, "stream": stream})
 
@@ -40,6 +47,7 @@ def test_a_text_draft_in_a_new_chat_starts_with_the_last_system_prompt():
     server, port, state, engine = start()
     try:
         chat(port, [SYSTEM, {"role": "user", "content": "earlier question"}])
+        settled(state)
         status, _ = post(port, "/v1/drafts", {"conversation_id": "new", "text": "how many apples"})
         assert status == 200
         assert engine.last_messages == [SYSTEM, {"role": "user", "content": "how many apples"}]
@@ -53,6 +61,7 @@ def test_the_request_on_enter_is_matched_and_the_conversation_kept():
         post(port, "/v1/drafts", {"conversation_id": "c1", "text": "how many apples are left"})
         messages = [SYSTEM, {"role": "user", "content": "how many apples are left"}]
         chat(port, messages, stream=True)
+        settled(state)
         assert state.counts["matched"] == 1
         sess = state.session("c1")
         assert sess.history[:2] == messages
@@ -69,6 +78,7 @@ def test_text_typed_after_the_last_draft_still_matches():
     try:
         post(port, "/v1/drafts", {"conversation_id": "c1", "text": "how many apples are"})
         chat(port, [SYSTEM, {"role": "user", "content": "how many apples are left?"}])
+        settled(state)
         assert state.counts["matched"] == 1
     finally:
         server.shutdown()
@@ -80,6 +90,7 @@ def test_a_new_chat_hands_its_conversation_to_the_id_it_gets():
         post(port, "/v1/drafts", {"conversation_id": "new", "text": "first question here"})
         messages = [SYSTEM, {"role": "user", "content": "first question here"}]
         chat(port, messages)
+        settled(state)
         post(port, "/v1/drafts", {"conversation_id": "abc123", "text": "second"})
         assert engine.last_messages[:2] == messages
         assert engine.last_messages[-1] == {"role": "user", "content": "second"}
@@ -93,9 +104,12 @@ def test_a_side_request_goes_to_the_other_slot_and_leaves_the_cache():
     try:
         post(port, "/v1/drafts", {"conversation_id": "c1", "text": "how many apples are left"})
         chat(port, [SYSTEM, {"role": "user", "content": "how many apples are left"}])
+        settled(state)
         assert engine.last_chat["id_slot"] == 0
+        settled(state)
         held = list(state.cache.ids)
         chat(port, [{"role": "user", "content": "### Task: write a title for this chat"}])
+        settled(state)
         assert engine.last_chat["id_slot"] == 1
         assert state.counts["side"] == 1
         assert state.cache.ids == held
@@ -107,6 +121,7 @@ def test_without_drafts_every_request_stays_in_the_conversation_slot():
     server, port, state, engine = start(n_slots=2)
     try:
         chat(port, [{"role": "user", "content": "a plain client, no drafts"}])
+        settled(state)
         assert engine.last_chat["id_slot"] == 0
         assert state.counts["unmatched"] == 1 and state.counts["side"] == 0
     finally:
@@ -144,11 +159,13 @@ def test_a_clicked_suggestion_stays_in_the_conversation_slot():
         post(port, "/v1/drafts", {"conversation_id": "new", "text": "how many apples are left"})
         first = [SYSTEM, {"role": "user", "content": "how many apples are left"}]
         chat(port, first, stream=True)
+        settled(state)
         chat(port, [{"role": "user", "content": "### Task: suggest follow-ups"}])     # side, not streamed
         assert engine.last_chat["id_slot"] == 1
         answer = state.unclaimed[0][-1]
         second = first + [answer, {"role": "user", "content": "And pears?"}]
         chat(port, second, stream=True)
+        settled(state)
         assert engine.last_chat["id_slot"] == 0
         assert state.counts["side"] == 1
         # and the conversation is kept for the chat's first draft
@@ -164,6 +181,7 @@ def test_a_streamed_request_never_goes_to_the_side_slot():
     try:
         post(port, "/v1/drafts", {"conversation_id": "c1", "text": "something typed"})
         chat(port, [{"role": "user", "content": "a turn from another tab"}], stream=True)
+        settled(state)
         assert engine.last_chat["id_slot"] == 0
     finally:
         server.shutdown()

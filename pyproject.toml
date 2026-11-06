@@ -58,4 +58,4 @@ include = ["mafdet*"]
 
 [tool.setuptools.package-data]
 mafdet = ["samples/*.txt", "catalog.json", "ui/*.html", "ui/*.css", "ui/*.js", "ui/*.ico", "ui/fonts/*",
-          "ui/i18n/*.json"]
+          "ui/i18n/*.json", "proxy/clients/*.js", "proxy/clients/*.md"]

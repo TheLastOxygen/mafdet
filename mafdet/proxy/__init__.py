@@ -2,7 +2,8 @@
 
 See PROXY.md at the repository root for what this does and PROXY.md "What the engine
 must offer" for the requirements.  This package is deliberately separate from the app:
-it never imports `mafdet.watch` or `mafdet.engine`, and it adds no runtime dependency.
+it never imports `mafdet.watch` or `mafdet.engine`, and it adds no runtime dependency.  Only
+`launch.py` (`mafdet proxy`) uses the app's `LlamaServer` and catalog, to start llama-server.
 """
 from __future__ import annotations
 
@@ -13,3 +14,9 @@ ENGINE_NAME = "mafdet-proxy"
 
 #: Capability tiers, best first.  T2 (thinking ahead) is not implemented yet.
 TIERS = ("T2", "T1", "T0", "T-1")
+
+
+def run(args) -> int:
+    """`mafdet proxy` (the CLI imports mafdet.<command> and calls run)."""
+    from .launch import run as launch
+    return launch(args)

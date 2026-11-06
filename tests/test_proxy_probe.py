@@ -42,3 +42,14 @@ def test_metrics_only_is_marked_as_the_estimate_channel():
     engine = FakeEngine(channel="none", metrics="vllm:prefix_cache_hits_total 41\n")
     profile = probe(engine, url=URL, model=MODEL)
     assert profile.channel == "metrics"
+
+
+def test_a_profile_saves_whatever_the_model_id_looks_like():
+    # "qwen3-4b:Q4_K_M" or "C:/models/x.gguf": Windows refuses ":" and "/" in a file name.
+    from mafdet.proxy.engine import EngineCaps
+    from mafdet.proxy.profile import EngineProfile
+    for model in ("qwen3-4b:Q4_K_M", "C:/models/Qwen3-4B-Q4_K_M.gguf", "a" * 400):
+        prof = EngineProfile(name="llama.cpp", url="http://127.0.0.1:8078", model=model, caps=EngineCaps())
+        path = prof.save()
+        assert path.exists()
+        assert EngineProfile.load("http://127.0.0.1:8078", model).model == model

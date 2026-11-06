@@ -71,6 +71,14 @@ COMMANDS = [
             "answer is written ahead.",
             ("mafdet strike", "mafdet strike --no-think", "mafdet strike --gguf Qwen/Qwen3-8B-GGUF:Qwen3-8B-Q4_K_M.gguf"),
             "use"),
+    Command("proxy", "the gatekeeper", "reading ahead for Open WebUI and other front ends",
+            "Starts llama-server with the model chosen in the app (or --model) and the MAFDET proxy in front "
+            "of it: an OpenAI-compatible server at http://127.0.0.1:8077/v1 that reads the message while you "
+            "type, when the front end sends drafts (for Open WebUI: the user script in "
+            "mafdet/proxy/clients). llama-server gets two slots, so the front end's titles and follow-ups do "
+            "not evict the conversation. With --url it uses a llama-server already running instead.",
+            ("mafdet proxy", "mafdet proxy --model qwen3-8b", "mafdet proxy --host 0.0.0.0",
+             "mafdet proxy --url http://127.0.0.1:8081"), "use", common=False),
     Command("hunt", "the hunt", "simulate people typing and measure the wait after sending",
             "Simulates a person typing a message (clean: start to finish; messy: typos, backspaces and an "
             "edit in the middle; paste: a long document followed by a question) and measures the wait from "
@@ -319,6 +327,34 @@ def _strike_args(p):
                         "+20%% on code, slightly later first token")
 
 
+def _proxy_args(p):
+    from .proxy.launch import ENGINE_PORT, OPEN_WEBUI, PROXY_PORT
+    p.add_argument("--model", default="",
+                   help="the model: an id from `mafdet models` (qwen3-4b, qwen3-4b:Q8_0), a GGUF file, or "
+                        "repository:file (default: the one chosen in the app)")
+    p.add_argument("--device", default="auto", choices=["auto", "cuda", "cpu"],
+                   help="where llama-server runs the model (default: %(default)s)")
+    p.add_argument("--ctx", type=int, default=16384,
+                   help="tokens of KV cache shared by the two slots; Open WebUI's tools alone take ~5.8k "
+                        "(default: %(default)s)")
+    p.add_argument("--port", type=int, default=PROXY_PORT, help="where the proxy listens (default: %(default)s)")
+    p.add_argument("--host", default="127.0.0.1",
+                   help="0.0.0.0 to reach it from another machine or from Docker (default: %(default)s)")
+    p.add_argument("--engine-port", type=int, default=ENGINE_PORT,
+                   help="where llama-server listens (default: %(default)s)")
+    p.add_argument("--cors", default=OPEN_WEBUI,
+                   help="web pages allowed to send drafts, comma-separated; \"\" for none "
+                        "(default: Open WebUI on this machine, %(default)s)")
+    p.add_argument("--url", default="",
+                   help="use a llama-server already running at this address instead of starting one "
+                        "(give it -np 2 -kvu --no-cache-idle-slots)")
+    p.add_argument("--exact", action="store_true",
+                   help="no reading ahead, every prompt recomputed: answers bit-identical, none of the gain")
+    p.add_argument("--reprobe", action="store_true", help="probe the engine again instead of the saved profile")
+    p.add_argument("--llama-args", default="",
+                   help='extra llama-server options, with an equals sign: --llama-args="-ub 256"')
+
+
 def _race_args(p):
     p.add_argument("--lengths", type=int, nargs="+", default=None,
                    help="prompt lengths to measure, in tokens (default: 50 to 8000 on GPU, 50 to 2000 on CPU)")
@@ -363,7 +399,7 @@ def _judge_args(p):
                         "or shifted probability (llama, default 0.25)")
 
 
-_ARGS = {"gui": _gui_args, "tui": _tui_args, "models": _models_args, "doctor": _doctor_args, "awaken": _awaken_args, "watch": _watch_args, "strike": _strike_args, "race": _race_args,
+_ARGS = {"gui": _gui_args, "tui": _tui_args, "models": _models_args, "doctor": _doctor_args, "awaken": _awaken_args, "watch": _watch_args, "strike": _strike_args, "race": _race_args, "proxy": _proxy_args,
          "hunt": _hunt_args, "judge": _judge_args}
 
 

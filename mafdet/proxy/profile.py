@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -64,7 +65,9 @@ class EngineProfile:
 
     # ---- storage ----------------------------------------------------------------
     def path(self) -> Path:
-        safe = f"{self.url.replace('://', '_').replace(':', '_').replace('/', '_')}__{self.model}"
+        # Only characters every file system takes: a model id can be "qwen3-4b:Q4_K_M" or a path
+        # like "C:/models/x.gguf", and Windows refuses ":" and "/" in a file name.
+        safe = re.sub(r"[^A-Za-z0-9._-]+", "_", f"{self.url}__{self.model}").strip("._")[:150]
         return profiles_dir() / (safe + ".json")
 
     def save(self) -> Path:

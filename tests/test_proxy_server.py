@@ -129,6 +129,7 @@ def test_after_an_answer_the_cache_holds_its_prompt():
     try:
         call(port, "/v1/chat/completions", {"model": "fake-model", "messages": MESSAGES,
                                             "chat_template_kwargs": {"enable_thinking": False}})
+        assert wait_until(lambda: not state.cache.generating)
         assert state.cache.ids == engine.render(MESSAGES, {"enable_thinking": False})
         assert state.cache.tail_unknown
         # and a later draft is rendered with the options the last request used

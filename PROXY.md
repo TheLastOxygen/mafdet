@@ -27,6 +27,8 @@ The goal is thinking ahead in the front end people already use: in the app, the 
     it clocks down, and the drafts keep it awake. To check on other cards.
   - The final answers agree but one in 27 (the same problem on two cards): the wording, rarely the number,
     can differ when llama.cpp computes a prefix read ahead in other batches. `--exact` for bit-identical.
+- **Step 3, one command:** `mafdet proxy --model qwen3-4b` starts llama-server the way the proxy needs it and
+  the proxy in front of it; the guide is "Open WebUI + MAFDET in 5 minutes" (`mafdet/proxy/clients/README.md`).
 - **Steps 1 and 2 on Open WebUI** (2026-11-06): a front end sends only the text being typed and the proxy
   rebuilds the rest; a user script makes Open WebUI do that (`mafdet/proxy/clients/`); Open WebUI's titles,
   tags and follow-ups go to a second slot. On the RTX 2060, second turn of a chat in Open WebUI 0.13.0,
@@ -65,10 +67,10 @@ measured, with the numbers in `research/LOG.md`.
 - [ ] A guide per front end, each one tried for real.
 
 **3. Easy to install.**
-- [ ] One command, `mafdet proxy`, that finds or starts llama-server and starts the proxy. Starting the engine
+- [x] One command, `mafdet proxy`, that finds or starts llama-server and starts the proxy. Starting the engine
       means sharing the app's `LlamaServer`: a pull request of its own (see Contributing).
 - [ ] A Docker image and a `docker-compose` file next to Open WebUI.
-- [ ] A page "Open WebUI + MAFDET in 5 minutes".
+- [x] A page "Open WebUI + MAFDET in 5 minutes": `mafdet/proxy/clients/README.md`.
 - [ ] `/proxy/stats` as a small readable page: is it working, how much waiting it saved.
 
 **4. More engines.**

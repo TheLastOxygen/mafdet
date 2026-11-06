@@ -128,6 +128,19 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
 
 ## Done and measured
 
+- **2026-11-06 · `mafdet proxy`: one command starts llama-server for the proxy and the proxy (roadmap step 3).**
+  `mafdet/proxy/launch.py`, through the app's `LlamaServer` and catalog: the model chosen in the app or
+  `--model` (catalog id, file, repo:file), 2 slots with one 16k pool (`-kvu`; LlamaServer already passes
+  `--cache-ram 0`, which keeps idle slots from being cleared), `--alias` the catalog id (Open WebUI showed the
+  file path), engine on port 8078 (fixed, so the profile and the saved last request are found again), CORS
+  for Open WebUI on this machine by default. Found on the first run: the profile's file name kept the model
+  id's ":" (`qwen3-4b:Q4_K_M`), which Windows refuses (WinError 87; it had made an alternate data stream):
+  now only `[A-Za-z0-9._-]`. Through it, in Chrome with Open WebUI: a chat's second message 1 token on
+  Enter (`n_past = 7171`); the first was cold (the saved request was under the old file name). Two proxy
+  tests that read the cache or the history right after an answer were flaky in the full suite (the proxy
+  updates them after sending the answer): they wait for it now. The guide: "Open WebUI + MAFDET in 5
+  minutes" (`mafdet/proxy/clients/README.md`).
+
 - **2026-11-06 · Proxy on Open WebUI tried by hand, with Tampermonkey: two fixes, then a new chat's first
   message 23 tokens to read on Enter and the second 1 (RTX 2060, Qwen3-4B).** The user installed the script
   in Chrome through Tampermonkey: drafts arrived (97 warms, no mismatch). Two problems showed up:

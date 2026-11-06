@@ -1,87 +1,108 @@
-# Front-end clients
+# Open WebUI + MAFDET in 5 minutes
 
-Small pieces that make a chat front end send drafts to the proxy (`POST /v1/drafts`) while
-the user types. The front end itself stays untouched.
+Open WebUI with a local model, where the model reads your message while you type: on Enter it
+has nothing left to read. Measured on an RTX 2060 with Qwen3-4B (2026-11-06, `research/LOG.md`),
+tokens the engine still had to read on Enter:
 
-## Open WebUI: `open-webui.user.js`
+| | Open WebUI on llama-server | through MAFDET |
+|---|---|---|
+| first message of a new chat | 7065 (4.3 s) | 23 (37 ms) |
+| second message | 7158 (4.7 s) | 1 |
+| a follow-up suggestion clicked | | 63 |
 
-A browser user script. While you type in Open WebUI's message box it posts
-`{"conversation_id", "text"}` to the proxy: 250 ms after the last change, at least every
-600 ms while you keep typing, at once on a paste. It never sends an empty or unchanged text.
-`conversation_id` is the chat id from the URL (`/c/<id>`), or `"new"` on a new chat.
-If the proxy is down it prints one warning in the console and retries quietly.
+Most of those 7k tokens are Open WebUI's 30 built-in tools, sent with every request. Without
+MAFDET they are read again on most turns: the title, tags and follow-ups Open WebUI asks the model
+for evict the conversation from llama-server's cache. MAFDET keeps them apart (two slots) and reads
+the rest while you type. It is reading ahead only: the prompt the model answers is the same.
 
-### Install
+## 1. MAFDET and a model
 
-1. Install Tampermonkey (or Violentmonkey) in the browser.
-2. Its dashboard: "Create a new script", paste the whole content of `open-webui.user.js`,
-   save. Or drag the file onto the dashboard.
-3. Start llama-server with two slots, `-np 2 -kvu --no-cache-idle-slots`. Open WebUI asks the model for a title, tags
-   and follow-up suggestions around every answer; on one slot they evict the conversation, and
-   the next turn rereads it all (with Open WebUI's 30 built-in tools, ~7k tokens: 4.7 s on an RTX
-   2060). With two, the proxy keeps the conversation in slot 0 and sends those to slot 1.
-   `--no-cache-idle-slots` matters: by default, with a unified KV cache, llama-server saves an
-   idle slot to RAM and clears it when another slot gets a task, so a title on slot 1 empties
-   the conversation in slot 0.
-   Then start the proxy with CORS for the page's origin, and point Open WebUI at it:
+`mafdet proxy` is in the source for now (it comes to `pipx install mafdet` with the next release):
 
-   ```bash
-   python -m mafdet.proxy --url http://127.0.0.1:8081 --model Qwen3-4B-Q4_K_M \
-       --cors http://localhost:8080,http://127.0.0.1:8080
-   ```
+```bash
+git clone https://github.com/Mafdet-AI/mafdet.git
+cd mafdet
+python -m venv .venv          # Windows: py -3.12 -m venv .venv
+source .venv/bin/activate     # Windows: .venv\Scripts\Activate.ps1
+pip install -e .
+mafdet doctor --install       # llama.cpp for this machine (CUDA, Vulkan, Metal or CPU)
+mafdet models                 # which models run well here
+mafdet models --download qwen3-4b
+```
 
-   In Open WebUI, Admin Settings > Connections: an OpenAI connection with the base URL
-   `http://127.0.0.1:8077/v1` (from Open WebUI in Docker: `http://host.docker.internal:8077/v1`).
-   The chat requests go from Open WebUI's server to the proxy; the drafts go from the browser,
-   which is why only they need CORS.
-4. Reload Open WebUI.
+## 2. Start it
 
-### Settings (top of the script)
+```bash
+mafdet proxy --model qwen3-4b
+```
+
+It starts llama-server with the options reading ahead needs (two slots sharing one 16k-token cache,
+nothing cleared behind its back) and the proxy at `http://127.0.0.1:8077/v1`. It prints the address,
+where the user script is and where to see that it works. Without `--model` it uses the model chosen
+in the MAFDET app. Ctrl+C stops both.
+
+Open WebUI in Docker: `mafdet proxy --host 0.0.0.0`, and use `http://host.docker.internal:8077/v1`
+below.
+
+## 3. Point Open WebUI at it
+
+Admin Settings > Connections > OpenAI API: add a connection with the URL `http://127.0.0.1:8077/v1`
+and any key (`none`). The model appears as `qwen3-4b:Q4_K_M`; choose it.
+
+## 4. The user script
+
+It sends what you type to the proxy (Open WebUI itself stays untouched).
+
+1. Install [Tampermonkey](https://www.tampermonkey.net/) (or Violentmonkey) in the browser. In Chrome,
+   open `chrome://extensions`, Tampermonkey's Details, and turn on "Allow user scripts" (or the
+   Developer mode switch, top right, on older versions).
+2. Tampermonkey's icon > "Create a new script": replace everything with the content of
+   `open-webui.user.js` (the path `mafdet proxy` prints), and save (Ctrl+S).
+3. Open Open WebUI at `http://localhost:8080`.
+
+## 5. Check that it works
+
+Type a message without sending it, then open `http://127.0.0.1:8077/proxy/stats`: under `sessions`,
+a `"new"` entry with `warms` above zero. After a few messages, `requests.matched` counts your
+messages and `requests.side` the titles, tags and follow-ups sent to the other slot.
+
+Nothing there: the browser console (F12) shows `[mafdet] proxy unreachable` when the proxy is down
+or refuses the page. The address in the bar must be one `mafdet proxy` accepts (`--cors`, by default
+`http://localhost:8080` and `http://127.0.0.1:8080`: two different origins for the browser).
+
+## The script's settings
 
 | setting | default | what |
 |---|---|---|
 | `@match` lines | `http://localhost:8080/*`, `http://127.0.0.1:8080/*` | where Open WebUI runs; add yours |
 | `PROXY` | `http://127.0.0.1:8077` | the proxy, as the browser reaches it |
 | `USE_GM` | `false` | `true` sends with `GM_xmlhttpRequest`, no CORS needed: also replace `@grant none` with `@grant GM_xmlhttpRequest` and add `@connect 127.0.0.1` (the comment under the header says how) |
-| `DEBOUNCE_MS`, `MAX_WAIT_MS` | 250, 600 | the debounce |
+| `DEBOUNCE_MS`, `MAX_WAIT_MS` | 250, 600 | after a pause of 250 ms, and at least every 600 ms while typing |
 | `INPUT` | `#chat-input` | the message box |
 
-If Open WebUI is started with a `CONTENT_SECURITY_POLICY` environment variable, its
-`connect-src` must allow the proxy, or use `USE_GM`.
+If Open WebUI is started with a `CONTENT_SECURITY_POLICY` environment variable, its `connect-src`
+must allow the proxy, or use `USE_GM`.
 
-### Check that it works
+## Your own llama-server
 
-Type something in a chat (without Enter), then open `http://127.0.0.1:8077/proxy/stats`.
-`sessions` should have one entry with your chat id (or `"new"`), `draft_tokens` above zero and
-`warms` going up. After Enter, `requests` counts the chat request. Nothing there: the browser
-console (F12) shows `[mafdet] proxy unreachable` when the proxy is down or CORS refuses
-the origin (the address bar's origin must be in `--cors` exactly: `localhost` and `127.0.0.1`
-are two origins).
+`mafdet proxy --url http://127.0.0.1:8081` uses a llama-server already running. Give it two slots and
+a shared cache, and keep it from clearing an idle slot: `-np 2 -kvu --no-cache-idle-slots` (or
+`--cache-ram 0`), with a context of at least 16k. On one slot, or with idle slots cleared (llama-server's
+default with `-kvu`), the title on the other slot empties the conversation.
 
-### What it gains (RTX 2060, Qwen3-4B, Open WebUI 0.13.0, 2026-11-06)
+## When the read-ahead does not count
 
-Tokens llama-server still had to read on Enter, typed messages:
+The proxy ties the request on Enter to your drafts by the user message (equal to the last draft, or
+extending it), or to the conversation by its history. The script rebuilds the text the way Open WebUI
+does (its editor's HTML through turndown: one newline between paragraphs, `"  \n"` for a Shift+Enter
+line break, outer spaces trimmed), but:
 
-| | without the proxy | with it |
-|---|---|---|
-| first message of a new chat | 7065 (4.3 s) | 23 (37 ms) |
-| second message | 7158 (4.7 s) | 1 |
-| a follow-up suggestion clicked | | 63 |
-
-Installed through Tampermonkey in Chrome and tried by hand. Details in `research/LOG.md`.
-
-### When the read-ahead does not count
-
-The proxy ties the request on Enter to the drafts by the user message: it must equal the last
-draft (or extend it). The script rebuilds the text the way Open WebUI does (its editor's HTML
-goes through turndown: one newline between paragraphs, `"  \n"` for a Shift+Enter line break,
-outer spaces trimmed), but:
-
-- **Paste Large Text as File** (Settings > Interface, off by default): a paste over 1000
-  characters becomes a file attachment instead of text in the box. That text is not read
-  ahead. Hold Shift while pasting, or turn the setting off.
-- Attached files, knowledge, web search, and system prompt variables: Open WebUI changes what
-  it sends around the message, so the prompt differs from the warmed one.
-- Rich text formatting (lists, tables, code blocks, typed with "Rich Text Input for Chat" on):
-  the script approximates the markdown Open WebUI makes of them; where it differs, only the
-  part before the difference is reused.
+- **Paste Large Text as File** (Settings > Interface, off by default): a paste over 1000 characters
+  becomes a file attachment instead of text in the box, and is not read ahead. Hold Shift while
+  pasting, or leave the setting off.
+- Attached files, knowledge, web search: Open WebUI wraps the message in its RAG template and changes
+  the earlier messages too, so the prompt differs from the warmed one.
+- Rich text (lists, tables, code blocks): the script approximates the markdown Open WebUI makes of
+  them; where it differs, only the part before the difference is reused.
+- The first message after `mafdet proxy` is started for the first time: the proxy learns Open WebUI's
+  tools from the first request (then keeps them on disk).
