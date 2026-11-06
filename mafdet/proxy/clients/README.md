@@ -18,18 +18,17 @@ ahead only: the prompt the model answers is the same.
 
 ## 1. MAFDET and a model
 
-`mafdet proxy` is in the source for now (it comes to `pipx install mafdet` with the next release):
+`mafdet proxy` comes with MAFDET 0.5.0 and later (`mafdet --version` says which you have):
 
 ```bash
-git clone https://github.com/Mafdet-AI/mafdet.git
-cd mafdet
-python -m venv .venv          # Windows: py -3.12 -m venv .venv
-source .venv/bin/activate     # Windows: .venv\Scripts\Activate.ps1
-pip install -e .
+pipx install mafdet           # or pipx upgrade mafdet; Windows with python.org's Python: pip install -U mafdet
 mafdet doctor --install       # llama.cpp for this machine (CUDA, Vulkan, Metal or CPU)
 mafdet models                 # which models run well here
 mafdet models --download qwen3-4b
 ```
+
+From the source instead: `git clone https://github.com/Mafdet-AI/mafdet.git`, then `pip install -e .` in a
+virtual environment (the README's "From the source").
 
 ## 2. Start it
 
