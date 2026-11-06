@@ -53,6 +53,25 @@ tokens of template to read then.
 The profile is cached per (url, model) in `~/.mafdet/proxy/`; `--reprobe` forces a fresh
 probe, `--no-probe` starts with read-ahead off (tier T-1).
 
+## Your own front end
+
+Point its OpenAI connection at the proxy, and post the message being typed to `POST /v1/drafts`:
+`{"conversation_id": "<your chat id, or \"new\">", "text": "<the whole message box>"}`. The text must be
+the user message exactly as the request on Enter will carry it. In a web page,
+`clients/mafdet-drafts.js` does the debouncing (a pause of 250 ms, at least every 600 ms while typing, a
+paste at once) and stays quiet when the proxy is down:
+
+```js
+const drafts = mafdetDrafts({ proxy: 'http://127.0.0.1:8077' });
+box.addEventListener('input', () => drafts.typed(chatId, box.value));
+box.addEventListener('paste', () => setTimeout(() => drafts.pasted(chatId, box.value)));
+// on Enter, after sending the chat request through the proxy:
+drafts.sent();
+```
+
+The page's origin must be allowed with `--cors`. Open WebUI's user script (`clients/open-webui.user.js`)
+is the same thing, reading Open WebUI's editor.
+
 ## What the probe decides (PR #1: only what llama.cpp needs)
 
 | Question | Answer stored in `EngineProfile` |

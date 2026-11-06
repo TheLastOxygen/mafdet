@@ -66,7 +66,8 @@ measured, with the numbers in `research/LOG.md`.
 
 **2. Front ends.**
 - [x] Open WebUI first: a browser user script (Tampermonkey) that posts the drafts, with Open WebUI untouched.
-- [ ] `mafdet-drafts.js`: a few dozen lines for anyone writing a front end ("call this while the user types").
+- [x] `mafdet-drafts.js`: a few dozen lines for anyone writing a front end ("call this while the user types"):
+      `mafdet/proxy/clients/`, documented in `mafdet/proxy/README.md`.
 - [ ] Support inside Open WebUI itself (a pull request or an option there), so that no script is needed.
 - [ ] A guide per front end, each one tried for real.
 
