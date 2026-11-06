@@ -1,19 +1,20 @@
 # Open WebUI + MAFDET in 5 minutes
 
-Open WebUI with a local model, where the model reads your message while you type: on Enter it
-has nothing left to read. Measured on an RTX 2060 with Qwen3-4B (2026-11-06, `research/LOG.md`),
-tokens the engine still had to read on Enter:
+Open WebUI with a local model, where the answer starts as soon as you press Enter. Measured on an
+RTX 2060 with Qwen3-4B, 8 conversations of 2-3 messages each way, typed at 12 characters a second
+(`research/proxy_openwebui.py`, 2026-11-06), time from Enter to the first word:
 
-| | Open WebUI on llama-server | through MAFDET |
-|---|---|---|
-| first message of a new chat | 7065 (4.3 s) | 23 (37 ms) |
-| second message | 7158 (4.7 s) | 1 |
-| a follow-up suggestion clicked | | 63 |
+| | mean | median | slowest |
+|---|---|---|---|
+| Open WebUI on llama-server (its default options) | 5.4 s | 3.3 s | 20.7 s |
+| Open WebUI through MAFDET | **0.16 s** | **0.14 s** | 0.4 s |
 
-Most of those 7k tokens are Open WebUI's 30 built-in tools, sent with every request. Without
-MAFDET they are read again on most turns: the title, tags and follow-ups Open WebUI asks the model
-for evict the conversation from llama-server's cache. MAFDET keeps them apart (two slots) and reads
-the rest while you type. It is reading ahead only: the prompt the model answers is the same.
+Two things make you wait without it. Open WebUI asks the model for a title, tags and follow-up
+suggestions around every answer, and your message queues behind them (4.6 s on average here); and
+it sends its 30 built-in tools (~5.8k tokens) with every request, which llama-server sometimes has
+to read again. MAFDET sends those requests to a slot of their own, keeps the conversation in the
+other, and reads your message while you type: on Enter, 1 token is left to read. It is reading
+ahead only: the prompt the model answers is the same.
 
 ## 1. MAFDET and a model
 

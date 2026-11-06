@@ -128,6 +128,31 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
 
 ## Done and measured
 
+- **2026-11-06 · Open WebUI, Enter → first token, 8 conversations each way: llama-server with its default options
+  5.40 s mean (median 3.31 s), through `mafdet proxy` 0.16 s (median 0.14 s); RTX 2060, Qwen3-4B Q4_K_M.**
+  `research/proxy_openwebui.py` drives Open WebUI 0.13.0 as its frontend does (POST /api/chat/completions and a
+  socket.io session): its tools, history, title, tags and follow-ups reach the engine as for a person. 8
+  conversations of 3 messages (2 of them a ~1.5k-token paste, then a typed question, then a follow-up: 2
+  counted turns), typed at 12 chars/s (drafts at most 0.6 s apart, as the user script), 1 s before Enter, 3 s
+  reading after each answer; thinking off for the answers (`chat_template_kwargs` as a custom param),
+  max_tokens 200; Open WebUI's side requests as it sends them (no tools, Qwen3 thinking). One warm-up
+  conversation per block, not counted. Time from the POST to the first token on the socket, and llama-server's
+  own timings relayed by Open WebUI (`prompt_n`, `cache_n`, `prompt_ms`). 22 counted turns each:
+  | | mean | median | p90 | max | read on Enter | waiting besides the read |
+  |---|---|---|---|---|---|---|
+  | llama-server defaults (`-c 16384 -ngl 99`: 4 slots, kvu, RAM cache) | 5.40 s | 3.31 s | 10.8 s | 20.7 s | 199 tok, 767 ms | 4.63 s |
+  | llama-server as `mafdet proxy` starts it, no proxy (2 slots, kvu, `--cache-ram 0`) | 11.66 s | 9.50 s | 16.1 s | 58.3 s | 6206 tok, 4430 ms | 7.23 s |
+  | `mafdet proxy` | **0.16 s** | **0.14 s** | 0.16 s | 0.4 s | 1 tok, 31 ms | 0.13 s |
+  With the defaults llama-server mostly keeps the conversation (4 slots, prompt-similarity selection, RAM cache):
+  the wait is queueing behind the title, tags and follow-ups, which think at length on Qwen3 and share the 16k
+  pool. With 2 slots and no proxy the follow-ups land on the conversation's slot (LRU) and it is read again
+  (~6.2k tokens, 4.4 s) on top of the queue. Through the proxy every turn had 1 token left to read, first turns
+  and pastes included (the tools come from the saved last request). First design alternated the arms on one
+  llama-server: the direct arm's requests took the proxy's slot 0 (a first turn waited 4.4 s with 43 tokens to
+  read), so each arm now runs on its own, with a warm-up. Not measured: the answer's writing speed (it shares
+  the GPU with the side requests on slot 1), thinking on for the answers, other cards and models. Data:
+  `proxy_openwebui_4b_2060.json` (proxy, 2 slots), `proxy_openwebui_4b_2060_defaults.json`.
+
 - **2026-11-06 · `mafdet proxy`: one command starts llama-server for the proxy and the proxy (roadmap step 3).**
   `mafdet/proxy/launch.py`, through the app's `LlamaServer` and catalog: the model chosen in the app or
   `--model` (catalog id, file, repo:file), 2 slots with one 16k pool (`-kvu`; LlamaServer already passes

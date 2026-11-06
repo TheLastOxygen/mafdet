@@ -27,6 +27,10 @@ The goal is thinking ahead in the front end people already use: in the app, the 
     it clocks down, and the drafts keep it awake. To check on other cards.
   - The final answers agree but one in 27 (the same problem on two cards): the wording, rarely the number,
     can differ when llama.cpp computes a prefix read ahead in other batches. `--exact` for bit-identical.
+- **Open WebUI, measured** (8 conversations each way, RTX 2060, Qwen3-4B): Enter → first token **5.4 s mean
+  (median 3.3 s) on llama-server's defaults, 0.16 s (median 0.14 s) through `mafdet proxy`**. Without it the
+  message queues behind Open WebUI's title, tags and follow-ups; with it they go to their own slot and the
+  message is read while typing (`research/LOG.md`).
 - **Step 3, one command:** `mafdet proxy --model qwen3-4b` starts llama-server the way the proxy needs it and
   the proxy in front of it; the guide is "Open WebUI + MAFDET in 5 minutes" (`mafdet/proxy/clients/README.md`).
 - **Steps 1 and 2 on Open WebUI** (2026-11-06): a front end sends only the text being typed and the proxy
@@ -88,7 +92,7 @@ measured, with the numbers in `research/LOG.md`.
 - [ ] Engines without a raw completion endpoint (Ignis for now) keep reading ahead only.
 
 **6. Show that it works.**
-- [ ] Realistic benchmarks: multi-turn chats, a pasted document followed by a question, through a real Open
+- [x] Realistic benchmarks: multi-turn chats, a pasted document followed by a question, through a real Open
       WebUI and not only `bench.py`.
 - [ ] A "Proxy" section in the README with the results.
 - [ ] Measurements from other cards and engines, asked of the community as for the Radeons.
