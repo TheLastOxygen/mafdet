@@ -128,6 +128,26 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
 
 ## Done and measured
 
+- **2026-11-06 · Thinking ahead in the proxy (`--think-ahead`, roadmap step 5): Open WebUI with Qwen3 thinking on,
+  Enter → first word of the answer 7.55 s → 4.31 s mean (median 6.34 → 4.06 s), faster in 20 of 22 turns
+  (RTX 2060, Qwen3-4B Q4_K_M).** `mafdet/proxy/think.py`: the app's frame (SEED, BRIDGE, SENT, META_BIAS,
+  copied from `watch.py`) run by the proxy on the draft, in chunks of 32 tokens on slot 0; plain read-ahead off
+  while it reasons; on Enter the final prompt + notes + SENT through `/completion`, streamed back as an OpenAI
+  chat completion (notes and the rest of the reasoning as `reasoning_content`, the answer as `content`, Qwen3's
+  `<tool_call>` as `tool_calls`). First try by hand: 566 tokens reasoned while typing, answer 4.3 s after Enter
+  (the run before without it: 2000 tokens of reasoning, cut, no answer). Found there: the drafts of the first
+  request after a restart had no tools (the saved request had none) and the answer followed them: the prompt
+  is now rendered again when the request's tools or template options differ from the draft's.
+  `research/proxy_openwebui.py --think --max-tokens 3000` (Open WebUI's default: thinking on; it now also
+  records the first word of the answer), same 8 conversations, one warm-up each block, through `mafdet proxy`:
+  | | first word of the answer: mean | median | p90 | max | whole answer | tokens after Enter |
+  |---|---|---|---|---|---|---|
+  | reading ahead only | 7.55 s | 6.34 s | 11.7 s | 21.0 s | 9.37 s | 338 |
+  | thinking ahead | **4.31 s** | **4.06 s** | 5.1 s | 10.4 s | 7.49 s | 230 |
+  Not checked: whether the answers are right (the bench has no answer key; the app's `thinking_ahead.py` does,
+  24/24 on the 4B). The run with llama-server's defaults and thinking on was stopped by Claude Code for low
+  memory (with Open WebUI): not measured. Data: `proxy_openwebui_think_4b_2060.json` (arms t1, t2).
+
 - **2026-11-06 · Open WebUI, Enter → first token, 8 conversations each way: llama-server with its default options
   5.40 s mean (median 3.31 s), through `mafdet proxy` 0.16 s (median 0.14 s); RTX 2060, Qwen3-4B Q4_K_M.**
   `research/proxy_openwebui.py` drives Open WebUI 0.13.0 as its frontend does (POST /api/chat/completions and a

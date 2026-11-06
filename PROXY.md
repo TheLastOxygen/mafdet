@@ -31,6 +31,9 @@ The goal is thinking ahead in the front end people already use: in the app, the 
   (median 3.3 s) on llama-server's defaults, 0.16 s (median 0.14 s) through `mafdet proxy`**. Without it the
   message queues behind Open WebUI's title, tags and follow-ups; with it they go to their own slot and the
   message is read while typing (`research/LOG.md`).
+- **Thinking ahead (step 5), first version:** `mafdet proxy --think-ahead` (Qwen3, thinking on): the model
+  reasons about the draft while you type. Open WebUI, Qwen3-4B, RTX 2060: first word of the answer **7.55 →
+  4.31 s** mean against reading ahead only, faster in 20 of 22 turns. Not exact; answers not checked yet.
 - **Step 3, one command:** `mafdet proxy --model qwen3-4b` starts llama-server the way the proxy needs it and
   the proxy in front of it; the guide is "Open WebUI + MAFDET in 5 minutes" (`mafdet/proxy/clients/README.md`).
 - **Steps 1 and 2 on Open WebUI** (2026-11-06): a front end sends only the text being typed and the proxy
@@ -87,8 +90,9 @@ measured, with the numbers in `research/LOG.md`.
 - [ ] A table "engine, version, what works", measured and dated.
 
 **5. Thinking ahead in the proxy.** The big gain, and the hardest part.
-- [ ] llama.cpp first: raw completion, cancelling a generation in the middle, the Qwen3 frame the app uses.
-- [ ] Opt-in: it changes the answer (it is not exact), and whoever turns it on must know that.
+- [x] llama.cpp first: raw completion, the Qwen3 frame the app uses (`--think-ahead`, `mafdet/proxy/think.py`).
+- [ ] Check the answers (an answer key, as `research/thinking_ahead.py`), and cancel a chunk in flight on Enter.
+- [x] Opt-in: it changes the answer (it is not exact), and whoever turns it on must know that.
 - [ ] A frame measured per model family, the most used first.
 - [ ] Engines without a raw completion endpoint (Ignis for now) keep reading ahead only.
 
