@@ -120,6 +120,10 @@ svg { display: block; flex: none; }
 .btn.accent:hover { filter: brightness(1.08); }
 .btn.ghost { border-color: transparent; color: var(--muted); }
 .btn.ghost:hover { color: var(--strong); background: var(--hover); }
+/* Deleting: rust, and only after the question in place. */
+.btn.danger { border-color: rgba(196, 106, 58, .7); color: var(--rust); }
+.btn.danger:hover { background: var(--rust); border-color: var(--rust); color: var(--paper); }
+.confirm-text { flex: 1; min-width: 0; color: var(--soft); font-size: 13px; line-height: 1.35; }
 .btn:focus-visible, .send:focus-visible, .jump:focus-visible, .copy:focus-visible, .nav-item:focus-visible,
 .chip:focus-visible, .seg button:focus-visible, .switch:focus-visible, .model-pill:focus-visible {
   outline: 2px solid var(--amber);
@@ -287,6 +291,8 @@ svg { display: block; flex: none; }
 }
 .view-chat .view-title { font-size: 15px; font-stretch: 100%; font-family: "JetBrains Mono", monospace; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
 .page-sub { margin: 10px 0 0; max-width: 70ch; color: var(--muted); font-size: 14px; line-height: 1.5; }
+.disk-line { margin-top: 6px; color: var(--faint); font: 400 12px/1.5 "JetBrains Mono", monospace; }
+.disk-line:empty { display: none; }
 .topbar-side { display: flex; align-items: center; gap: 18px; min-width: 0; }
 .topbar-model { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
@@ -370,6 +376,21 @@ svg { display: block; flex: none; }
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+/* The reasoning written before Enter, and the mark where Enter fell. */
+.think-ahead { color: var(--faint); }
+.enter-mark {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0;
+  color: var(--amber);
+  font: 600 10px/1 "JetBrains Mono", monospace;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  white-space: normal;
+}
+.enter-mark i { flex: 1; height: 1px; background: var(--line-strong); }
+.enter-mark svg { transform: rotate(180deg); }
 
 .msg-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; color: var(--faint); line-height: 1.6; }
 .msg-meta .diamond { color: var(--amber); }
@@ -484,6 +505,25 @@ textarea::placeholder { color: var(--faint); }
   background: var(--raised);
   cursor: pointer;
 }
+/* The answer written ahead, under the message: faint until it is complete, then it reads as an answer. */
+.ghost {
+  margin: 8px 0 0;
+  padding: 10px 14px 10px 16px;
+  border-left: 2px solid var(--line-strong);
+  background: linear-gradient(90deg, var(--amber-soft), transparent 60%);
+  border-radius: 0 6px 6px 0;
+  animation: fade .3s both;
+}
+.ghost.complete { border-left-color: var(--amber); }
+.ghost-head { display: flex; align-items: center; gap: 8px; }
+.ghost-head .diamond { color: var(--amber); }
+.ghost-body { margin-top: 8px; max-height: 28vh; overflow: auto; color: var(--muted); font-size: 14px; line-height: 1.55; scrollbar-width: thin; }
+.ghost.complete .ghost-body { color: var(--soft); }
+.ghost-body p { margin: 0 0 8px; }
+.ghost-body > :last-child { margin-bottom: 0; }
+.ghost-body .code { margin-bottom: 8px; }
+.ghost-caret { opacity: .7; }
+
 .status { display: flex; align-items: center; gap: 10px; height: 30px; padding: 0 4px; }
 .status-icon { color: var(--muted); transition: color .2s; }
 .status-icon.on { color: var(--strong); }

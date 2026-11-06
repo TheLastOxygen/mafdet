@@ -138,6 +138,7 @@ def make_handler(app: ChatService, token: str, port_box: list):
                 "/api/hf/search": lambda: app.hf_search(str(data.get("query", ""))),
                 "/api/hf/files": lambda: app.hf_files(repo),
                 "/api/models/add": lambda: add_model(app, str(data.get("path", ""))),
+                "/api/models/delete": lambda: app.delete_model(model),
             }
             if self.path in guarded:
                 try:

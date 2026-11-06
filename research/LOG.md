@@ -128,8 +128,16 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
    - **past reasoning out of the history: done (2026-11-04, "Done and measured").** Left: the same conversations
      on the 14B (its slower reading makes the reread answer cost more, but it happens while typing); a miss at
      turn 6 (problem 17, 20:30 for 20:24) to watch in later multi-turn runs.
-   - show the answer written ahead live under the input field (zero perceived wait; a product/UX change,
-     test with people, not a benchmark)
+   - **the answer written ahead shown live under the input field: done (2026-11-06, "Done and measured").**
+     Not tried with people yet (a product/UX change, not a benchmark).
+   - **a thinking budget after Enter (`--think-budget N`, Settings): built (2026-11-06), not measured.** The
+     misses of the runs so far were reasoning cut at --max-tokens with no answer (problem 16, the snail, on the
+     14B and the 30B-A3B; problems 8 and 16 on the 4B's IQ4_XS), never a wrong number: with a budget the
+     reasoning is closed there, as for a turn ended inside it, and the model answers with what it has. To
+     measure, same 24 problems: `thinking_ahead.py --config "budget 1200=--think-budget 1200"` against
+     `--config "reason ahead="`, 4B then 14B: accuracy (does a closed reasoning still give the number?) and
+     the mean wait. A budget lower than the typical reasoning (900 tokens on the 4B) would trade answers for
+     speed; the interesting setting is just under --max-tokens.
    - harder benchmark (problems the 4B gets wrong 30-50% of the time) to see accuracy effects at all
    - reasoning ahead beyond Qwen3 (each reasoning model's frame must be measured); MiniCPM, newer Qwen
      and Gemma were asked for on Reddit
@@ -145,6 +153,37 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
    - The README: a "RTX 3060 12 GB" row (4B, 14B, 30B-A3B) when the user wants these numbers there.
 
 ## Done and measured
+
+- **2026-11-06 · The app: delete a model, the disk, the answer ahead shown live, where Enter fell, a thinking
+  budget, waits on the user's own typing; an answer lost to a broken emoji fixed.** Built and checked on the 14B here
+  (IQ4_XS, all on the 4070 SUPER, 41.7 tok/s; 201 tests), not measured as research:
+  - Delete (window: a question on the card; terminal app: Del and a question; `mafdet models --delete <id>`): only
+    files under `~/.mafdet/models` (catalog downloads, the search's `hf/<owner>/<repo>/` with all the parts and the
+    folders left empty, files put there by hand); a file added from elsewhere keeps "Remove from the list". The
+    model in use is closed first (llama-server holds the file open, Windows refuses), the setting that would load
+    it at the next start is cleared, a `.part` of it goes too. Models and Hardware show what the models take and
+    what is free; a download that would not fit is refused before the first byte (`downloads.check_space`, a
+    `.part` counted as done, the parts of a split model summed).
+  - The answer written ahead appears under the message as it is written (`Session.preview`, sent with the status
+    while Settings → *Show the answer as it is written ahead* is on): what Enter shows at once. On the 14B, a
+    greeting typed at 14 chars/s: the first words 5.1 s after the start of typing, complete at 5.7 s, 426
+    reasoning tokens and 35 answer tokens before Enter, first word 1 ms after it. The reasoning box marks where
+    Enter fell: the notes written while typing carry `ahead: true` in the think events, SENT and what follows do
+    not (a word problem: 335 of 472 reasoning tokens before Enter, first word 3.2 s after).
+  - `--think-budget N` (Settings, *Thinking budget after Enter*): reasoning tokens after Enter; past them the chunk
+    in flight is cancelled and the reasoning closed as for a turn ended inside it ("\n</think>\n\n"), and the model
+    answers. Budget 64 on the 14B: 297 tokens ahead + 65 after Enter, closed, the answer right (8:15 + 2:50 =
+    11:05) in 1.7 s. The done event says `budget`; `closed` keeps its meaning (the model's own). Not measured on
+    the 24 problems: Next 6.
+  - The catalog's waits use the user's typing: `typing_s` in the done event (first character → Enter), the median
+    of the last 20 messages over 2 s replaces TYPING_SECONDS (34) from the third on, clamped to 8-180 s; Models
+    says which is in use. The samples of these checks were removed from this machine's config.
+  - Found by the live check: 3 of 3 greetings ended with an emoji the model left incomplete (a byte missing before
+    <|im_end|>; the 14B IQ4_XS, sampled with THINK_SAMPLING's presence_penalty 1.5 for the answer too).
+    `Detokenizer` held the text back waiting for the rest of the character, so an answer written ahead in full
+    reached the page empty ("answer ready", then nothing; the same for an answer streamed). Now the end of the
+    generation flushes it, as a replacement character. Open: whether the presence penalty on byte tokens is the
+    cause (exempt them, or sample the answer without it), and how often it happens on the 4B.
 
 - **2026-11-06 · Thinking ahead in the proxy (`--think-ahead`, roadmap step 5): Open WebUI with Qwen3 thinking on,
   Enter → first word of the answer 7.55 s → 4.31 s mean (median 6.34 → 4.06 s), faster in 20 of 22 turns

@@ -18,7 +18,7 @@ import urllib.error
 from pathlib import Path
 
 from . import catalog, config, gguf
-from .downloads import fetch
+from .downloads import check_space, fetch
 from .hardware import Hardware
 from .tasks import Task
 
@@ -64,6 +64,7 @@ def files(repo: str, hw: Hardware, device: str = "auto", ctx: int = 8192) -> dic
     # The Hub gives the parameters, not how many work for each token: a mixture of experts names them.
     active = ACTIVE.search(repo.split("/")[-1])
     active_b = min(params_b, float(active.group(1))) if active and params_b else params_b
+    typing_s = catalog.typing_seconds()["seconds"]
     out = []
     for name in sorted(sizes, key=lambda n: sizes[n]):
         base = os.path.basename(name)
@@ -77,7 +78,7 @@ def files(repo: str, hw: Hardware, device: str = "auto", ctx: int = 8192) -> dic
                  "reason_ahead": thinks, "reasoning_tokens": 900}
         v = catalog.Variant(model, gguf.quant_label(base), repo, name, size)
         e = catalog.estimate(v, hw, device, ctx)
-        e.update(catalog.waits(model, e["decode_tps"]))
+        e.update(catalog.waits(model, e["decode_tps"], typing_s))
         local = dest_dir(repo) / name
         out.append({"file": name, "parts": parts, "bytes": size, "quant": v.quant, "name": gguf.model_name(base),
                     "installed": all((dest_dir(repo) / p).is_file() for p in parts), "path": str(local), **e})
@@ -113,6 +114,14 @@ def download(repo: str, file: str, task: Task) -> dict:
     if missing:
         raise FileNotFoundError(f"{repo} has no file {missing[0]}")
     total = sum(sizes[p] or 0 for p in parts)
+    # The whole model must fit, not each part on its own: what is already on disk counts as done.
+    have = 0
+    for p in parts:
+        for q in (dest_dir(repo) / p, dest_dir(repo) / (p + ".part")):
+            if q.is_file():
+                have += q.stat().st_size
+    dest_dir(repo).mkdir(parents=True, exist_ok=True)
+    check_space(dest_dir(repo), total - have)
     token = _token()
     headers = {"Authorization": f"Bearer {token}"} if token else {}
     done = 0

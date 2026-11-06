@@ -8,6 +8,7 @@ has its full size. No half-written model is ever loaded.
 from __future__ import annotations
 
 import os
+import shutil
 import ssl
 import sys
 import urllib.request
@@ -23,6 +24,22 @@ USER_AGENT = f"mafdet/{__version__}"
 
 def size_text(n: int) -> str:
     return f"{n / 2**30:.1f} GB" if n >= 2**30 else f"{n / 2**20:.0f} MB"
+
+
+def disk_free(folder: Path) -> int | None:
+    """Bytes free on the disk `folder` is on; None when it cannot be told."""
+    try:
+        return shutil.disk_usage(folder).free
+    except OSError:
+        return None
+
+
+def check_space(folder: Path, needed: int):
+    """Refuse a download that would not fit on the disk, before any byte comes in: a model that stops at
+    99% for lack of space wastes the time it took, and a full disk slows the whole machine down."""
+    free = disk_free(folder)
+    if free is not None and needed > free:
+        raise OSError(f"Not enough space on the disk: {size_text(needed)} needed, {size_text(free)} free in {folder}")
 
 
 class _KeepAuthAtHome(urllib.request.HTTPRedirectHandler):
@@ -76,6 +93,8 @@ def fetch(url: str, dest: Path, task: Task, size: int | None = None, offset: int
     if size is not None and have > size:          # a .part from another file of the same name
         part.unlink()
         have = 0
+    if size is not None:
+        check_space(dest.parent, size - have)
     task.detail = f"{dest.name}{f', {size_text(size)}' if size else ''}, from {urlparse(url).hostname}"
     headers = {"User-Agent": USER_AGENT, **(headers or {})}
     if have:

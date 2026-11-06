@@ -280,15 +280,22 @@ class Detokenizer:
         self.ids: list[int] = []
         self.start = self.read = 0
 
-    def push(self, tokens: list[int]) -> str:
+    def push(self, tokens: list[int], final: bool = False) -> str:
+        """The text of `tokens`; `final` when nothing more will come, so a character left broken by the model
+        (a byte of an emoji missing, seen on Qwen3-14B with the presence penalty) comes out as a replacement
+        character instead of holding back everything after it."""
         self.ids += [t for t in tokens if t != self.skip]
         with self.lock:
             head = self.tok.decode(self.ids[self.start:self.read])
             text = self.tok.decode(self.ids[self.start:])
-        if text.endswith("�"):
+        if text.endswith("�") and not final:
             return ""                              # a character still incomplete: wait for its other bytes
         self.start, self.read = self.read, len(self.ids)
         return text[len(head):]
+
+    def flush(self) -> str:
+        """What is still held back, at the end."""
+        return self.push([], final=True)
 
 
 class Session:
@@ -301,7 +308,12 @@ class Session:
         self.ahead = getattr(args, "ahead", 0)     # mafdet strike: tokens written at a pause, before Enter
         self.think = getattr(args, "think", False)  # mafdet strike: reason ahead, keeping the notes across edits
         self.think_cap = getattr(args, "think_ahead", 0)
+        # Reasoning allowed after Enter (0: none): past it the reasoning is closed and the model answers with
+        # what it has, instead of thinking on until the token limit cuts it with no answer.
+        self.think_budget = getattr(args, "think_budget", 0)
         self.keep_reasoning = getattr(args, "keep_reasoning", False)   # past turns' reasoning stays in the history
+        self.typing_t0 = 0.0                       # when the message being typed was started (empty -> text)
+        self._preview: tuple = (None, {"text": "", "complete": False})   # the answer ahead last decoded, by its key
         # --gatherer: a small model writes the notes (a second Session in the "gatherer" role, on
         # its own llama-server); this one, the main model, only reads them and answers.
         self.gatherer: Session | None = None
@@ -439,11 +451,39 @@ class Session:
 
     # ---- draft and prefill -------------------------------------------------------
     def draft(self, text: str):
+        if text.strip() and not self.text.strip():
+            self.typing_t0 = time.perf_counter()   # a message starts: how long it takes to type is reported on Enter
         self.text, self.text_t = text, time.perf_counter()
         if self.gatherer is not None:
             self.gatherer.draft(text)
         if self.state == "ready":
             self._retarget()
+
+    def preview(self) -> dict:
+        """The answer written ahead for the text as it is now, as text: what Enter would show at once.
+
+        Empty while nothing is written yet, and when the text changed since: an answer only holds for
+        the exact text it was written for. {"text", "complete"}: complete when the model ended its turn.
+        """
+        holds = self.text.rstrip() == self.notes_text.rstrip()
+        tokens = list(self.answer_ahead) if holds and self.answer_ahead else []
+        spec, n_spec = self.spec, 0
+        if spec is not None and not spec.cancelled and spec.text.rstrip() == self.text.rstrip():
+            got = list(spec.tokens)
+            tokens += got[self._split_ahead(got)[0]:]
+            n_spec = len(got)
+        key = (len(tokens) - n_spec, id(spec) if n_spec else 0, n_spec)
+        if key == self._preview[0]:
+            return self._preview[1]
+        complete = bool(tokens) and tokens[-1] == self.end_id
+        with self.tok_lock:
+            text = self.tok.decode([t for t in tokens if t != self.end_id]) if tokens else ""
+        if "</think>" in text:
+            text = text.split("</think>", 1)[1]
+        # A character whose last byte is still to come (an accent, an emoji) decodes as a replacement character.
+        out = {"text": text.lstrip().rstrip("�"), "complete": complete}
+        self._preview = (key, out)
+        return out
 
     # ---- gatherer --------------------------------------------------------------------
     def _gatherer_args(self):
@@ -1007,6 +1047,7 @@ class Session:
         limit = min(self.args.max_tokens or room, room) - len(answer_pre)
         thought, answer = self._split_ahead(list(spec.tokens) if spec else [])
         thinking = self.think and not answer_pre
+        budget = self.think_budget if thinking else 0
         ttft = answer_ms = None
         state = {"thinking": thinking, "started": False}
 
@@ -1029,28 +1070,42 @@ class Session:
                 state["started"] = True
                 yield {"type": "token", "text": piece}
 
-        # What was written ahead first, all at once: the notes, then the answer if it holds.
+        def emit(text: str):
+            """The events of a piece of text, the first word of the answer timed."""
+            nonlocal answer_ms
+            for ev in pieces(text):
+                if ev["type"] == "token" and answer_ms is None:
+                    answer_ms = (time.perf_counter() - t_enter) * 1000
+                yield ev
+
+        # What was written ahead first, all at once: the notes, then the answer if it holds. The reasoning
+        # written before Enter is marked as such (`ahead`), the page shows where Enter fell; the sentence
+        # that says the message is complete (SENT) belongs to Enter, not to what came before.
         detok = Detokenizer(self.tok, self.tok_lock, self.end_id)
-        pre = detok.push(notes + answer_pre)
-        if pre:
-            state["thinking"] = self.think
-        for ev in pieces(pre):
-            if ev["type"] == "token" and answer_ms is None:
-                answer_ms = (time.perf_counter() - t_enter) * 1000
-            yield ev
+        state["thinking"] = self.think
+        sent = len(self.sent_ids) if self.sent_ids and notes[-len(self.sent_ids):] == self.sent_ids else 0
+        for part, ahead in ((notes[:len(notes) - sent], True), (notes[len(notes) - sent:] + answer_pre, False)):
+            for ev in emit(detok.push(part)):
+                if ahead:
+                    ev["ahead"] = True
+                yield ev
         # The answer written ahead, if it holds; otherwise a new one (the stream waits for a prefill still running).
         # An answer ahead that reached its end is complete: nothing is left to generate.
         complete = bool(answer_pre) and answer_pre[-1] == self.end_id
         stream = None if complete else spec or Stream(self, final, limit, text)
-        first, generated, stopped, closed = stream, [], False, False
+        first, generated, stopped, closed, budgeted = stream, [], False, False, False
+        thought_after = 0                          # reasoning tokens written since Enter, against the budget
         while stream is not None:
             for tokens in stream.follow(self.stop):
                 if ttft is None:
                     ttft = (time.perf_counter() - t_enter) * 1000
-                for ev in pieces(detok.push(tokens)):
-                    if ev["type"] == "token" and answer_ms is None:
-                        answer_ms = (time.perf_counter() - t_enter) * 1000
-                    yield ev
+                yield from emit(detok.push(tokens))
+                if budget and state["thinking"]:
+                    thought_after += len(tokens)
+                    if thought_after >= budget:
+                        budgeted = True            # the budget is spent: closed below, the model answers with what it has
+                        stream.cancel()
+                        break
             if self.stop.is_set():
                 stream.cancel()
                 stopped = True
@@ -1061,19 +1116,20 @@ class Session:
                 break
             if (self.think and state["thinking"] and not stopped and not stream.hit_limit and not closed
                     and len(generated) < limit - 8):
-                # The turn ended inside the reasoning, the answer written there: nothing for the page but
-                # thoughts (Qwen3-4B after reasoning ahead: once in 24 problems on the M2 Pro, once on the RTX 2060).
-                # Close the reasoning as the template does, and the model writes the answer.
+                # The reasoning stops here without an answer: the turn ended inside it, the answer written there
+                # (Qwen3-4B after reasoning ahead: once in 24 problems on the M2 Pro, once on the RTX 2060), or the
+                # thinking budget is spent. Close the reasoning as the template does, and the model writes the answer.
                 closed = True
                 close = self._encode(self.tok, "\n") + [self.think_end] + self._encode(self.tok, "\n\n")
                 generated = (generated[:-1] if generated[-1:] == [self.end_id] else generated) + close
-                yield from pieces(detok.push(close))
+                yield from emit(detok.push(close))
                 stream = Stream(self, final + generated, limit - len(generated), text)
                 continue
             if stopped or not stream.hit_limit or len(generated) >= limit:
                 break
             # The answer ahead stopped at --ahead tokens: carry on from there, with the slot's cache already holding it.
             stream = Stream(self, final + generated, limit - len(generated), text)
+        yield from emit(detok.flush())             # a character the model left broken at the very end
         self.history = self._next_history(final, notes, answer_pre, generated)
         if first is not None and "cache_n" in (first.info.get("timings") or {}):
             reused = first.info["timings"]["cache_n"]   # what the server actually reused
@@ -1088,7 +1144,8 @@ class Session:
                "think_tokens": reasoning if self.think else 0,
                "think_ahead": len(notes) + thought if self.think else 0,
                "cut": stream is not None and stream.hit_limit and len(generated) >= limit, "stopped": stopped,
-               "closed": closed,
+               "closed": closed and not budgeted, "budget": budgeted,
+               "typing_s": round(t_enter - self.typing_t0, 1) if self.typing_t0 else 0.0,
                **({"branch": self.branch_log} if self.n_branches else {})}
 
     def new_chat(self):

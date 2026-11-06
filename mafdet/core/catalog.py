@@ -26,6 +26,8 @@ import hashlib
 import json
 import os
 import re
+import shutil
+import statistics
 from dataclasses import dataclass
 from functools import lru_cache
 from importlib.resources import files
@@ -51,8 +53,11 @@ APPLE_PREFILL_FLOPS_PER_GBS = 0.025e12 # the same for Apple Silicon's GPU (no te
 CPU_PREFILL_FLOPS_PER_CORE = 30e9
 # Typing a question takes about half a minute (measured: 30-37 s at 5 characters per second with
 # pauses); while reasoning ahead the model covers at most about 60% of its reasoning, because
-# the end of the message is still unknown (Qwen3-4B: 418 of 662 tokens).
+# the end of the message is still unknown (Qwen3-4B: 418 of 662 tokens). Once the user has sent a
+# few messages, their own typing time takes the place of this default (typing_seconds).
 TYPING_SECONDS = 34
+TYPING_MIN_SAMPLES = 3
+TYPING_RANGE_S = (8, 180)      # a median outside it is a few odd messages, not a pace
 AHEAD_SHARE_MAX = 0.6
 
 
@@ -231,6 +236,65 @@ def remove_local(variant_id: str):
         config.save({"local_models": [p for p in config.load()["local_models"] if p != v.file]})
 
 
+# ---- deleting files ------------------------------------------------------------
+
+def in_models_dir(path: str | Path) -> bool:
+    """Whether a file is in the app's own models folder: the only place MAFDET deletes from."""
+    root = os.path.normcase(os.path.abspath(config.models_dir()))
+    return os.path.normcase(os.path.abspath(path)).startswith(root + os.sep)
+
+
+def _owned_files(v: Variant) -> list[Path]:
+    """The files on disk a variant stands for: its parts (a split model), and the .part of a download
+    stopped halfway. Only the ones that exist."""
+    first = Path(v.file) if v.model.get("local") else config.models_dir() / v.file
+    out = []
+    for p in gguf.shards(first):
+        out += [q for q in (p, p.with_name(p.name + ".part")) if q.is_file()]
+    return out
+
+
+def delete_files(v: Variant) -> dict:
+    """Delete a downloaded model from the disk: its file (every part of a split model) and a .part left by
+    an interrupted download. Only inside the models folder: a file added from elsewhere stays where the
+    user put it (remove_local forgets it), and a file in the Hugging Face cache belongs to that cache.
+    Returns what went: {"path", "bytes", "files"}."""
+    files_ = _owned_files(v)
+    where = local_path(v) if not files_ else None
+    if not files_:
+        if where and not in_models_dir(where):
+            raise ValueError(f"{os.path.basename(where)} is not in the models folder ({where}): MAFDET only deletes "
+                             "its own downloads")
+        raise FileNotFoundError(f"{os.path.basename(v.file)} is not on the disk")
+    outside = [p for p in files_ if not in_models_dir(p)]
+    if outside:
+        raise ValueError(f"{outside[0].name} is not in the models folder ({outside[0]}): MAFDET only deletes its "
+                         "own downloads; Remove from the list leaves the file where it is")
+    freed = 0
+    for p in files_:
+        freed += p.stat().st_size
+        p.unlink()
+    # The folders of a Hugging Face download (hf/<owner>/<repo>/) go when they are empty.
+    root = config.models_dir().absolute()
+    folder = files_[0].parent.absolute()
+    while folder != root and root in folder.parents and not any(folder.iterdir()):
+        folder.rmdir()
+        folder = folder.parent
+    return {"path": str(files_[0]), "bytes": freed, "files": len(files_)}
+
+
+def disk_usage() -> dict:
+    """What the models take on the disk, and what is free there."""
+    root = config.models_dir()
+    used = sum(p.stat().st_size for p in root.rglob("*") if p.is_file())
+    try:
+        u = shutil.disk_usage(root)
+        free, total = u.free, u.total
+    except OSError:
+        free = total = 0
+    return {"path": str(root), "models_bytes": used, "free_bytes": free, "total_bytes": total}
+
+
 # ---- installed files ---------------------------------------------------------
 
 def local_path(v: Variant) -> str | None:
@@ -340,12 +404,23 @@ def estimate(v: Variant, hw: Hardware, device: str = "auto", ctx: int = 8192) ->
 ANSWER_TOKENS = 300            # a typical answer, for the models that do not reason
 
 
-def waits(m: dict, decode_tps: float) -> dict:
+def typing_seconds() -> dict:
+    """How long the user takes to type a message: the median of their last messages in the app, once there
+    are a few; the measured default before that. {"seconds", "samples", "yours"}."""
+    samples = [s for s in config.load()["typing_seconds"] if isinstance(s, (int, float)) and s > 0]
+    if len(samples) < TYPING_MIN_SAMPLES:
+        return {"seconds": TYPING_SECONDS, "samples": len(samples), "yours": False}
+    lo, hi = TYPING_RANGE_S
+    return {"seconds": round(min(hi, max(lo, statistics.median(samples)))), "samples": len(samples), "yours": True}
+
+
+def waits(m: dict, decode_tps: float, typing_s: float | None = None) -> dict:
     """What the user waits for after Enter.
 
     A model that reasons ahead: seconds to the answer for a typical question, with and without
     MAFDET. The others start answering right away (the message is already read), so what tells
-    them apart is how long a typical answer takes to write.
+    them apart is how long a typical answer takes to write. `typing_s`: how long the message is
+    typed, the time the model has to reason ahead (default: the user's own pace, see typing_seconds).
     """
     if decode_tps <= 0:
         return {"with_mafdet_s": None, "without_s": None, "ahead_tokens": 0, "answer_s": None}
@@ -353,7 +428,9 @@ def waits(m: dict, decode_tps: float) -> dict:
     if not m["reason_ahead"]:
         return {"with_mafdet_s": None, "without_s": None, "ahead_tokens": 0, "answer_s": answer_s}
     reasoning = m["reasoning_tokens"]
-    ahead = min(AHEAD_SHARE_MAX * reasoning, decode_tps * TYPING_SECONDS)
+    if typing_s is None:
+        typing_s = typing_seconds()["seconds"]
+    ahead = min(AHEAD_SHARE_MAX * reasoning, decode_tps * typing_s)
     return {"with_mafdet_s": round((reasoning - ahead) / decode_tps, 1),
             "without_s": round(reasoning / decode_tps, 1), "ahead_tokens": round(ahead), "answer_s": answer_s}
 
@@ -372,7 +449,7 @@ def preferred_quant(model: dict, hw: Hardware, device: str = "auto", ctx: int = 
     return fit
 
 
-def entry(v: Variant, hw: Hardware, device: str = "auto", ctx: int = 8192) -> dict:
+def entry(v: Variant, hw: Hardware, device: str = "auto", ctx: int = 8192, typing_s: float | None = None) -> dict:
     """Everything an interface shows about one variant on this machine."""
     dev = "cuda" if device in ("auto", "cuda") and hw.gpu else "cpu"
     e = estimate(v, hw, device, ctx)
@@ -380,7 +457,7 @@ def entry(v: Variant, hw: Hardware, device: str = "auto", ctx: int = 8192) -> di
     if got:
         e.update(decode_tps=got["decode_tps"], prefill_tps=got["prefill_tps"], measured=True,
                  measured_at=got.get("date", ""))
-    e.update(waits(v.model, e["decode_tps"]))
+    e.update(waits(v.model, e["decode_tps"], typing_s))
     path = local_path(v)
     fam = next((f for f in families() if f["id"] == v.model["family"]), LOCAL_FAMILY)
     return {"id": v.id, "model_id": v.model["id"], "name": v.model["name"], "quant": v.quant,
@@ -390,7 +467,7 @@ def entry(v: Variant, hw: Hardware, device: str = "auto", ctx: int = 8192) -> di
             "default": v.quant == preferred_quant(v.model, hw, device, ctx), "tier": v.model["tier"],
             "params_b": v.model["params_b"], "active_b": v.model["active_b"],
             "reason_ahead": v.model["reason_ahead"], "bytes": v.bytes, "installed": bool(path),
-            "path": path, **e}
+            "path": path, "deletable": bool(path) and in_models_dir(path), **e}
 
 
 def recommend(entries: list[dict]) -> str | None:
@@ -424,7 +501,8 @@ def best_in_family(entries: list[dict], family: str) -> str | None:
 
 def listing(hw: Hardware, device: str = "auto", ctx: int = 8192) -> dict:
     own = local_variants()
-    entries = [entry(v, hw, device, ctx) for v in variants() + own]
+    typing = typing_seconds()
+    entries = [entry(v, hw, device, ctx, typing["seconds"]) for v in variants() + own]
     fams = families() + ([LOCAL_FAMILY] if own else [])
     best = recommend(entries)
     # No "best of the family" among your own files: they are not a family, and you chose them.
@@ -433,4 +511,4 @@ def listing(hw: Hardware, device: str = "auto", ctx: int = 8192) -> dict:
         e["recommended"] = e["id"] == best
         e["family_best"] = e["id"] == family_best[e["family"]]
     return {"models": entries, "recommended": best, "family_best": family_best, "families": fams,
-            "models_dir": str(config.models_dir())}
+            "models_dir": str(config.models_dir()), "disk": disk_usage(), "typing": typing}

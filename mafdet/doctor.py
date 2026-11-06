@@ -11,6 +11,7 @@ from __future__ import annotations
 from rich.console import Console
 
 from .core import catalog, config, hardware, llama_setup
+from .core.downloads import size_text
 from .core.tasks import TaskManager
 from .progress import follow
 
@@ -25,6 +26,10 @@ def run(args) -> int:
     console.print(f"{ok} Processor  {hw.cpu} · {hw.cores} cores, {hw.threads} threads")
     console.print(f"{ok} Memory     {hw.ram_mb / 1024:.1f} GB, {hw.ram_free_mb / 1024:.1f} GB free · "
                   f"~{hw.ram_bandwidth_gbs:.0f} GB/s")
+    disk = catalog.disk_usage()
+    low = disk["free_bytes"] < 5 * 2**30            # the 4B is 2.3 GB, the 14B 8-9
+    console.print(f"{warn if low else ok} Disk       models {size_text(disk['models_bytes'])} in {disk['path']} · "
+                  f"{size_text(disk['free_bytes'])} free" + (" (little room for a model)" if low else ""))
     if hw.gpu:
         g = hw.gpu
         console.print(f"{ok} GPU        {g.name} · {g.vram_mb / 1024:.1f} GB VRAM ({g.vram_free_mb / 1024:.1f} GB free) · "

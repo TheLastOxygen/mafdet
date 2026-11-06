@@ -1,7 +1,9 @@
 """Models of your own: GGUF headers, files on disk, the Hugging Face search, downloads that keep a token home."""
 import http.server
+import os
 import struct
 import threading
+import time
 from types import SimpleNamespace
 
 import pytest
@@ -116,7 +118,7 @@ def test_files_of_your_own(tmp_path):
     write_gguf(root / "mmproj-F16.gguf")                                   # a vision projector: not a model
     write_gguf(root / "Split-Q4_K_M-00001-of-00002.gguf")                  # its second part is missing
     write_gguf(root / "Qwen3-4B-Q4_K_M.gguf")                              # a catalog file: the catalog's card
-    own = {v.file.rsplit("/", 1)[-1]: v for v in catalog.local_variants()}
+    own = {os.path.basename(v.file): v for v in catalog.local_variants()}
     assert set(own) == {"Mine-Q4_K_M.gguf", "Mine-Q8_0.gguf", "Thinker-Q4_K_M.gguf"}
     assert own["Mine-Q4_K_M.gguf"].model["id"] == own["Mine-Q8_0.gguf"].model["id"]
     thinker = own["Thinker-Q4_K_M.gguf"].model
@@ -213,3 +215,96 @@ def test_token_stays_home(tmp_path):
         srv.shutdown()
     assert (tmp_path / "f.gguf").read_bytes() == b"hello"
     assert RedirectHandler.seen == {"127.0.0.1": "Bearer secret", "localhost": None}
+
+
+# ---- deleting, and the room on the disk ------------------------------------------------------
+
+def test_delete_a_catalog_download(tmp_path):
+    root = config.models_dir()
+    v = catalog.find("qwen3-4b:Q4_K_M")
+    (root / v.file).write_bytes(b"\0" * v.bytes)                            # the size the catalog expects
+    (root / (v.file + ".part")).write_bytes(b"\0" * 10)                     # a download of it stopped halfway, before
+    assert catalog.local_path(v) == str(root / v.file)
+    gone = catalog.delete_files(v)
+    assert gone["files"] == 2 and gone["bytes"] == v.bytes + 10 and not (root / v.file).exists()
+    assert not (root / (v.file + ".part")).exists() and catalog.local_path(v) is None
+    with pytest.raises(FileNotFoundError):
+        catalog.delete_files(v)
+
+
+def test_delete_a_split_model_from_the_search_with_its_folders(tmp_path):
+    root = config.models_dir()
+    folder = root / "hf" / "someone" / "Big-GGUF"
+    for i in (1, 2):
+        write_gguf(folder / f"Big-Q4_K_M-0000{i}-of-00002.gguf")
+    write_gguf(root / "hf" / "someone" / "Other-GGUF" / "Other-Q4_K_M.gguf")
+    (v,) = [v for v in catalog.local_variants() if "Big" in v.file]
+    gone = catalog.delete_files(v)
+    assert gone["files"] == 2 and not folder.exists() and not (root / "hf" / "someone" / "Big-GGUF").exists()
+    assert (root / "hf" / "someone").exists()                              # the other model keeps its folders
+    assert [v.model["name"] for v in catalog.local_variants()] == ["Other"]
+
+
+def test_a_file_from_elsewhere_is_never_deleted(tmp_path):
+    p = write_gguf(tmp_path / "elsewhere" / "Far-Q5_K_M.gguf")
+    v = catalog.add_local(str(p))
+    with pytest.raises(ValueError, match="not in the models folder"):
+        catalog.delete_files(v)
+    assert p.exists()
+    listing = catalog.listing(machine())
+    mine = next(e for e in listing["models"] if e["local"])
+    assert mine["installed"] and mine["added"] and not mine["deletable"]
+
+
+def test_the_listing_says_what_the_models_take(tmp_path):
+    write_gguf(config.models_dir() / "Mine-Q4_K_M.gguf")
+    listing = catalog.listing(machine())
+    d = listing["disk"]
+    assert d["path"] == str(config.models_dir()) and d["models_bytes"] == (config.models_dir() / "Mine-Q4_K_M.gguf").stat().st_size
+    assert d["free_bytes"] > 0 and d["total_bytes"] >= d["free_bytes"]
+    assert next(e for e in listing["models"] if e["local"])["deletable"]
+
+
+def test_a_download_that_does_not_fit_is_refused_before_it_starts(tmp_path, monkeypatch):
+    import shutil
+    monkeypatch.setattr(shutil, "disk_usage", lambda p: SimpleNamespace(total=100, used=90, free=10))
+    with pytest.raises(OSError, match="Not enough space"):
+        downloads.fetch("http://127.0.0.1:9/never", tmp_path / "f.gguf", Task("1", "download", "x"), size=1000)
+    assert not (tmp_path / "f.gguf.part").exists()
+    # What a .part already holds counts as done: the rest must fit.
+    (tmp_path / "g.gguf.part").write_bytes(b"\0" * 995)
+    with pytest.raises(OSError):                                           # the server is not there: past the check
+        downloads.fetch("http://127.0.0.1:9/never", tmp_path / "g.gguf", Task("1", "download", "x"), size=1000)
+
+
+def test_the_service_deletes_and_forgets_the_choice(tmp_path):
+    from mafdet.core.chat import ChatService
+    root = config.models_dir()
+    v = catalog.find("qwen3-4b:Q4_K_M")
+    (root / v.file).write_bytes(b"\0" * v.bytes)
+    config.save({"model": v.id})
+    svc = ChatService()
+    started = threading.Event()
+    task = svc.tasks.start("bench", v.id, lambda t: started.wait(5))
+    with pytest.raises(RuntimeError, match="being measured"):
+        svc.delete_model(v.id)
+    started.set()
+    while task.state == "running":
+        time.sleep(0.01)
+    gone = svc.delete_model(v.id)
+    assert gone["bytes"] == v.bytes and not (root / v.file).exists() and svc.settings["model"] == ""
+    with pytest.raises(ValueError):
+        svc.delete_model("no-such-model:Q0")
+
+
+def test_the_command_deletes_by_bare_id(tmp_path):
+    import io
+    from rich.console import Console
+    from mafdet.models import delete
+    root = config.models_dir()
+    v = catalog.find("qwen3-4b:Q5_K_M")
+    (root / v.file).write_bytes(b"\0" * v.bytes)
+    out = Console(file=io.StringIO(), width=200)
+    assert delete(out, "qwen3-4b") == 0 and not (root / v.file).exists()
+    assert "qwen3-4b:Q5_K_M deleted" in out.file.getvalue()
+    assert delete(out, "qwen3-4b") == 1 and "not on the disk" in out.file.getvalue()

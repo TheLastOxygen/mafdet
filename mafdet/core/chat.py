@@ -24,7 +24,10 @@ from ..llama_backend import find_llama_server
 from .tasks import TaskManager
 
 # Settings that need the model loaded again when they change.
-RELOAD_KEYS = {"think", "ahead", "think_ahead", "max_tokens", "ctx", "device", "recycle", "gatherer", "branches"}
+RELOAD_KEYS = {"think", "ahead", "think_ahead", "think_budget", "max_tokens", "ctx", "device", "recycle", "gatherer",
+               "branches"}
+TYPING_SAMPLES = 20                               # messages the typing pace is the median of
+TYPING_MIN_S = 2.0                                # a message typed in less (a paste, "ok") says nothing about the pace
 
 ERROR_CODES = [                                   # (text in the message, code the interfaces translate)
     ("Cannot find llama-server", "llama_missing"),
@@ -67,7 +70,7 @@ class ChatService:
         hw = hardware.detect(refresh)
         if refresh and self.session is None and hw.gpu:
             self._others_vram_mb = hw.gpu.vram_used_mb
-        return hw.to_dict()
+        return {**hw.to_dict(), "disk": catalog.disk_usage()}
 
     def machine(self) -> hardware.Hardware:
         """The machine as the estimates see it: the VRAM taken by our own model counts as free."""
@@ -96,6 +99,8 @@ class ChatService:
                     return {"state": "no-runtime"}
                 return {"state": "no-model", "model_id": self.settings["model"]}
             st = s.status()
+            if st["state"] == "ready" and self.settings["preview"] and not st.get("generating"):
+                st["preview"] = s.preview()        # the answer written ahead, for the page to show as it comes
         st["model_id"] = self.variant_id
         if st["state"] == "error":
             st["error_code"] = error_code(st.get("error", ""))
@@ -109,7 +114,7 @@ class ChatService:
         st = self.settings
         argv = ["strike", "--gguf", path, "--model", v.model["tokenizer"], "--ctx", str(st["ctx"]),
                 "--device", st["device"], "--ahead", str(st["ahead"]), "--think-ahead", str(st["think_ahead"]),
-                "--max-tokens", str(st["max_tokens"])]
+                "--think-budget", str(st["think_budget"]), "--max-tokens", str(st["max_tokens"])]
         if not st["think"] or not v.model["reason_ahead"]:
             argv.append("--no-think")              # only a measured frame reasons ahead (Qwen3 today)
         if v.model.get("llama_args"):
@@ -193,7 +198,15 @@ class ChatService:
         if s is None:
             yield {"type": "error", "message": "The model is not ready yet.", "code": "not_ready"}
             return
-        yield from s.send(text)
+        for event in s.send(text):
+            if event["type"] == "done" and event.get("typing_s", 0) >= TYPING_MIN_S:
+                self._note_typing(event["typing_s"])
+            yield event
+
+    def _note_typing(self, seconds: float):
+        """How long this message took to type: the catalog's waits after Enter follow the user's own pace."""
+        samples = (self.settings["typing_seconds"] + [round(seconds, 1)])[-TYPING_SAMPLES:]
+        self.settings = config.save({"typing_seconds": samples})
 
     def stop(self):
         s = self.session
@@ -240,6 +253,24 @@ class ChatService:
         if variant_id == self.variant_id:
             self.unload()
         catalog.remove_local(variant_id)
+
+    def delete_model(self, variant_id: str) -> dict:
+        """Delete a downloaded model from the disk. The model in use is closed first (llama-server holds its
+        file open), and the setting that would load it at the next start is cleared."""
+        v = catalog.find(variant_id)
+        if v is None:
+            raise ValueError(f"Unknown model: {variant_id}")
+        busy = [t for t in self.tasks.running() if t.target == v.id]
+        if busy:
+            raise RuntimeError(f"{v.model['name']} is being {'downloaded' if busy[0].kind == 'download' else 'measured'}: "
+                               "wait for it, or cancel it, then delete it")
+        with self._lock:
+            if v.id == self.variant_id:
+                self.unload()
+        out = catalog.delete_files(v)
+        if self.settings["model"] == v.id:
+            self.settings = config.save({"model": ""})
+        return out
 
     def install_runtime(self) -> dict:
         return self.tasks.start("llama", llama_setup.LLAMA_TAG, llama_setup.install).to_dict()

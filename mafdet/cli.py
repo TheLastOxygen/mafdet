@@ -44,9 +44,10 @@ COMMANDS = [
             "CPU), how fast it writes and how long the answer takes after Enter, with and without MAFDET. "
             "Estimated from the hardware, or measured once you benchmark a model in the app. Your own GGUF files "
             "(in ~/.mafdet/models, or added in the app) are listed too, and any GGUF on Hugging Face can be "
-            "downloaded as repository:file.",
+            "downloaded as repository:file. --delete removes a downloaded model from the disk.",
             ("mafdet models", "mafdet models --family gemma", "mafdet models --download qwen3-4b",
-             "mafdet models --download unsloth/Qwen3-4B-GGUF:Qwen3-4B-UD-Q4_K_XL.gguf"), "app", common=False),
+             "mafdet models --download unsloth/Qwen3-4B-GGUF:Qwen3-4B-UD-Q4_K_XL.gguf",
+             "mafdet models --delete qwen3-4b:Q8_0"), "app", common=False),
     Command("doctor", "the check-up", "check the machine, llama.cpp and the models",
             "Checks the GPU, memory, llama.cpp and the downloaded models, and says what is missing. With "
             "--install it downloads the llama.cpp build for this machine by itself.",
@@ -269,6 +270,9 @@ def _models_args(p):
     p.add_argument("--download", metavar="ID", default="",
                    help="download a model: an id from the list (qwen3-4b) or with its quantization (qwen3-4b:Q8_0), "
                         "or any GGUF on Hugging Face as repository:file")
+    p.add_argument("--delete", metavar="ID", default="",
+                   help="delete a downloaded model from the disk: its id (qwen3-4b:Q8_0; the bare id when one "
+                        "quantization is on disk), or the id of one of your models as the list shows it")
     p.add_argument("--device", default="auto", choices=["auto", "cuda", "cpu"],
                    help="estimate for the GPU (auto, cuda) or as if there were none (cpu)")
 
@@ -308,6 +312,10 @@ def _strike_args(p):
                         "answer ahead")
     p.add_argument("--think-ahead", type=int, default=1024,
                    help="longest reasoning kept across edits of the message, in tokens (default: %(default)s)")
+    p.add_argument("--think-budget", type=int, default=0,
+                   help="reasoning allowed after Enter, in tokens: past it the reasoning is closed and the model "
+                        "answers with what it has, instead of thinking on until the token limit cuts it with no "
+                        "answer (default: %(default)s, no limit)")
     p.add_argument("--keep-reasoning", action="store_true",
                    help="keep the reasoning of past turns in the conversation (by default only messages and "
                         "answers stay, as in the model's chat template, and the context lasts more turns)")

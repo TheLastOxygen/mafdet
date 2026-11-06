@@ -13,6 +13,7 @@
   let family = "all";                     // all, or a family id
   const picked = {};                      // model id → quantization chosen on its card
   let animateNext = true;
+  let confirmDelete = "";                 // the variant whose card asks "delete from the disk?"
 
   function groups() {
     const out = new Map();
@@ -72,6 +73,12 @@
       ? t("models.subtitle_gpu", { gpu: hw.gpu.name.replace(/^(NVIDIA (GeForce )?|AMD (Radeon )?)/, ""), ram: M.mb(hw.ram_mb),
           others: others > 1024 ? t("models.vram_others", { n: M.mb(others) }) : "" })
       : t("models.subtitle_cpu", { cpu: hw.cpu, ram: M.mb(hw.ram_mb) });
+    // What the models take on the disk, and the typing pace the waits after Enter are computed on.
+    const cat = M.state.catalog, disk = cat?.disk, typing = cat?.typing;
+    const parts = [];
+    if (disk) parts.push(t("models.disk", { n: (cat.models || []).filter((m) => m.installed).length, size: M.bytes(disk.models_bytes), free: M.bytes(disk.free_bytes) }));
+    if (typing) parts.push(typing.yours ? t("models.typing_yours", { s: M.dur(typing.seconds), n: typing.samples }) : t("models.typing_default", { s: M.dur(typing.seconds) }));
+    $("models-disk").textContent = parts.join(" · ");
   }
 
   function placementBadge(e) {
@@ -90,7 +97,25 @@
       `<div class="progress-text"><span>${esc(text)}</span><button type="button" class="btn ghost" data-cancel="${dl.id}">${t("action.cancel")}</button></div></div>`;
   }
 
-  // What can be done with a variant right now: download, use, measure, or the progress of one of them.
+  // Deleting asks once, in place: the row becomes the question, with the size that would go.
+  function confirmRow(e) {
+    return `<span class="confirm-text">${esc(t("models.delete_confirm", { size: M.bytes(e.bytes) }))}</span>` +
+      `<button type="button" class="btn danger" data-delete-yes="${esc(e.id)}">${t("action.delete")}</button>` +
+      `<button type="button" class="btn ghost" data-delete-no="${esc(e.id)}">${t("action.cancel")}</button>`;
+  }
+  const deleteButton = (e) => (e.deletable
+    ? `<button type="button" class="btn ghost" data-del="${esc(e.id)}" title="${esc(e.path || "")}">${t("action.delete")}</button>` : "");
+
+  async function deleteModel(id) {
+    confirmDelete = "";
+    const name = M.modelName(id), e = (M.state.catalog?.models || []).find((m) => m.id === id);
+    const r = await M.post("/api/models/delete", { model: id }).catch((err) => ({ error: err.message }));
+    if (r.error) M.toast(t("models.toast.failed", { model: name, error: r.error }), "error");
+    else M.toast(t("models.toast.deleted", { model: name, size: M.bytes(r.bytes || e?.bytes || 0) }), "ok");
+    await Promise.all([M.refresh.catalog(), M.refresh.hardware(), M.get("/api/status").then(M.setStatus).catch(() => {})]);
+  }
+
+  // What can be done with a variant right now: download, use, measure, delete, or the progress of one of them.
   function actions(e) {
     const s = M.state.status || {};
     const dl = M.taskFor("download", e.id), bench = M.taskFor("bench", e.id);
@@ -103,12 +128,13 @@
       return `<button type="button" class="btn accent" data-get="${e.id}">${t("action.download_and_use")}</button>` +
         `<button type="button" class="btn ghost" data-dl="${e.id}">${t("action.download")}</button>`;
     }
+    if (confirmDelete === e.id) return confirmRow(e);
     const inUse = s.model_id === e.id;
     const main = inUse && s.state === "ready" ? `<button type="button" class="btn" disabled>${M.glyph("check", 10)}${t("action.in_use")}</button>`
       : inUse && s.state === "loading" ? `<button type="button" class="btn" disabled>${t("action.loading")}</button>`
       : `<button type="button" class="btn primary" data-use="${e.id}">${t("action.use")}</button>`;
     return main + `<button type="button" class="btn ghost" data-bench="${e.id}">${t(e.measured ? "action.remeasure" : "action.benchmark")}</button>` +
-      (e.added ? `<button type="button" class="btn ghost" data-forget="${e.id}" title="${esc(e.path || "")}">${t("models.forget")}</button>` : "");
+      (e.added ? `<button type="button" class="btn ghost" data-forget="${e.id}" title="${esc(e.path || "")}">${t("models.forget")}</button>` : deleteButton(e));
   }
 
   function card(vs, i, animate) {
@@ -203,9 +229,12 @@
 
   // One listener for every card button, wherever the card is (Models view or setup).
   document.addEventListener("click", async (ev) => {
-    const b = ev.target.closest("[data-get],[data-dl],[data-use],[data-bench],[data-cancel],[data-forget]");
+    const b = ev.target.closest("[data-get],[data-dl],[data-use],[data-bench],[data-cancel],[data-forget],[data-del],[data-delete-yes],[data-delete-no]");
     if (!b || !b.closest(".card, .ob-model")) return;
     if (b.dataset.forget) { await M.post("/api/models/forget", { model: b.dataset.forget }); await M.refresh.catalog(); return; }
+    if (b.dataset.del) { confirmDelete = b.dataset.del; updateActions(); return; }
+    if (b.dataset.deleteNo) { confirmDelete = ""; updateActions(); return; }
+    if (b.dataset.deleteYes) { await deleteModel(b.dataset.deleteYes); return; }
     if (b.dataset.get) { M.pendingUse.add(b.dataset.get); await M.startTask("/api/download", { model: b.dataset.get }); }
     else if (b.dataset.dl) await M.startTask("/api/download", { model: b.dataset.dl });
     else if (b.dataset.bench) await M.startTask("/api/bench", { model: b.dataset.bench });
@@ -274,9 +303,10 @@
     const mine = own(f.path);
     if (mine) {
       const s = M.state.status || {};
-      return s.model_id === mine.id && ["ready", "loading"].includes(s.state)
+      if (confirmDelete === mine.id) return confirmRow(mine);
+      return (s.model_id === mine.id && ["ready", "loading"].includes(s.state)
         ? `<button type="button" class="btn" disabled>${M.glyph("check", 10)}${t("action.in_use")}</button>`
-        : `<button type="button" class="btn primary" data-hf-use="${esc(mine.id)}">${t("action.use")}</button>`;
+        : `<button type="button" class="btn primary" data-hf-use="${esc(mine.id)}">${t("action.use")}</button>`) + deleteButton(mine);
     }
     return `<button type="button" class="btn accent" data-hf-get="${esc(f.file)}">${t("action.download_and_use")}</button>` +
       `<button type="button" class="btn ghost" data-hf-dl="${esc(f.file)}">${t("action.download")}</button>`;
@@ -347,7 +377,7 @@
     if (repo) return hfOpenRepo(repo.dataset.repo);
     const link = e.target.closest("[data-link]");
     if (link) { e.preventDefault(); return M.post("/api/open", { url: link.href }); }
-    const b = e.target.closest("[data-hf-get],[data-hf-dl],[data-hf-use],[data-cancel]");
+    const b = e.target.closest("[data-hf-get],[data-hf-dl],[data-hf-use],[data-cancel],[data-del],[data-delete-yes],[data-delete-no]");
     if (!b || !hf.files) return;
     if (b.dataset.hfUse) {
       M.setStatus(await M.post("/api/model/load", { model: b.dataset.hfUse }));
@@ -355,6 +385,9 @@
       M.go("chat");
       return;
     }
+    if (b.dataset.del) { confirmDelete = b.dataset.del; updateFileActions(); return; }
+    if (b.dataset.deleteNo) { confirmDelete = ""; updateFileActions(); return; }
+    if (b.dataset.deleteYes) { await deleteModel(b.dataset.deleteYes); updateFileActions(); return; }
     if (b.dataset.cancel) await M.post("/api/tasks/cancel", { id: b.dataset.cancel });
     else {
       const file = b.dataset.hfGet || b.dataset.hfDl;
@@ -388,6 +421,16 @@
     const p = total ? Math.round((100 * used) / total) : 0;
     return `<div class="gauge"><div class="gauge-row"><span class="label">${label}</span><span class="label">${right}</span></div>` +
       `<div class="gauge-bar ${p > 85 ? "partial" : ""}"><i data-w="${p}"></i></div></div>`;
+  }
+
+  // The disk the models live on: what they take, what is left for the next one.
+  function diskCard(d, i) {
+    if (!d) return "";
+    const used = d.total_bytes - d.free_bytes;
+    return `<div class="hw-card enter" style="--i:${i}"><div class="hw-head">${M.mark("judge", 22)}<span class="label">${t("hardware.disk")}</span></div>` +
+      `<h3 class="hw-name">${esc(t("hardware.disk_free", { free: M.bytes(d.free_bytes), total: M.bytes(d.total_bytes) }))}</h3>` +
+      meterBlock(esc(t("hardware.in_use", { used: M.bytes(used) })), used, d.total_bytes, esc(t("hardware.disk_models_short", { size: M.bytes(d.models_bytes) }))) +
+      `<p class="hw-line mono">${esc(t("hardware.disk_models", { size: M.bytes(d.models_bytes), path: d.path }))}</p></div>`;
   }
 
   function runtimeBlock() {
@@ -430,7 +473,8 @@
       `<div class="hw-figures"><div class="stat"><span class="label">${t("hardware.bandwidth")}</span><span class="stat-value">${esc(t("hardware.bandwidth_value", { n: M.num(hw.ram_bandwidth_gbs) }))}</span><span class="stat-note label">${t("hardware.estimated")}</span></div></div></div>`,
       `<div class="hw-card enter" style="--i:3"><div class="hw-head">${M.mark("mask", 22)}<span class="label">${t("hardware.system")}</span></div>` +
       `<h3 class="hw-name">${esc(hw.os)}</h3><p class="hw-line mono">${esc(hw.arch)}</p></div>`,
-      `<div class="hw-card wide enter" style="--i:4" id="hw-runtime"><div class="hw-head">${M.mark("awaken", 22)}<span class="label">${t("hardware.runtime")}</span></div>${runtimeBlock()}</div>`,
+      diskCard(hw.disk, 4),
+      `<div class="hw-card wide enter" style="--i:5" id="hw-runtime"><div class="hw-head">${M.mark("awaken", 22)}<span class="label">${t("hardware.runtime")}</span></div>${runtimeBlock()}</div>`,
     ];
     const animate = !hwAnimated && M.view === "hardware";
     const grid = $("hw-grid");
@@ -466,7 +510,7 @@
   // =====================================================================================
 
   const LANG_NAMES = { en: "English", it: "Italiano", fr: "Français", de: "Deutsch" };
-  const RELOAD = ["think", "ahead", "think_ahead", "max_tokens", "ctx", "device", "recycle", "gatherer", "branches"];
+  const RELOAD = ["think", "ahead", "think_ahead", "think_budget", "max_tokens", "ctx", "device", "recycle", "gatherer", "branches"];
 
   async function save(changes) {
     const before = M.state.settings || {};
@@ -489,6 +533,7 @@
   const shows = {
     ahead: (v) => t("settings.tokens", { n: M.num(+v) }),
     think_ahead: (v) => t("settings.tokens", { n: M.num(+v) }),
+    think_budget: (v) => (+v ? t("settings.tokens", { n: M.num(+v) }) : t("settings.unlimited")),
     max_tokens: (v) => (+v ? t("settings.tokens", { n: M.num(+v) }) : t("settings.unlimited")),
   };
 
@@ -506,7 +551,9 @@
       section("settings.section.thinking", [
         row("settings.think", "settings.think.hint", toggle("think", st.think)),
         row("settings.think_ahead", "settings.think_ahead.hint", range("think_ahead", st.think_ahead, 256, 4096, 256, shows.think_ahead)),
+        row("settings.think_budget", "settings.think_budget.hint", range("think_budget", st.think_budget, 0, 4096, 128, shows.think_budget)),
         row("settings.ahead", "settings.ahead.hint", range("ahead", st.ahead, 0, 1024, 64, shows.ahead)),
+        row("settings.preview", "settings.preview.hint", toggle("preview", st.preview)),
         row("settings.max_tokens", "settings.max_tokens.hint", range("max_tokens", st.max_tokens, 0, 8192, 256, shows.max_tokens)),
       ]),
       section("settings.section.model", [

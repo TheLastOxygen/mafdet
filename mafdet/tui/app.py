@@ -265,6 +265,7 @@ class ChatView(Vertical):
     #empty Button { margin-top: 1; }
     #empty LoadingIndicator { height: 1; color: #D4892A; margin-top: 1; }
     #status { height: 1; padding: 0 2; }
+    #preview { height: auto; max-height: 4; padding: 0 2; display: none; }
     #input { margin: 0 1 0 1; border: solid #4A3312; background: #0F0A05; }
     #input:focus { border: solid #A8742F; }
     #input.ahead { border: heavy #D4892A; }
@@ -274,6 +275,7 @@ class ChatView(Vertical):
         with VerticalScroll(id="thread"):
             yield Vertical(id="empty")
         yield Input(placeholder="> message mafdet_      Enter send · Esc stop · Ctrl+N new chat", id="input")
+        yield Static("", id="preview")
         yield Static("", id="status")
 
     def on_mount(self):
@@ -416,6 +418,28 @@ class ChatView(Vertical):
             line.append(" " * pad)
             line.append(f"ctx {s.get('context', 0):,}/{s.get('ctx', 0):,}", style=FAINT)
         self.query_one("#status", Static).update(line)
+        self.render_preview(s)
+
+    PREVIEW_CHARS = 240
+
+    def render_preview(self, s: dict):
+        """The answer written ahead, under the message, as it is written: its tail, since it grows at the end."""
+        box = self.query_one("#preview", Static)
+        p = s.get("preview") or {}
+        text = (p.get("text") or "").strip() if s["state"] == "ready" and not self.generating else ""
+        if not text:
+            box.display = False
+            return
+        tail = text[-self.PREVIEW_CHARS:].replace("\n", " ")
+        line = Text()
+        line.append("◆ ", style=AMBER)
+        line.append("ANSWER READY" if p.get("complete") else "ANSWER AHEAD", style=Style(color=AMBER, bold=True))
+        line.append(" · Enter shows it at once\n" if p.get("complete") else " · still writing\n", style=FAINT)
+        line.append(("…" if len(text) > len(tail) else "") + tail, style=DIM)
+        if not p.get("complete"):
+            line.append(" ▌", style=HOT)
+        box.update(line)
+        box.display = True
 
     def on_status(self, s: dict):
         if s["state"] == "ready" and self.model_seen is not None and s.get("model_id") != self.model_seen:
@@ -452,15 +476,26 @@ class ChatView(Vertical):
         self.generating = True
         self.stream(text, bot)
 
+    ENTER_MARK = "\n── ⏎ Enter ──\n"               # between the reasoning written before Enter and the rest
+
     @work(thread=True, exclusive=True)
     def stream(self, text: str, bot: BotMessage):
         answer, reasoning, last, done = "", "", 0.0, None
+        ahead = False                              # reasoning written before Enter has been shown
         try:
             for ev in self.service.send(text):
                 if ev["type"] == "token":
                     answer += ev["text"]
                 elif ev["type"] == "think":
-                    reasoning += ev["text"]
+                    if ev.get("ahead"):
+                        ahead = True
+                        reasoning += ev["text"]
+                    else:
+                        if ahead:
+                            reasoning += self.ENTER_MARK
+                            ahead = False
+                            ev["text"] = ev["text"].lstrip("\n")
+                        reasoning += ev["text"]
                 elif ev["type"] == "done":
                     done = ev
                 elif ev["type"] == "error":
@@ -492,6 +527,8 @@ class ChatView(Vertical):
             if (done.get("branch") or {}).get("adopted"):
                 meta.append("⑂ ending guessed")
             meta.append(f"{done['tokens']:,} tok · {done['tps']} tok/s")
+            if done.get("budget"):
+                meta.append("reasoning closed at the budget")
             line = Text("└─ ", style=LINE)
             for i, item in enumerate(meta):
                 if i:
@@ -518,6 +555,44 @@ class ChatView(Vertical):
 # Models
 # =====================================================================================
 
+class Confirm(ModalScreen[bool]):
+    """A question with two answers, for what cannot be undone: Y for yes, N or Esc for no."""
+
+    DEFAULT_CSS = """
+    Confirm { align: center middle; background: #080503 80%; }
+    #confirm { width: 72; height: auto; border: round #F0603A; background: $background; padding: 1 3; }
+    #confirm-title { color: #F2CB8E; text-style: bold; }
+    #confirm-body { margin-top: 1; color: #D9AE6E; }
+    #confirm-actions { height: 3; margin-top: 1; align-horizontal: right; }
+    #confirm-actions Button { margin-left: 1; }
+    """
+    BINDINGS = [Binding("escape", "answer(False)", show=False), Binding("n", "answer(False)", show=False),
+                Binding("y", "answer(True)", show=False)]
+
+    def __init__(self, heading: str, body: str, yes: str = "Delete"):
+        super().__init__()
+        self.heading, self.body, self.yes = heading, body, yes
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="confirm"):
+            yield Static(self.heading, id="confirm-title")
+            yield Static(self.body, id="confirm-body", markup=False)
+            with Horizontal(id="confirm-actions"):
+                yield Button("Cancel", id="confirm-no")
+                yield Button(self.yes, variant="error", id="confirm-yes")
+
+    @on(Button.Pressed, "#confirm-yes")
+    def _yes(self):
+        self.dismiss(True)
+
+    @on(Button.Pressed, "#confirm-no")
+    def _no(self):
+        self.dismiss(False)
+
+    def action_answer(self, yes: bool):
+        self.dismiss(yes)
+
+
 class ModelsView(Vertical):
     """The catalog as one table: a row per model, its quantization switched in place (Q).
 
@@ -527,7 +602,7 @@ class ModelsView(Vertical):
 
     DEFAULT_CSS = """
     ModelsView { height: 1fr; padding: 0 2; }
-    #models-head { height: 2; margin: 1 0 1 0; }
+    #models-head { height: 3; margin: 1 0 1 0; }
     #models-table { height: 1fr; }
     #models-line { height: 2; margin-top: 1; }
     """
@@ -535,6 +610,7 @@ class ModelsView(Vertical):
         Binding("enter", "use", "Use"),
         Binding("d", "download", "Download"),
         Binding("m", "measure", "Measure"),
+        Binding("delete", "delete", "Delete"),
         Binding("x", "cancel", "Cancel"),
         Binding("q", "quant(1)", "Quant"),
         Binding("tab", "family(1)", "Family"),
@@ -639,7 +715,15 @@ class ModelsView(Vertical):
         head.append(f"{machine} · {hw['ram_mb'] / 1024:.0f} GB RAM", style=MUTED)
         if cat.get("vram_others_mb", 0) > 1024:
             head.append(f" · {gb(cat['vram_others_mb'])} of VRAM in use elsewhere", style=AMBER)
-        head.append("     ★ best for you  ✓ measured  (…) without MAFDET  ⏎ use\n", style=FAINT)
+        head.append("     ★ best for you  ✓ measured  (…) without MAFDET  ⏎ use  Del delete\n", style=FAINT)
+        disk, typing = cat.get("disk"), cat.get("typing")
+        if disk:
+            head.append(f"{gb(disk['models_bytes'] / 2**20)} of models on the disk · {gb(disk['free_bytes'] / 2**20)} free",
+                        style=FAINT)
+        if typing and typing.get("yours"):
+            head.append(f" · waits on your typing: {typing['seconds']} s per message, the median of {typing['samples']}",
+                        style=FAINT)
+        head.append("\n")
         fams = [("all", "All")] + [(f["id"], f["name"]) for f in cat["families"]]
         for fid, name in fams:
             on = fid == self.family
@@ -758,6 +842,21 @@ class ModelsView(Vertical):
         if task:
             self.service.cancel(task["id"])
 
+    def action_delete(self):
+        """Delete the model under the cursor from the disk, after a question."""
+        cur = self.current()
+        if cur is None or not cur[1]["installed"]:
+            return
+        e = cur[1]
+        if not e["deletable"]:
+            self.app.notify("This file is outside the models folder: MAFDET only deletes its own downloads.",
+                            severity="warning", timeout=5)
+            return
+        body = (f"{e['name']} {e['quant']}: {gb(e['bytes'] / 2**20)} at {e['path']}.\n"
+                "The file goes; the model can be downloaded again.")
+        self.app.push_screen(Confirm("Delete from the disk?", body),
+                             callback=lambda yes: self.app.delete_model(e["id"]) if yes else None)
+
 
 # =====================================================================================
 # Hardware
@@ -800,6 +899,12 @@ class HardwareView(VerticalScroll):
         t.add_row("MEMORY", bar(1 - hw["ram_free_mb"] / hw["ram_mb"], 24, GREEN) +
                   Text(f"  {gb(hw['ram_mb'])} · {gb(hw['ram_free_mb'])} free"))
         t.add_row("BANDWIDTH", f"{hw['ram_bandwidth_gbs']:.0f} GB/s (estimated)")
+        d = hw.get("disk") or {}
+        if d.get("total_bytes"):
+            used = 1 - d["free_bytes"] / d["total_bytes"]
+            t.add_row("DISK", bar(used, 24, GREEN) + Text(f"  {gb(d['free_bytes'] / 2**20)} free of "
+                                                           f"{gb(d['total_bytes'] / 2**20)}"))
+            t.add_row("", Text(f"Models: {gb(d['models_bytes'] / 2**20)} in {d['path']}", style=FAINT))
         t.add_row("SYSTEM", f"{hw['os']} · {hw['arch']}")
         t.add_row("", "")
         t.add_row("RUNTIME", Text(f"llama.cpp {rt['build'] or '?'}" if rt["installed"] else "Not installed",
@@ -858,8 +963,16 @@ class SettingsView(VerticalScroll):
                        "Off: no reasoning, it answers right away.", Switch(value=st["think"], id="think"))
         yield self.row("Reasoning kept across edits", "The longest reasoning carried over while you keep typing.",
                        self.select("think_ahead", [512, 1024, 2048, 4096], st["think_ahead"], "{:,} tokens"))
+        yield self.row("Thinking budget after Enter", "Reasoning allowed after you send the message: past it the "
+                       "reasoning is closed and the model answers with what it has, instead of thinking on until "
+                       "the token limit cuts it off with no answer.",
+                       self.select("think_budget", [0, 256, 512, 1024, 2048, 4096], st.get("think_budget", 0),
+                                   "{:,} tokens", "No limit"))
         yield self.row("Answer written ahead", "Answer tokens written during a pause, while the message does not change.",
                        self.select("ahead", [0, 128, 256, 512, 1024], st["ahead"], "{:,} tokens"))
+        yield self.row("Answer shown as it is written ahead", "Under the message, the answer the model writes during "
+                       "your pauses, as it comes: on Enter it appears at once.",
+                       Switch(value=st.get("preview", True), id="preview"))
         yield self.row("Longest answer", "As long as the context allows, or a limit.",
                        self.select("max_tokens", [0, 1024, 2048, 4096, 8192], st["max_tokens"], "{:,} tokens", "No limit"))
         yield Static("MODEL AND MEMORY", classes="section")
@@ -1150,6 +1263,8 @@ class MafdetTUI(App):
     Button:hover { border: solid #D4892A; color: #FFC46B; background: #1A1108; }
     Button.-primary, Button.-warning { border: solid #D4892A; color: #FFC46B; background: #0F0A05; }
     Button.-primary:hover, Button.-warning:hover { background: #D4892A; color: #050302; }
+    Button.-error { border: solid #F0603A; color: #F0603A; background: #0F0A05; }
+    Button.-error:hover { background: #F0603A; color: #050302; }
     /* The rail's menu: after the rules for every button, which would otherwise win. */
     Rail Button, Rail Button:hover, Rail Button:focus, Rail Button.on {
         width: 100%; min-width: 0; height: 1; border: none; margin: 0 0 1 0; padding: 0 1;
@@ -1245,6 +1360,20 @@ class MafdetTUI(App):
 
     def load_model(self, variant_id: str):
         self.run_worker(lambda: self.service.load(variant_id), thread=True, exclusive=True, group="load")
+
+    def delete_model(self, variant_id: str):
+        """Delete a model from the disk (off the UI thread: the model in use is closed first)."""
+        name = model_name(self.service, variant_id)
+
+        def job():
+            try:
+                gone = self.service.delete_model(variant_id)
+            except Exception as e:
+                self.call_from_thread(self.notify, f"{name}: {e}", severity="error", timeout=6)
+                return
+            self.call_from_thread(self.notify, f"{name} deleted · {gb(gone['bytes'] / 2**20)} freed", timeout=4)
+            self.call_from_thread(self.query_one(ModelsView).refresh_table)
+        self.run_worker(job, thread=True, group="delete")
 
     # ---- polling ---------------------------------------------------------------------
 

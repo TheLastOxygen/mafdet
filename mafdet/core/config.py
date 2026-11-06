@@ -26,7 +26,10 @@ DEFAULTS = {
     "think": True,                    # reason ahead while the user types (Qwen3 thinking mode)
     "ahead": 512,                     # answer tokens written at a pause, before Enter
     "think_ahead": 1024,              # longest reasoning kept across edits
+    "think_budget": 0,                # reasoning allowed after Enter; past it the model is told to answer (0 = no limit)
     "max_tokens": 0,                  # longest answer (0 = as long as the context allows)
+    "preview": True,                  # the answer written ahead shown under the message as it is written
+    "typing_seconds": [],             # how long the last messages took to type: the catalog's waits follow it
     "ctx": 8192,
     "device": "auto",                 # auto, cuda or cpu
     "recycle": False,

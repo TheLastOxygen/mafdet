@@ -60,6 +60,11 @@
             <textarea id="input" rows="1" data-i18n-placeholder="chat.placeholder" spellcheck="true"></textarea>
             <button class="send" id="send" type="button" aria-label="Send" disabled></button>
           </div>
+          <!-- The answer written ahead, as it is written: what Enter would show at once. -->
+          <div class="ghost" id="ghost" hidden aria-live="off">
+            <div class="ghost-head label"><span class="diamond">◆</span><span id="ghost-label"></span></div>
+            <div class="ghost-body md" id="ghost-body"></div>
+          </div>
           <div class="status" id="status">
             <span class="status-icon" id="status-icon"></span>
             <span class="status-text label" id="status-text"></span>
@@ -76,6 +81,7 @@
         <div>
           <h1 class="view-title" data-i18n="models.title">Models</h1>
           <p class="page-sub" id="models-sub"></p>
+          <p class="page-sub disk-line" id="models-disk"></p>
           <div class="head-actions">
             <button class="btn accent" id="hf-open" type="button" data-i18n="hf.open">Search Hugging Face</button>
             <button class="btn" id="model-add" type="button" data-i18n="hf.add_file">Add a GGUF file</button>

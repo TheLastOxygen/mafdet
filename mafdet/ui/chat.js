@@ -289,12 +289,14 @@
 
   const fmt = (n) => M.num(Math.round(n));
 
-  function renderThink(el, text, thinking, d) {
+  // The reasoning: what was written before Enter, a mark where Enter fell, then what came after.
+  function renderThink(el, ahead, after, thinking, d) {
     const box = el.querySelector(".think");
-    if (!text) return;
+    if (!ahead && !after) return;
     const follow = nearBottom();
     box.hidden = false;
-    box.querySelector(".think-body").textContent = text;
+    const mark = ahead && (after || thinking) ? `<span class="enter-mark"><i></i>${M.glyph("send", 9)}${t("chat.enter_mark")}<i></i></span>` : "";
+    box.querySelector(".think-body").innerHTML = `<span class="think-ahead">${esc(ahead)}</span>${mark}${esc(ahead ? after.replace(/^\n+/, "") : after)}`;
     const summary = box.querySelector("summary");
     summary.classList.toggle("pulse", thinking);
     summary.textContent = thinking ? t("chat.thinking")
@@ -310,6 +312,7 @@
     if (d.think_tokens) parts.push(t("chat.meta.think_ahead", { ahead: fmt(d.think_ahead), total: fmt(d.think_tokens) }));
     if (d.ahead) parts.push(t("chat.meta.answer_ahead", { n: fmt(d.ahead) }));
     parts.push(t("chat.meta.speed", { n: fmt(d.tokens), tps: M.num(d.tps, 1) }));
+    if (d.budget) parts.push(t("chat.meta.budget"));
     if (d.stopped) parts.push(t("chat.meta.stopped"));
     if (d.cut) parts.push(t("chat.meta.cut"));
     meta.innerHTML = parts.join('<span class="sep">/</span>');
@@ -350,16 +353,17 @@
     if (!text.trim() || generating || !ready()) return;
     generating = true;
     setSendMode();
+    hideGhost();                                           // the answer written ahead moves into the thread
     addMessage("user").querySelector(".msg-body").textContent = text;
     input.value = "";
     autosize();
     pushDraft();
     const bot = addMessage("bot");
     toBottom();
-    let answer = "", reasoning = "", frame = 0;
+    let answer = "", ahead = "", reasoning = "", frame = 0;
     const paint = () => {
       frame = 0;
-      renderThink(bot, reasoning, !answer);
+      renderThink(bot, ahead, reasoning, !answer);
       renderAnswer(bot, answer, true);
     };
     renderAnswer(bot, "", true);
@@ -378,10 +382,10 @@
           if (!chunk.startsWith("data: ")) continue;
           const ev = JSON.parse(chunk.slice(6));
           if (ev.type === "token" || ev.type === "think") {
-            if (ev.type === "token") answer += ev.text; else reasoning += ev.text;
+            if (ev.type === "token") answer += ev.text; else if (ev.ahead) ahead += ev.text; else reasoning += ev.text;
             if (!frame) frame = requestAnimationFrame(paint);
           } else if (ev.type === "done") {
-            renderThink(bot, reasoning, false, ev);
+            renderThink(bot, ahead, reasoning, false, ev);
             metaLine(bot, ev);
           } else if (ev.type === "error") {
             errorLine(bot, ev.code ? t(`error.${ev.code}`) : ev.message);
@@ -418,6 +422,34 @@
     render();
     input.focus();
     pushDraft();
+  }
+
+  // ---- the answer written ahead, shown as it is written -----------------------------------
+  // What Enter would show at once, under the message: the model answers during the pauses, and
+  // the reader sees it come before sending. Any change to the message drops it (the server says so).
+
+  const ghost = $("ghost"), ghostBody = $("ghost-body"), ghostLabel = $("ghost-label");
+  let ghostShown = "";
+
+  function hideGhost() {
+    if (ghost.hidden) return;
+    ghost.hidden = true;
+    ghostShown = "";
+    ghostBody.innerHTML = "";
+  }
+
+  function renderGhost(s) {
+    const p = s.preview;
+    if (generating || s.state !== "ready" || !p || !p.text) return hideGhost();
+    const key = `${p.complete ? "1" : "0"}:${p.text}`;
+    if (key === ghostShown) return;
+    const atEnd = ghostBody.scrollHeight - ghostBody.scrollTop - ghostBody.clientHeight < 40;
+    ghostShown = key;
+    ghost.hidden = false;
+    ghost.classList.toggle("complete", p.complete);
+    ghostLabel.textContent = t(p.complete ? "chat.ghost.ready" : "chat.ghost.writing");
+    ghostBody.innerHTML = markdown(p.text) + (p.complete ? "" : '<span class="caret ghost-caret"></span>');
+    if (atEnd) ghostBody.scrollTop = ghostBody.scrollHeight;
   }
 
   // ---- status line ---------------------------------------------------------------------
@@ -491,6 +523,7 @@
         statusText.textContent = t("status.waiting", { read, thought });
       }
     }
+    renderGhost(s);
     setSendMode();
   }
 

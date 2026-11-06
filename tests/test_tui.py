@@ -86,6 +86,44 @@ def test_models_view_keys():
     assert (before, after) == ("Q4_K_M", "Q5_K_M") and family == "qwen3" and fits == "fits"
 
 
+def test_delete_asks_then_removes_the_file():
+    """Del on a downloaded model opens the question; Y deletes the file, the table loses the row."""
+    from test_local_models import write_gguf
+    config.save({"first_run_done": True, "effects": False})
+    path = write_gguf(config.models_dir() / "Mine-Q4_K_M.gguf")
+    from mafdet.core import catalog
+    (v,) = catalog.local_variants()
+
+    async def go():
+        from mafdet.tui.app import Confirm, ModelsView
+        app = MafdetTUI()
+        async with app.run_test(size=(150, 40)) as pilot:
+            await pilot.pause(0.5)
+            await pilot.press("f2")
+            await pilot.pause(0.5)
+            view = app.query_one(ModelsView)
+            view.selected = v.model["id"]
+            await pilot.press("delete")
+            await pilot.pause(0.3)
+            asked = isinstance(app.screen, Confirm)
+            await pilot.press("escape")
+            await pilot.pause(0.3)
+            kept = path.exists() and not isinstance(app.screen, Confirm)
+            await pilot.press("delete")
+            await pilot.pause(0.3)
+            await pilot.press("y")
+            for _ in range(40):
+                await pilot.pause(0.1)
+                if not path.exists():
+                    break
+            await pilot.pause(0.5)
+            rows = [str(k.value) for k in app.query_one(ModelsView).query_one("DataTable").rows]
+        app.service.close()
+        return asked, kept, path.exists(), rows
+    asked, kept, exists, rows = asyncio.run(go())
+    assert asked and kept and not exists and v.model["id"] not in rows
+
+
 def test_scramble_keeps_spaces_and_punctuation():
     import random
     from mafdet.tui.fx import scramble
