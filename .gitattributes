@@ -1,0 +1,3 @@
+# Files that run in Linux containers keep Unix line endings on every checkout.
+docker/** text eol=lf
+.dockerignore text eol=lf
