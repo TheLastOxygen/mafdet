@@ -41,3 +41,21 @@ def test_no_signal_is_reported_as_unknown():
     assert audit.unknowns == 1
     assert not audit.should_demote()
     assert audit.stats()["last"]["reported"] is None
+
+
+def test_after_an_answer_the_prediction_is_a_lower_bound():
+    # The slot holds the prompt and the answer the proxy passed through; it knows only the
+    # prompt, so reusing more than predicted is expected, and only less is a mismatch.
+    audit = Auditor("timings")
+    assert not audit.record(40, WarmResult(cached_tokens=95, channel="timings"), at_least=True).mismatch
+    assert audit.record(40, WarmResult(cached_tokens=10, channel="timings"), at_least=True).mismatch
+
+
+def test_the_shared_cache_knows_when_it_holds_more_than_it_was_told():
+    from mafdet.proxy.session import SharedCache
+    cache = SharedCache()
+    cache.set([1, 2, 3, 4], tail_unknown=True)
+    assert cache.predict([1, 2, 3, 4, 5, 6]) == (3, True)     # extends past what is known
+    assert cache.predict([1, 2, 9]) == (1, False)            # diverges inside it: exact
+    cache.set([1, 2, 3, 4])
+    assert cache.predict([1, 2, 3, 4, 5]) == (3, False)

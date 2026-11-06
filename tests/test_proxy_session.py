@@ -55,10 +55,10 @@ def test_a_warm_never_overlaps_a_generation():
 
 def test_two_exact_mismatches_demote_the_session_to_static():
     sess, engine = make_session(report_cached=0)   # an engine that lies about reuse
-    sess.submit([{"role": "user", "content": "one two three four five six seven eight nine ten"}])
-    sess.flush()
-    sess.flush()
-    sess.flush()
+    text = "one two three four five six seven eight nine ten"
+    for extra in ("", " eleven", " eleven twelve"):
+        sess.submit([{"role": "user", "content": text + extra}])
+        sess.flush()
     assert sess.auditor.mismatches >= 2
     assert sess.tier == "T0"
 
@@ -67,3 +67,39 @@ def test_nothing_is_warmed_without_a_draft():
     sess, engine = make_session()
     assert sess.flush() is None
     assert engine.warms == 0
+
+
+def test_the_same_draft_is_not_warmed_twice():
+    sess, engine = make_session()
+    sess.submit([{"role": "user", "content": "one two three four five six seven eight nine ten"}])
+    sess.flush()
+    assert sess.flush() is None
+    assert engine.warms == 1
+
+
+def test_enter_drops_the_draft_still_waiting():
+    # A stale draft warmed after the answer would evict the answer from the slot.
+    sess, engine = make_session()
+    sess.debounce_ms = 80
+    sess.submit([{"role": "user", "content": "alpha"}])          # under min_new: waits for the debounce
+    sess.begin_generation()
+    sess.end_generation()
+    time.sleep(0.2)
+    assert engine.warms == 0
+
+
+def test_a_draft_typed_during_the_answer_is_warmed_when_it_ends():
+    sess, engine = make_session()
+    sess.begin_generation()
+    sess.submit([{"role": "user", "content": "one two three four five six seven eight nine ten"}])
+    time.sleep(0.1)
+    assert engine.warms == 0
+    sess.end_generation()
+    assert wait_until(lambda: engine.warms == 1), "the draft was not caught up after the answer"
+
+
+def test_the_template_options_reach_the_render():
+    sess, engine = make_session()
+    sess.submit([{"role": "user", "content": "alpha"}], {"enable_thinking": False})
+    assert engine.last_template_kwargs == {"enable_thinking": False}
+    assert sess.latest[-1] == engine.tokenize("<think></think>")[0]

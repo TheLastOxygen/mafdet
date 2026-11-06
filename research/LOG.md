@@ -94,18 +94,15 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
 5. **Proxy** (2026-10-28, proposed on Reddit by a user of SGLang, llama.cpp and other engines, with Open WebUI and Hermes):
    an OpenAI-compatible server in front of any engine, fed debounced drafts by the front end. `PROXY.md` has
    the scope and the contract; contributions as pull requests to `main`, code in `mafdet/proxy/`. Reading
-   ahead for llama.cpp merged (PR #4, That80-20, 2026-11-06), measured again here with a fixed bench
-   ("Done and measured", 2026-11-06). Left:
-   - ~25 ms added on short typed messages (36 → 59 ms): find where (a debounced warm still running at
-     Enter, or the extra hop) before more measuring.
-   - the generation lock is per conversation, but a plain OpenAI client sends no `conversation_id`: its
-     answer lands in the "default" session and does not stop the drafts' warms on the engine's one slot.
-   - on Enter the pending debounce timer is not cancelled: a stale draft can be warmed after the answer
-     and evict it from the slot (the next turn's prefix).
-   - the audit cannot see requests that bypass the proxy (the bench's own OFF runs): its mismatches there
-     are the bench's, not the proxy's.
-   - answers not bit-identical with a warm partial prefix (engine side); an `exact` flag (commit with
-     `cache_prompt: false`) was offered by the author.
+   ahead for llama.cpp merged (PR #4, That80-20, 2026-11-06); roadmap step 0 (a solid core) done and measured
+   the same day (issue #5, "Done and measured" 2026-11-06, both entries). The roadmap is in `PROXY.md`.
+   Next for us: step 1 (drafts without knowing the conversation) and step 2 on Open WebUI (a user script),
+   unless the contributor takes them. Left from step 0:
+   - the audit cannot see requests that bypass the proxy (the bench's own OFF and reset runs): its
+     mismatches there are the bench's, not the proxy's.
+   - the GPU's clocks: on the 2060 the first request after seconds of idle is slow (one token 45 ms
+     instead of 12, a short prompt ~300 ms instead of ~45). The drafts keep the GPU awake, most of the gain
+     on short messages. Check on another card (the 4070 SUPER, the 3060) before writing it as a result.
    - thinking ahead needs a raw completion endpoint, cancelling, and a frame measured per model family.
 
 6. Other ideas discussed, not started:
@@ -130,8 +127,38 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
 
 ## Done and measured
 
+- **2026-11-06 · Proxy step 0, a solid core: short typed messages 302 → 102 ms, a paste 2 s before Enter
+  1365 → 54 ms (RTX 2060, Qwen3-4B Q4_K_M).** Same setup as the entry below. What changed in `mafdet/proxy/`:
+  - The draft is rendered with the request's `chat_template_kwargs` (sent with the draft, or those of the last
+    chat request). With `enable_thinking: false` Qwen3's template ends the prompt with an empty think block;
+    the drafts were rendered without it, so on Enter the engine still had 6-7 tokens to read, and a batch that
+    small costs ~6 ms a token on the 2060 (as much as 30 tokens). Now 1 token is left on Enter.
+  - The generation lock and the warm lock are the slot's (`SharedCache`), not the conversation's: an answer
+    from a client with no `conversation_id` holds every draft. On Enter every pending draft is dropped (a
+    stale one warmed after the answer would evict it); a draft typed during the answer is warmed when it
+    ends. After an answer the cache model holds its prompt, and the next prediction is a lower bound.
+  - `--exact` (no read-ahead, `cache_prompt: false`), `--cors <origins>` (off by default), one write per
+    streamed chunk. 33 proxy tests (11 new).
+  - The bench: the OFF run now waits as long as the typing lasts, then the same pause, before Enter (the
+    entry below sent it right after the reset). That is what made the proxy look ~25 ms slower: the first
+    request after seconds of little work runs at lower GPU clocks. In the server log the drafts' warms of
+    ~11 tokens go from 21 to 80 ms as the typing goes on, and one token on Enter costs 45 ms instead of 12.
+    The proxy's own hop costs ~1 ms (direct 31.8-32.3 ms, through the proxy 32.2-34.2 ms, no drafts).
+  Enter → first token, without → with the proxy:
+  - 24 typed problems, 12 chars/s, Enter 0.35 s after the last key: **302 → 102 ms** mean (median 287 → 85),
+    faster in 24/24. Without the proxy the GPU sits idle while the user types; with it the drafts keep it
+    awake and the message is read. How much of it is the clocks is a property of the card: see Next 5.
+  - 4 pasted prompts (~2k and ~4k tokens), Enter 0.35 s after the paste: 1171 → 880 ms; Enter 2 s after the
+    paste: **1365 → 54 ms** (944 → 54, 1782 → 51, 963 → 41, 1771 → 68).
+  Answers: 19/24 typed and 3/4 pasted byte-identical; 26 of 27 comparable agree on the number. The one that
+  does not is again the printer problem (133 without, 132 with the proxy, the right reading), as on the V620:
+  llama.cpp computes the prefix read ahead in other batches. engine_stability identical. Audit 493 warms,
+  4 mismatches (requests the proxy cannot see). Data: `proxy_read_ahead_4b_2060.json`,
+  `proxy_read_ahead_4b_2060_settle2.json` (both rewritten by this run).
+
 - **2026-11-06 · Proxy read-ahead on the RTX 2060, with the bench fixed: a pasted prompt is read while the user
-  waits to press Enter (1181 → 49 ms with 2 s before Enter), nothing to gain on short typed messages.** PR #4
+  waits to press Enter (1181 → 49 ms with 2 s before Enter).** The typed numbers here are superseded by the
+  entry above (the OFF run did not wait for the typing; the "~25 ms added" was the GPU's clocks). PR #4
   (2026-11-03 entry below) measured the proxy right after the same prompt sent without it, cache on: with one
   slot the ON run found its prompt already cached by the OFF run, drafts or not. And the clock started when
   the response headers arrived: llama-server sends them before reading the prompt, the proxy only after the
@@ -142,8 +169,7 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
   Probe: T1 (`n_predict: 0`, `timings.cache_n`, edits hit the prefix), as on the V620. Enter → first token,
   without → with the proxy:
   - 24 typed problems, 12 chars/s, Enter 0.35 s after the last key: **36 → 59 ms** mean (median 32 → 62),
-    slower in 23/24: the message is ~30 tokens, there is nothing to read ahead, the proxy adds ~25 ms
-    (not looked into, see Next 5).
+    slower in 23/24 (explained in the entry above: GPU clocks and the missing think block).
   - 4 pasted prompts (~2k and ~4k tokens), Enter 0.35 s after the paste: **1160 → 873 ms** (771 → 466,
     1553 → 1274): the gain is the 0.35 s, the rest of the reading is still running at Enter.
   - The same with Enter 2 s after the paste: **1181 → 49 ms** (760 → 39, 1661 → 56).
@@ -151,7 +177,7 @@ costs 2.4 decoding steps. To speed up the 14B, take work away from the CPU.
     22 ms, so the PR's 492 → 23 was mostly the cache left by the OFF run plus the uncounted wait.
   Answers: 21/24 typed and 4/4 pasted byte-identical, all 27 comparable agree on the number (one hit
   max_tokens); engine_stability identical. Audit 493 warms, 4 mismatches. Data:
-  `proxy_read_ahead_4b_2060.json`, `proxy_read_ahead_4b_2060_settle2.json`.
+  not kept: the same files hold the run of the entry above, in git history at b0be007.
 
 - **2026-11-04 · Past turns' reasoning out of the history: the context lasts, the wait does not grow.** With
   `--think`, `Session._next_history` keeps message and answer of each turn (what follows the last </think>, its

@@ -2,21 +2,21 @@
  "summary": {
   "typed": {
    "n": 24,
-   "off_mean_ms": 36.0,
-   "on_mean_ms": 59.0,
-   "off_median_ms": 32.0,
-   "on_median_ms": 62.0,
-   "identical": 21,
-   "same_answer": 24,
-   "on_slower": 23
+   "off_mean_ms": 302.0,
+   "on_mean_ms": 102.0,
+   "off_median_ms": 287.0,
+   "on_median_ms": 85.0,
+   "identical": 19,
+   "same_answer": 23,
+   "on_slower": 0
   },
   "long": {
    "n": 4,
-   "off_mean_ms": 1160.0,
-   "on_mean_ms": 873.0,
-   "off_median_ms": 1160.0,
-   "on_median_ms": 876.0,
-   "identical": 4,
+   "off_mean_ms": 1171.0,
+   "on_mean_ms": 880.0,
+   "off_median_ms": 1174.0,
+   "on_median_ms": 882.0,
+   "identical": 3,
    "same_answer": 4,
    "on_slower": 0
   },
@@ -64,13 +64,13 @@
   "max_tokens": 96,
   "model": "Qwen3-4B-Q4_K_M",
   "url": "http://127.0.0.1:8081",
-  "when": "2026-11-06 10:45:38"
+  "when": "2026-11-06 12:00:21"
  },
  "rows": {
   "typed": [
    {
-    "off_ttft": 0.05770999984815717,
-    "on_ttft": 0.07086650002747774,
+    "off_ttft": 0.39113410003483295,
+    "on_ttft": 0.05848780018277466,
     "identical": true,
     "same_answer": true,
     "off_finish": "stop",
@@ -79,8 +79,8 @@
     "on_text": "Luca starts with 25 euros.  \nHe buys 3 notebooks at 4 euros each: $3 \\times 4 = 12$ euros.  \nHe also buys a pen for 2 euros.  \nTotal spent: $12 + 2 = 14$ euros.  \nRemaining: $25 - 14 = 11$ euros.  \n\n11"
    },
    {
-    "off_ttft": 0.032068399945273995,
-    "on_ttft": 0.06138570001348853,
+    "off_ttft": 0.38887630007229745,
+    "on_ttft": 0.07516610017046332,
     "identical": true,
     "same_answer": true,
     "off_finish": "stop",
@@ -89,8 +89,8 @@
     "on_text": "11:15"
    },
    {
-    "off_ttft": 0.04450579988770187,
-    "on_ttft": 0.06867299997247756,
+    "off_ttft": 0.308883500052616,
+    "on_ttft": 0.1848861000034958,
     "identical": true,
     "same_answer": true,
     "off_finish": "stop",
@@ -99,8 +99,8 @@
     "on_text": "7 \u00d7 12 = 84  \n84 - 15 = 69  \n\n69"
    },
    {
-    "off_ttft": 0.029989299830049276,
-    "on_ttft": 0.06711589987389743,
+    "off_ttft": 0.2612759000621736,
+    "on_ttft": 0.1496711999643594,
     "identical": true,
     "same_answer": true,
     "off_finish": "stop",
@@ -109,18 +109,18 @@
     "on_text": "The perimeter of a rectangle is calculated as $2 \\times (\\text{length} + \\text{width})$.\n\n$$\n2 \\times (14 + 9) = 2 \\times 23 = 46\n$$\n\n46"
    },
    {
-    "off_ttft": 0.032206400064751506,
-    "on_ttft": 0.03651400003582239,
-    "identical": false,
+    "off_ttft": 0.40215049986727536,
+    "on_ttft": 0.11323030013591051,
+    "identical": true,
     "same_answer": true,
     "off_finish": "stop",
     "on_finish": "stop",
     "off_text": "Marta reads 18 pages a day for 6 days:  \n18 \u00d7 6 = 108 pages.  \n\nThen she reads 12 more pages:  \n108 + 12 = 120 pages.  \n\nTotal: 120.",
-    "on_text": "Marta reads 18 pages a day for 6 days:  \n$ 18 \\times 6 = 108 $ pages.  \n\nThen she reads 12 more pages:  \n$ 108 + 12 = 120 $ pages.  \n\nTotal: **120**."
+    "on_text": "Marta reads 18 pages a day for 6 days:  \n18 \u00d7 6 = 108 pages.  \n\nThen she reads 12 more pages:  \n108 + 12 = 120 pages.  \n\nTotal: 120."
    },
    {
-    "off_ttft": 0.035238999873399734,
-    "on_ttft": 0.03594179986976087,
+    "off_ttft": 0.37590630003251135,
+    "on_ttft": 0.01994400005787611,
     "identical": true,
     "same_answer": true,
     "off_finish": "stop",
@@ -129,8 +129,8 @@
     "on_text": "45 + 38 = 83  \n83 - 17 = 66  \n\n66"
    },
    {
-    "off_ttft": 0.03040150017477572,
-    "on_ttft": 0.06525159999728203,
+    "off_ttft": 0.3101387000642717,
+    "on_ttft": 0.05955249979160726,
     "identical": true,
     "same_answer": true,
     "off_finish": "stop",
@@ -139,8 +139,8 @@
     "on_text": "72 + 9 = 81  \n81 \u00f7 3 = 27  \n\n27"
    },
    {
-    "off_ttft": 0.03209299989975989,
-    "on_ttft": 0.07206910010427237,
+    "off_ttft": 0.31702259997837245,
+    "on_ttft": 0.22824910003691912,
     "identical": true,
     "same_answer": true,
     "off_finish": "stop",
@@ -149,8 +149,8 @@
     "on_text": "120 - (15 \u00d7 4) = 120 - 60 = 60\n\n60"
    },
    {
-    "off_ttft": 0.044635700061917305,
-    "on_ttft": 0.05317729990929365,
+    "off_ttft": 0.22000490012578666,
+    "on_ttft": 0.05770460003986955,
     "identical": true,
     "same_answer": true,
     "off_finish": "stop",
@@ -159,8 +159,8 @@
     "on_text": "42 km"
    },
    {
-    "off_ttft": 0.05978180002421141,
-    "on_ttft": 0.03649169998243451,
+    "off_ttft": 0.2850323000457138,
+    "on_ttft": 0.04579459992237389,
     "identical": true,
     "same_answer": true,
     "off_finish": "stop",
@@ -169,8 +169,8 @@
     "on_text": "A box has 8 rows of 9 tiles:  \n$ 8 \\times 9 = 72 $ tiles.  \n\n14 tiles are broken.  \n\nUsable tiles:  \n$ 72 - 14 = 58 $.  \n\n58."
    },
    {
-    "off_ttft": 0.03207219997420907,
-    "on_ttft": 0.06185229984112084,
+    "off_ttft": 0.25028509995900095,
+    "on_ttft": 0.04579770006239414,
     "identical": true,
     "same_answer": true,
     "off_finish": "stop",
@@ -179,18 +179,18 @@
     "on_text": "14 \u00d7 7 = 98  \n98 - 30 = 68  \n\n68"
    },
    {
-    "off_ttft": 0.031890599988400936,
-    "on_ttft": 0.04880110011436045,
-    "identical": true,
+    "off_ttft": 0.3102353001013398,
+    "on_ttft": 0.06694489996880293,
+    "identical": false,
     "same_answer": true,
     "off_finish": "stop",
     "on_finish": "stop",
     "off_text": "The perimeter of the garden is $2 \\times (6 + 11) = 2 \\times 17 = 34$ meters.  \nFencing costs 5 euros per meter, so the total cost is $34 \\times 5 = 170$ euros.\n\n170",
-    "on_text": "The perimeter of the garden is $2 \\times (6 + 11) = 2 \\times 17 = 34$ meters.  \nFencing costs 5 euros per meter, so the total cost is $34 \\times 5 = 170$ euros.\n\n170"
+    "on_text": "The perimeter of the garden is $2 \\times (6 + 11) = 2 \\times 17 = 34$ meters.  \nFencing costs 5 euros per meter, so the total cost is $34 \\times 5 = 170$ euros.  \n\n170"
    },
    {
-    "off_ttft": 0.03221730003133416,
-    "on_ttft": 0.06483699986711144,
+    "off_ttft": 0.24807490012608469,
+    "on_ttft": 0.1439086999744177,
     "identical": true,
     "same_answer": true,
     "off_finish": "stop",
@@ -199,8 +199,8 @@
     "on_text": "94 - 27 = 67  \n67 + 12 = 79  \n\n79"
    },
    {
-    "off_ttft": 0.03499799990095198,
-    "on_ttft": 0.04367640009149909,
+    "off_ttft": 0.2868862999603152,
+    "on_ttft": 0.06632099999114871,
     "identical": true,
     "same_answer": true,
     "off_finish": "stop",
@@ -209,8 +209,8 @@
     "on_text": "8 + 5 = 13 litres per minute  \n13 \u00d7 9 = 117 litres"
    },
    {
-    "off_ttft": 0.032483400078490376,
-    "on_ttft": 0.07476840005256236,
+    "off_ttft": 0.28614360000938177,
+    "on_ttft": 0.11929040006361902,
     "identical": true,
     "same_answer": true,
     "off_finish": "stop",
@@ -219,8 +219,8 @@
     "on_text": "260 - 74 = 186\n\n186"
    },
    {
-    "off_ttft": 0.03200230002403259,
-    "on_ttft": 0.06597300013527274,
+    "off_ttft": 0.30751900002360344,
+    "on_ttft": 0.10398319992236793,
     "identical": true,
     "same_answer": true,
     "off_finish": "stop",
@@ -229,8 +229,8 @@
     "on_text": "52 - 19 = 33  \n33 + 24 = 57  \n\n57"
    },
    {
-    "off_ttft": 0.030031000031158328,
-    "on_ttft": 0.07281639985740185,
+    "off_ttft": 0.2809080998413265,
+    "on_ttft": 0.057355100056156516,
     "identical": true,
     "same_answer": true,
     "off_finish": "stop",
@@ -239,8 +239,8 @@
     "on_text": "17 \u00d7 5 = 85  \n85 - 6 = 79  \n\n79"
    },
    {
-    "off_ttft": 0.03387399995699525,
-    "on_ttft": 0.06096330005675554,
+    "off_ttft": 0.20935939997434616,
+    "on_ttft": 0.13241519988514483,
     "identical": false,
     "same_answer": true,
     "off_finish": "stop",
@@ -249,18 +249,18 @@
     "on_text": "68 \u00d7 (1 - 0.25) = 68 \u00d7 0.75 = 51\n\n51"
    },
    {
-    "off_ttft": 0.02910619997419417,
-    "on_ttft": 0.0744182001799345,
-    "identical": true,
+    "off_ttft": 0.2709119999781251,
+    "on_ttft": 0.1666264000814408,
+    "identical": false,
     "same_answer": true,
     "off_finish": "stop",
     "on_finish": "stop",
     "off_text": "4 * 450 = 1800\n\n1800",
-    "on_text": "4 * 450 = 1800\n\n1800"
+    "on_text": "4 \u00d7 450 = 1800\n\n1800"
    },
    {
-    "off_ttft": 0.03197190002538264,
-    "on_ttft": 0.033196100033819675,
+    "off_ttft": 0.27370060002431273,
+    "on_ttft": 0.06849279999732971,
     "identical": true,
     "same_answer": true,
     "off_finish": "length",
@@ -269,28 +269,28 @@
     "on_text": "Total sweets = 64  \nLeftover sweets = 3  \nSweets given to children = 64 - 3 = 61  \nNumber of children = 8  \nSweets per child = 61 \u00f7 8 = 7.625  \n\nSince the question asks for how many each, and the answer must be a whole number, the correct interpretation is that 61 sweets are split among 8 children, so each child gets"
    },
    {
-    "off_ttft": 0.046918499981984496,
-    "on_ttft": 0.05115070007741451,
-    "identical": true,
-    "same_answer": true,
+    "off_ttft": 0.25073109986260533,
+    "on_ttft": 0.0970367998816073,
+    "identical": false,
+    "same_answer": false,
     "off_finish": "stop",
     "on_finish": "stop",
     "off_text": "22 pages/minute \u00d7 6 minutes = 132 pages.  \nThen add the 1 page that jammed.  \nTotal = 132 + 1 = 133.  \n\n133",
-    "on_text": "22 pages/minute \u00d7 6 minutes = 132 pages.  \nThen add the 1 page that jammed.  \nTotal = 132 + 1 = 133.  \n\n133"
+    "on_text": "22 pages/minute \u00d7 6 minutes = 132 pages.  \nThen, the printer jams, but that doesn't affect the number of pages already printed.  \n\n**Answer: 132**"
    },
    {
-    "off_ttft": 0.033007799880579114,
-    "on_ttft": 0.06033750018104911,
+    "off_ttft": 0.353273699991405,
+    "on_ttft": 0.24959749984554946,
     "identical": false,
     "same_answer": true,
     "off_finish": "stop",
     "on_finish": "stop",
     "off_text": "First, calculate the total number of rooms:  \n9 floors \u00d7 14 rooms = 126 rooms  \n\nThen subtract the number of empty rooms:  \n126 - 21 = 105  \n\nSo, 105 rooms are occupied.",
-    "on_text": "First, calculate the total number of rooms:  \n9 floors \u00d7 14 rooms = 126 rooms  \n\nThen subtract the number of empty rooms:  \n126 - 21 = 105  \n\nAnswer: 105"
+    "on_text": "Total rooms = 9 floors \u00d7 14 rooms/floor = 126 rooms  \nEmpty rooms = 21  \nOccupied rooms = 126 - 21 = 105  \n\n105"
    },
    {
-    "off_ttft": 0.02959990012459457,
-    "on_ttft": 0.06743299984373152,
+    "off_ttft": 0.38225909997709095,
+    "on_ttft": 0.04242800013162196,
     "identical": true,
     "same_answer": true,
     "off_finish": "stop",
@@ -299,8 +299,8 @@
     "on_text": "To find the monthly payment, divide the total cost by the number of months:\n\n$$\n\\frac{240}{8} = 30\n$$\n\nThe monthly payment is **30** euros."
    },
    {
-    "off_ttft": 0.032404599944129586,
-    "on_ttft": 0.05979309999383986,
+    "off_ttft": 0.28425149992108345,
+    "on_ttft": 0.09514979994855821,
     "identical": true,
     "same_answer": true,
     "off_finish": "stop",
@@ -311,8 +311,8 @@
   ],
   "long": [
    {
-    "off_ttft": 0.7708319001831114,
-    "on_ttft": 0.46556949988007545,
+    "off_ttft": 0.7818688000552356,
+    "on_ttft": 0.46827420010231435,
     "identical": true,
     "same_answer": true,
     "off_finish": "stop",
@@ -321,8 +321,8 @@
     "on_text": "25 - (3*4) - 2 = 25 - 12 - 2 = 11"
    },
    {
-    "off_ttft": 1.5528198999818414,
-    "on_ttft": 1.2740370999090374,
+    "off_ttft": 1.5671232000458986,
+    "on_ttft": 1.2878393998835236,
     "identical": true,
     "same_answer": true,
     "off_finish": "stop",
@@ -331,18 +331,18 @@
     "on_text": "11:15"
    },
    {
-    "off_ttft": 0.7672609000001103,
-    "on_ttft": 0.4796545000281185,
-    "identical": true,
+    "off_ttft": 0.7629116999451071,
+    "on_ttft": 0.47571110003627837,
+    "identical": false,
     "same_answer": true,
     "off_finish": "stop",
     "on_finish": "stop",
     "off_text": "12 * 7 = 84  \n84 - 15 = 69  \n69",
-    "on_text": "12 * 7 = 84  \n84 - 15 = 69  \n69"
+    "on_text": "12 * 7 = 84\n84 - 15 = 69"
    },
    {
-    "off_ttft": 1.5491833998821676,
-    "on_ttft": 1.271370599977672,
+    "off_ttft": 1.573334600077942,
+    "on_ttft": 1.289995800005272,
     "identical": true,
     "same_answer": true,
     "off_finish": "stop",

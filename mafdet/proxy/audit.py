@@ -42,7 +42,9 @@ class Auditor:
         self.unknowns = 0
         self.demoted = False
 
-    def record(self, predicted: int, warm: WarmResult) -> AuditEntry:
+    def record(self, predicted: int, warm: WarmResult, *, at_least: bool = False) -> AuditEntry:
+        """`at_least`: the slot holds more than the proxy knows (an answer it passed
+        through), so only reusing *less* than predicted is a mismatch."""
         estimate = warm.channel == "metrics" or warm.estimate
         reported = warm.cached_tokens
         if reported is None:
@@ -52,7 +54,10 @@ class Auditor:
             self.estimates += 1
             entry = AuditEntry(predicted, reported, warm.channel, True, False, warm.ms)
         else:
-            mismatch = abs(reported - predicted) > TOLERANCE
+            if at_least:
+                mismatch = reported < predicted - TOLERANCE
+            else:
+                mismatch = abs(reported - predicted) > TOLERANCE
             if mismatch:
                 self.mismatches += 1
             entry = AuditEntry(predicted, reported, warm.channel, False, mismatch, warm.ms)

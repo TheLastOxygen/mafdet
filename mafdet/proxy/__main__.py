@@ -28,6 +28,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--min-new", type=int, default=8, help="new tokens that trigger a warm")
     ap.add_argument("--reprobe", action="store_true", help="probe again instead of reusing the saved profile")
     ap.add_argument("--no-probe", action="store_true", help="start without probing (read-ahead off: T-1)")
+    ap.add_argument("--exact", action="store_true",
+                    help="no read-ahead, every prompt recomputed (cache_prompt: false): answers "
+                         "bit-identical to a cold run, none of the gain")
+    ap.add_argument("--cors", default="",
+                    help="origins allowed to call the proxy from a web page, comma-separated "
+                         "(e.g. http://localhost:3000), or * for any; off by default")
     args = ap.parse_args(argv)
 
     engine = make(args.engine, args.url)
@@ -45,7 +51,9 @@ def main(argv: list[str] | None = None) -> int:
             print(f"probed in {took:.1f}s -> tier {profile.tier}, spelling {profile.spelling}, "
                   f"channel {profile.channel} (saved to {path})", file=sys.stderr)
 
-    state = ProxyState(engine, profile, args.model, debounce_ms=args.debounce_ms, min_new=args.min_new)
+    cors = [o.strip() for o in args.cors.split(",") if o.strip()]
+    state = ProxyState(engine, profile, args.model, debounce_ms=args.debounce_ms, min_new=args.min_new,
+                       exact=args.exact, cors=cors)
     server = make_server(state, args.host, args.port)
     print(f"{profile.name} {args.url} -> proxy on http://{args.host}:{args.port} "
           f"(tier {profile.tier}); drafts to POST /v1/drafts, stats at GET /proxy/stats", file=sys.stderr)

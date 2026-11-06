@@ -35,9 +35,13 @@ class FakeEngine:
     def tokenize(self, text: str) -> list[int] | None:
         return [self._vocab.setdefault(word, len(self._vocab) + 1) for word in text.split()]
 
-    def render(self, messages: list[dict]) -> list[int] | None:
-        """Stand-in for a chat template: role names and contents, deterministically."""
+    def render(self, messages: list[dict], template_kwargs: dict | None = None) -> list[int] | None:
+        """Stand-in for a chat template: role names and contents, deterministically, and
+        an empty think block when asked not to think (as Qwen3's template does)."""
+        self.last_template_kwargs = template_kwargs
         text = " ".join(f"{m.get('role')}:{m.get('content')}" for m in messages or [])
+        if (template_kwargs or {}).get("enable_thinking") is False:
+            text += " <think></think>"
         return self.tokenize(text)
 
     def _cached_for(self, ids: list[int]) -> int:

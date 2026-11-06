@@ -2,21 +2,21 @@
  "summary": {
   "typed": {
    "n": 1,
-   "off_mean_ms": 49.0,
-   "on_mean_ms": 71.0,
-   "off_median_ms": 49.0,
-   "on_median_ms": 71.0,
+   "off_mean_ms": 375.0,
+   "on_mean_ms": 161.0,
+   "off_median_ms": 375.0,
+   "on_median_ms": 161.0,
    "identical": 1,
    "same_answer": 1,
-   "on_slower": 1
+   "on_slower": 0
   },
   "long": {
    "n": 4,
-   "off_mean_ms": 1181.0,
-   "on_mean_ms": 49.0,
-   "off_median_ms": 1154.0,
-   "on_median_ms": 48.0,
-   "identical": 4,
+   "off_mean_ms": 1365.0,
+   "on_mean_ms": 54.0,
+   "off_median_ms": 1367.0,
+   "on_median_ms": 53.0,
+   "identical": 3,
    "same_answer": 4,
    "on_slower": 0
   },
@@ -64,13 +64,13 @@
   "max_tokens": 96,
   "model": "Qwen3-4B-Q4_K_M",
   "url": "http://127.0.0.1:8081",
-  "when": "2026-11-06 10:46:20"
+  "when": "2026-11-06 12:01:42"
  },
  "rows": {
   "typed": [
    {
-    "off_ttft": 0.04876859998330474,
-    "on_ttft": 0.07119460008107126,
+    "off_ttft": 0.37512710015289485,
+    "on_ttft": 0.16052499995566905,
     "identical": true,
     "same_answer": true,
     "off_finish": "stop",
@@ -81,8 +81,8 @@
   ],
   "long": [
    {
-    "off_ttft": 0.7598518000449985,
-    "on_ttft": 0.03916470007970929,
+    "off_ttft": 0.9444031999446452,
+    "on_ttft": 0.054390399949625134,
     "identical": true,
     "same_answer": true,
     "off_finish": "stop",
@@ -91,8 +91,8 @@
     "on_text": "25 - (3*4) - 2 = 25 - 12 - 2 = 11"
    },
    {
-    "off_ttft": 1.6612736000679433,
-    "on_ttft": 0.05638270010240376,
+    "off_ttft": 1.781745000043884,
+    "on_ttft": 0.0514830001629889,
     "identical": true,
     "same_answer": true,
     "off_finish": "stop",
@@ -101,18 +101,18 @@
     "on_text": "11:15"
    },
    {
-    "off_ttft": 0.7557381000369787,
-    "on_ttft": 0.0382965998724103,
-    "identical": true,
+    "off_ttft": 0.9627241999842227,
+    "on_ttft": 0.04147910000756383,
+    "identical": false,
     "same_answer": true,
     "off_finish": "stop",
     "on_finish": "stop",
     "off_text": "12 * 7 = 84  \n84 - 15 = 69  \n69",
-    "on_text": "12 * 7 = 84  \n84 - 15 = 69  \n69"
+    "on_text": "12 * 7 = 84\n84 - 15 = 69"
    },
    {
-    "off_ttft": 1.5487009000498801,
-    "on_ttft": 0.06096079992130399,
+    "off_ttft": 1.7708544000051916,
+    "on_ttft": 0.0679065000731498,
     "identical": true,
     "same_answer": true,
     "off_finish": "stop",

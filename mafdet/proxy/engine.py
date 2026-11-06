@@ -73,8 +73,9 @@ class Engine(Protocol):
         """Token ids for `text`, or None when the engine cannot tokenize."""
         ...
 
-    def render(self, messages: list[dict]) -> list[int] | None:
-        """The ids of the prompt the engine would build for these messages.
+    def render(self, messages: list[dict], template_kwargs: dict | None = None) -> list[int] | None:
+        """The ids of the prompt the engine would build for these messages, with the
+        request's template options (`chat_template_kwargs`).
 
         Warming anything else warms nothing: the chat template's own tokens are the
         prefix of the real request, so the draft must go through the same template."""

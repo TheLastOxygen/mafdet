@@ -16,14 +16,19 @@ The goal is thinking ahead in the front end people already use: in the app, the 
 - **Built:** `POST /v1/drafts`, `GET /proxy/stats`, the chat request passed through unchanged, a probe that
   finds what the engine supports (tier T1 on llama.cpp: `n_predict: 0`, `timings.cache_n`, edits still hit
   the cached prefix), and an audit of the reuse on every warm. Standard library only, 22 tests.
+- **Step 0 done** (a solid core, issue #5): the answer being written holds the drafts of every client, a
+  draft still waiting is dropped on Enter, drafts go through the same template options as the request,
+  `--exact`, `--cors`. 33 tests.
 - **Measured** (RTX 2060, Qwen3-4B Q4_K_M, `research/LOG.md` 2026-11-06), wait from Enter to the first token,
   without → with the proxy:
-  - a pasted prompt of 2-4k tokens, Enter 2 s after the paste: **1181 → 49 ms**;
-  - the same, Enter 0.35 s after the paste: 1160 → 873 ms (it hides only the time before Enter);
-  - short typed messages: 36 → 59 ms. Nothing to read ahead there, and the proxy adds ~25 ms (to fix).
-  - The final answers agree; the wording can differ when llama.cpp computes a cached prefix in other batches.
-- **Not yet usable from a real front end:** no front end sends drafts today, and a browser page cannot call
-  the proxy (no CORS headers).
+  - a pasted prompt of 2-4k tokens, Enter 2 s after the paste: **1365 → 54 ms**;
+  - the same, Enter 0.35 s after the paste: 1171 → 880 ms (it hides only the time before Enter);
+  - short typed messages: **302 → 102 ms**. Most of it on this card is the GPU: idle while the user types,
+    it clocks down, and the drafts keep it awake. To check on other cards.
+  - The final answers agree but one in 27 (the same problem on two cards): the wording, rarely the number,
+    can differ when llama.cpp computes a prefix read ahead in other batches. `--exact` for bit-identical.
+- **Not yet usable from a real front end:** no front end sends drafts today (step 2), and the front end has
+  to send the whole conversation with each draft (step 1).
 
 ## Roadmap
 
@@ -31,14 +36,15 @@ To take a piece, say so in an issue first, so that two people do not build the s
 measured, with the numbers in `research/LOG.md`.
 
 **0. A solid core.** The proxy must never make the wait longer.
-- [ ] Find and remove the ~25 ms added on short messages.
-- [ ] Hold the drafts' warms while *any* answer is being written on the engine's slot, not only one of the
+- [x] Find the ~25 ms added on short messages: the bench's, not the proxy's (GPU clocks), plus drafts
+      rendered without the request's template options (fixed).
+- [x] Hold the drafts' warms while *any* answer is being written on the engine's slot, not only one of the
       same conversation (a plain OpenAI client sends no `conversation_id`).
-- [ ] On Enter, cancel the draft still waiting, so that it cannot evict the answer just written.
-- [ ] Track the requests that go through the proxy in its model of the cache, so that the audit knows what is
+- [x] On Enter, cancel the draft still waiting, so that it cannot evict the answer just written.
+- [x] Track the requests that go through the proxy in its model of the cache, so that the audit knows what is
       really there.
-- [ ] An `exact` option: answers bit-identical to no proxy, without the gain.
-- [ ] CORS headers, so that a web page can post drafts.
+- [x] An `exact` option: answers bit-identical to no proxy, without the gain.
+- [x] CORS headers, so that a web page can post drafts (`--cors`, off by default).
 
 **1. Drafts without knowing the conversation.** What makes the proxy work with front ends not written for it.
 - [ ] The front end sends only the text being typed; the proxy rebuilds the rest (system prompt, history,

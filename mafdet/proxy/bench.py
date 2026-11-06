@@ -210,6 +210,15 @@ def main(argv: list[str] | None = None) -> int:
         # after the previous turn of a chat.  Without this the ON run would find the whole
         # prompt cached by the OFF run just before it, drafts or no drafts.
         reset()
+        # The same timeline as the ON run, without the drafts: the user types (the engine
+        # waits), then Enter after the pause.  A GPU left idle clocks down, and on the
+        # RTX 2060 one token costs 12 ms right after a request and ~45 ms after seconds of
+        # little work, so sending OFF right after the reset would flatter it.
+        typing = 0.0
+        if typed_mode:
+            posts = -(-len(prompt) // 4)              # one draft per 4 characters, as _type
+            typing = max(0, posts - 1) * 4 / max(args.typing_cps, 0.1)
+        time.sleep(typing + args.settle)
         # OFF: straight at the engine.
         off_ttft, off_text, off_finish = _chat_ttft(engine_host, engine_port, body, max_tokens=args.max_tokens)
         reset()
@@ -305,8 +314,10 @@ def main(argv: list[str] | None = None) -> int:
               f"agree on the answer; see engine_stability for whether the engine is bit-stable "
               f"across cache states.", file=sys.stderr)
     if not ok:
-        print("EXACTNESS FAILED: the proxy changed an answer. Read-ahead must be exact -- "
-              "this is a bug, not noise.", file=sys.stderr)
+        print("ANSWER CHANGED: a final number differs with the proxy.  The proxy never changes "
+              "the prompt, but llama.cpp computes a prefix read ahead in other batches, and greedy "
+              "decoding can then flip a token (Qwen3-4B on the printer problem, on two cards).  "
+              "Read both texts; the proxy's --exact gives bit-identical answers.", file=sys.stderr)
 
     if args.json_out:
         with open(args.json_out, "w", encoding="utf-8") as f:

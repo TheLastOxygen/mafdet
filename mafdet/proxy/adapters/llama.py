@@ -60,10 +60,13 @@ class LlamaEngine:
         tokens = data.get("tokens")
         return list(tokens) if isinstance(tokens, list) else None
 
-    def render(self, messages: list[dict]) -> list[int] | None:
-        """The prompt llama-server builds for a chat request: its own template, then tokens."""
-        status, data, _ = self._call("/apply-template",
-                                     {"messages": messages, "add_generation_prompt": True})
+    def render(self, messages: list[dict], template_kwargs: dict | None = None) -> list[int] | None:
+        """The prompt llama-server builds for a chat request: its own template, with the
+        request's `chat_template_kwargs` (e.g. Qwen3's enable_thinking), then tokens."""
+        body = {"messages": messages, "add_generation_prompt": True}
+        if template_kwargs:
+            body["chat_template_kwargs"] = template_kwargs
+        status, data, _ = self._call("/apply-template", body)
         if status != 200 or not data.get("prompt"):
             return None
         # The template's text is already in the model's vocabulary; no BOS is added twice.

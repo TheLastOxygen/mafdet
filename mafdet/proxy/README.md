@@ -22,6 +22,17 @@ Point the front end at the proxy: `POST /v1/drafts` while the user types, the us
 `POST /v1/chat/completions` on Enter.  `GET /proxy/stats` shows what the proxy believes
 (it is the "is it working" line), `GET /healthz` is liveness.
 
+A draft may carry the request's `chat_template_kwargs` (e.g. `{"enable_thinking": false}` for
+Qwen3); without them the proxy uses those of the last chat request it passed through. The
+draft must render exactly as the request on Enter will, or the engine still has a few
+tokens of template to read then.
+
+- `--cors http://localhost:3000` (comma-separated, or `*`): lets a web page in those origins
+  call the proxy. Off by default: with it on, any page open in the browser can reach the
+  local engine through the proxy.
+- `--exact`: no read-ahead, and every prompt recomputed (`cache_prompt: false`): answers
+  bit-identical to a cold run, none of the gain.
+
 The profile is cached per (url, model) in `~/.mafdet/proxy/`; `--reprobe` forces a fresh
 probe, `--no-probe` starts with read-ahead off (tier T-1).
 
@@ -51,8 +62,12 @@ one engine cannot claim anything about the others.
 | `adapters/llama.py` | llama-server: `/tokenize`, `/completion`, `/v1/chat/completions` pass-through |
 | `bench.py` | Enter -> first token, drafts on vs off, with an exactness check |
 
-## Read-ahead is exact
+## Read-ahead does not change the prompt
 
-A draft is only ever a *prefix* of what the user will send, so prewarming it cannot
-change the answer.  `bench.py` checks that the text of every answer with the proxy is
-identical to the answer without it, and fails the run if not.
+A draft is only ever a *prefix* of what the user will send, so the prompt the engine
+answers is the same.  The answer can still differ in wording, rarely in substance:
+llama.cpp computes a prefix read ahead in other batches than a cold prompt, and greedy
+decoding is not bit-reproducible across them (Qwen3-4B, on two cards: 25 of 28 answers
+byte-identical, one final number different, research/LOG.md 2026-11-06).  `bench.py`
+compares the texts and the final numbers and exits with 1 when a number changes; `--exact`
+gives bit-identical answers at the price of the gain.
