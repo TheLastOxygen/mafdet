@@ -45,10 +45,10 @@ research = ["torch>=2.4", "rich"]
 mafdet = "mafdet.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/TheLastOxygen/mafdet"
-Issues = "https://github.com/TheLastOxygen/mafdet/issues"
-Releases = "https://github.com/TheLastOxygen/mafdet/releases"
-Research = "https://github.com/TheLastOxygen/mafdet/blob/main/research/LOG.md"
+Homepage = "https://github.com/Mafdet-AI/mafdet"
+Issues = "https://github.com/Mafdet-AI/mafdet/issues"
+Releases = "https://github.com/Mafdet-AI/mafdet/releases"
+Research = "https://github.com/Mafdet-AI/mafdet/blob/main/research/LOG.md"
 
 [tool.setuptools.dynamic]
 version = { attr = "mafdet.__version__" }

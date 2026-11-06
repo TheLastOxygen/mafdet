@@ -885,7 +885,7 @@ class SettingsView(VerticalScroll):
                        "models that fit in VRAM.",
                        Switch(value=st["branches"], id="branches"))
         yield Static(Text.assemble(("\nMAFDET ", Style(color=PAPER, bold=True)), (f"v{__version__} · Apache-2.0 · ", MUTED),
-                                   ("github.com/TheLastOxygen/mafdet", AMBER)))
+                                   ("github.com/Mafdet-AI/mafdet", AMBER)))
 
     @staticmethod
     def select(key, values, current, fmt, zero=None):

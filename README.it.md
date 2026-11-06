@@ -68,7 +68,7 @@ La lettura in anticipo è esatta. Il ragionamento in anticipo no, perché il mod
 
 ## Avvio rapido
 
-**Su Windows, con un doppio clic.** Scarica MAFDET (su GitHub, *Code → Download ZIP*, ed estrai lo zip; oppure `git clone https://github.com/TheLastOxygen/mafdet.git`) e fai doppio clic su **`start_mafdet.bat`**. La prima volta crea un ambiente Python in `.venv` e ci installa MAFDET: ci vuole circa un minuto, e serve [Python](https://www.python.org/downloads/) 3.10 o successivo. Dopo, un doppio clic apre MAFDET in meno di un secondo, e dopo un aggiornamento installa da solo le librerie nuove. Il terminale mostra man mano cosa sta scaricando: ogni libreria, e poi llama.cpp e i modelli che scegli nell'app, con dimensione, barra di avanzamento, velocità e tempo rimanente.
+**Su Windows, con un doppio clic.** Scarica MAFDET (su GitHub, *Code → Download ZIP*, ed estrai lo zip; oppure `git clone https://github.com/Mafdet-AI/mafdet.git`) e fai doppio clic su **`start_mafdet.bat`**. La prima volta crea un ambiente Python in `.venv` e ci installa MAFDET: ci vuole circa un minuto, e serve [Python](https://www.python.org/downloads/) 3.10 o successivo. Dopo, un doppio clic apre MAFDET in meno di un secondo, e dopo un aggiornamento installa da solo le librerie nuove. Il terminale mostra man mano cosa sta scaricando: ogni libreria, e poi llama.cpp e i modelli che scegli nell'app, con dimensione, barra di avanzamento, velocità e tempo rimanente.
 
 **Su macOS, con un doppio clic.** Lo stesso, con **`start_mafdet.command`** (serve Python 3.10 o successivo: da python.org, oppure `brew install python@3.12`). Se il Finder dice che non può verificare il file, clic destro, *Apri*, poi di nuovo *Apri*: serve solo la prima volta.
 
@@ -86,7 +86,7 @@ Su Windows con il Python di python.org, `pip install mafdet` funziona così com'
 **Dai sorgenti, da terminale** (serve anche per le misure in `research/`):
 
 ```bash
-git clone https://github.com/TheLastOxygen/mafdet.git
+git clone https://github.com/Mafdet-AI/mafdet.git
 cd mafdet
 python -m venv .venv          # Windows: py -3.12 -m venv .venv
 source .venv/bin/activate     # Windows: .venv\Scripts\Activate.ps1
@@ -244,7 +244,7 @@ Sull'M2 Pro il 4B scrive a 54 tok/s (83-87 sulla RTX 2060), quindi entrambe le a
 
 ### Su una AMD Radeon
 
-**Un primo dato, da indagare più a fondo**: una scheda, una prova, mandata da [SpykeBTW](https://github.com/SpykeBTW) ([issue #1](https://github.com/TheLastOxygen/mafdet/issues/1)). Radeon RX 5700 XT (8 GB), Ryzen 5 3600, 16 GB, Windows 11, driver AMD 31.0.23013.1023, llama.cpp b11747 con Vulkan: lo stesso script e gli stessi problemi di sopra.
+**Un primo dato, da indagare più a fondo**: una scheda, una prova, mandata da [SpykeBTW](https://github.com/SpykeBTW) ([issue #1](https://github.com/Mafdet-AI/mafdet/issues/1)). Radeon RX 5700 XT (8 GB), Ryzen 5 3600, 16 GB, Windows 11, driver AMD 31.0.23013.1023, llama.cpp b11747 con Vulkan: lo stesso script e gli stessi problemi di sopra.
 
 | RX 5700 XT | Senza ragionamento in anticipo | `mafdet strike` |
 |---|---|---|
@@ -298,7 +298,7 @@ MAFDET gira sulle schede AMD Radeon con la build Vulkan di llama.cpp, e le macch
 1. Installa MAFDET ([Avvio rapido](#avvio-rapido)) e aprilo una volta: dovrebbe trovare la scheda, installare llama.cpp *Windows · Vulkan* (o *Linux · Vulkan*) e scaricare Qwen3-4B. `mafdet doctor` mostra cosa ha trovato.
 2. Nell'app, *Modelli*, **Misura** Qwen3-4B.
 3. Dalla cartella di MAFDET, con il suo ambiente attivo: `python research/thinking_ahead.py radeon_4b.json`. Scrive 24 problemi in tempo reale, con e senza ragionamento in anticipo, e ci mette circa 20 minuti; lascia la macchina libera nel frattempo.
-4. [Apri una issue](https://github.com/TheLastOxygen/mafdet/issues/new) con l'output di `mafdet doctor`, i numeri di *Misura* e `radeon_4b.json`. Il tuo nome va in [Grazie](#grazie), accanto ai tuoi numeri.
+4. [Apri una issue](https://github.com/Mafdet-AI/mafdet/issues/new) con l'output di `mafdet doctor`, i numeri di *Misura* e `radeon_4b.json`. Il tuo nome va in [Grazie](#grazie), accanto ai tuoi numeri.
 5. Se puoi, anche l'output di `%USERPROFILE%\.mafdet\llama.cpp\llama-bench.exe -m %USERPROFILE%\.mafdet\models\Qwen3-4B-Q4_K_M.gguf -p 512 -n 128` (su Linux, gli stessi percorsi sotto `~`): le velocità di llama.cpp da solo, senza MAFDET in mezzo.
 
 Se qualcosa non funziona (la scheda non trovata, llama.cpp che non parte, il modello che gira sulla CPU), una issue con l'output di `mafdet doctor` e i file `server*.log` accanto a llama-server (in `~/.mafdet/llama.cpp`) è altrettanto utile. Le Radeon integrate (APU Ryzen) per ora non vengono usate: restano sulla build per CPU. Qualsiasi scheda con un driver Vulkan può provarla con `mafdet doctor --install --build vulkan`.
@@ -334,7 +334,7 @@ Se qualcosa non funziona (la scheda non trovata, llama.cpp che non parte, il mod
 
 A chi ha misurato MAFDET sul proprio hardware:
 
-- [SpykeBTW](https://github.com/SpykeBTW): la prima AMD Radeon, una RX 5700 XT ([issue #1](https://github.com/TheLastOxygen/mafdet/issues/1), [numeri](#su-una-amd-radeon)).
+- [SpykeBTW](https://github.com/SpykeBTW): la prima AMD Radeon, una RX 5700 XT ([issue #1](https://github.com/Mafdet-AI/mafdet/issues/1), [numeri](#su-una-amd-radeon)).
 
 ## Licenza
 

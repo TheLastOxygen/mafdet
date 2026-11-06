@@ -521,7 +521,7 @@
       `<section class="set-section enter"><div class="label">${t("settings.section.about")}</div><div class="about">` +
       `<div style="display:flex;align-items:center;gap:12px">${M.mark("mask", 28)}${M.wordmark(12)}<span class="label">${esc(t("settings.about.version", { v: M.version }))}</span></div>` +
       `<p style="margin:0">${t("settings.about.body")}</p>` +
-      `<p style="margin:0" class="label">${t("settings.about.license")} · <a href="https://github.com/TheLastOxygen/mafdet" data-link>${t("settings.about.source")}</a></p>` +
+      `<p style="margin:0" class="label">${t("settings.about.license")} · <a href="https://github.com/Mafdet-AI/mafdet" data-link>${t("settings.about.source")}</a></p>` +
       `<div><button type="button" class="btn" data-setup>${t("settings.setup_again")}</button></div></div></section>`,
     ].join("");
     $("settings").querySelectorAll(".enter").forEach((el, i) => el.style.setProperty("--i", i));
